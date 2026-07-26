@@ -28,6 +28,8 @@ export type HearingStatus = 'scheduled' | 'adjourned' | 'held' | 'cancelled'
 export type TaskStatus = 'todo' | 'in_progress' | 'done'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'void'
+export type TicketStatus = 'open' | 'in_progress' | 'waiting' | 'resolved' | 'closed'
+export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type RoleKey =
   | 'platform_owner'
   | 'platform_admin'
@@ -558,6 +560,102 @@ export interface Database {
         }
         Update: Partial<Database['public']['Tables']['support_sessions']['Insert']>
         Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          id: string
+          organization_id: string
+          ticket_number: string | null
+          subject: string
+          status: TicketStatus
+          priority: TicketPriority
+          created_by: string | null
+          assignee_id: string | null
+          support_session_id: string | null
+          resolved_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          ticket_number?: string | null
+          subject: string
+          status?: TicketStatus
+          priority?: TicketPriority
+          created_by?: string | null
+          assignee_id?: string | null
+          support_session_id?: string | null
+          resolved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['support_tickets']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'support_tickets_organization_id_fkey'
+            columns: ['organization_id']
+            isOneToOne: false
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'support_tickets_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'support_tickets_assignee_id_fkey'
+            columns: ['assignee_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'support_tickets_support_session_id_fkey'
+            columns: ['support_session_id']
+            isOneToOne: false
+            referencedRelation: 'support_sessions'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      support_ticket_messages: {
+        Row: {
+          id: string
+          ticket_id: string
+          author_id: string | null
+          from_platform: boolean
+          body: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          ticket_id: string
+          author_id?: string | null
+          from_platform?: boolean
+          body: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['support_ticket_messages']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'support_ticket_messages_ticket_id_fkey'
+            columns: ['ticket_id']
+            isOneToOne: false
+            referencedRelation: 'support_tickets'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'support_ticket_messages_author_id_fkey'
+            columns: ['author_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
       }
       staff_profiles: {
         Row: {

@@ -1,6 +1,6 @@
 import { supabase } from '@/shared/lib/supabase'
 import type { InvoiceStatus } from '@/shared/types/database.types'
-import { timeAmount, type BillingStats, type ExpenseRow, type InvoiceDetail, type InvoiceRow, type TimeEntryRow } from '@/features/billing/types'
+import { timeAmount, type BillingStats, type ExpenseRow, type InvoiceDetail, type InvoiceRow, type PersonalStats, type TimeEntryRow } from '@/features/billing/types'
 import type { ExpenseFormValues, GenerateInvoiceFormValues, PaymentFormValues, TimeEntryFormValues } from '@/features/billing/schemas'
 
 const TIME_SELECT = '*, matter:matters(id, title, matter_number), user:profiles!time_entries_user_id_fkey(id, full_name)'
@@ -156,6 +156,50 @@ export const billingService = {
       outstanding: invoiced - collected,
       billableHoursMTD: Math.round((billableMinutesMTD / 60) * 10) / 10,
       revenueMTD,
+    }
+  },
+
+  /** One member's own numbers — the non-financial alternative to getStats. */
+  async getPersonalStats(organizationId: string, userId: string): Promise<PersonalStats> {
+    const monthStart = new Date()
+    monthStart.setDate(1)
+    monthStart.setHours(0, 0, 0, 0)
+    const monthStartStr = monthStart.toISOString().slice(0, 10)
+
+    const [time, exp, tasks] = await Promise.all([
+      supabase
+        .from('time_entries')
+        .select('minutes, rate, billable, invoiced, work_date')
+        .eq('organization_id', organizationId)
+        .eq('user_id', userId),
+      supabase
+        .from('expenses')
+        .select('amount, billable, invoiced, expense_date')
+        .eq('organization_id', organizationId)
+        .eq('user_id', userId),
+      supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('assignee_id', userId)
+        .neq('status', 'done'),
+    ])
+    if (time.error) throw time.error
+    if (exp.error) throw exp.error
+    if (tasks.error) throw tasks.error
+
+    const timeRows = time.data ?? []
+    const expRows = exp.data ?? []
+    const billableMinutesMTD = timeRows.filter((t) => t.billable && t.work_date >= monthStartStr).reduce((s, t) => s + t.minutes, 0)
+    const unbilledTime = timeRows.filter((t) => t.billable && !t.invoiced).reduce((s, t) => s + timeAmount(t.minutes, Number(t.rate)), 0)
+    const unbilledExp = expRows.filter((e) => e.billable && !e.invoiced).reduce((s, e) => s + Number(e.amount), 0)
+    const expensesMTD = expRows.filter((e) => e.expense_date >= monthStartStr).reduce((s, e) => s + Number(e.amount), 0)
+
+    return {
+      billableHoursMTD: Math.round((billableMinutesMTD / 60) * 10) / 10,
+      unbilledValue: unbilledTime + unbilledExp,
+      expensesMTD,
+      openTasks: tasks.count ?? 0,
     }
   },
 }

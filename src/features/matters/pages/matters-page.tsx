@@ -9,6 +9,7 @@ import { MatterFormDialog } from '@/features/matters/components/matter-form-dial
 import { MATTER_STATUS_META, PRACTICE_AREAS } from '@/features/matters/types'
 import type { MatterFilters } from '@/features/matters/services/matters.service'
 import { PageHeader } from '@/shared/components/page-header'
+import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
 import { Input } from '@/shared/components/ui/input'
 import { Button } from '@/shared/components/ui/button'
@@ -33,7 +34,27 @@ export function MattersPage() {
       <PageHeader
         title="Matters"
         description="Every case and engagement your firm is handling."
-        actions={has('matters.create') ? <Button onClick={() => setFormOpen(true)}><Plus /> New matter</Button> : undefined}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              filename="matters"
+              disabled={!data?.length}
+              sheets={() => [{
+                name: 'Matters',
+                rows: (data ?? []).map((m) => ({
+                  'Matter #': m.matter_number ?? '',
+                  Title: m.title,
+                  Client: m.client?.display_name ?? '',
+                  'Practice area': m.practice_area ?? '',
+                  Status: MATTER_STATUS_META[m.status].label,
+                  Lead: m.lead_lawyer?.full_name ?? '',
+                  Opened: m.opened_on,
+                })),
+              }]}
+            />
+            {has('matters.create') && <Button onClick={() => setFormOpen(true)}><Plus /> New matter</Button>}
+          </div>
+        }
       />
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">

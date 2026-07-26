@@ -9,6 +9,7 @@ import { TaskFormDialog } from '@/features/tasks/components/task-form-dialog'
 import { TASK_PRIORITY_META, TASK_STATUS_META, type TaskRow } from '@/features/tasks/types'
 import type { TaskFilters } from '@/features/tasks/services/tasks.service'
 import { PageHeader } from '@/shared/components/page-header'
+import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
 import { Input } from '@/shared/components/ui/input'
 import { Button } from '@/shared/components/ui/button'
@@ -127,7 +128,27 @@ export function TasksPage() {
       <PageHeader
         title="Tasks"
         description="Assignments and deadlines across the firm."
-        actions={canCreate ? <Button onClick={openNew}><Plus /> New task</Button> : undefined}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              filename="tasks"
+              disabled={!data?.length}
+              sheets={() => [{
+                name: 'Tasks',
+                rows: (data ?? []).map((t) => ({
+                  Title: t.title,
+                  Status: TASK_STATUS_META[t.status].label,
+                  Priority: TASK_PRIORITY_META[t.priority].label,
+                  Assignee: t.assignee?.full_name ?? '',
+                  Matter: t.matter?.matter_number ?? '',
+                  'Due date': t.due_date ?? '',
+                  Description: t.description ?? '',
+                })),
+              }]}
+            />
+            {canCreate && <Button onClick={openNew}><Plus /> New task</Button>}
+          </div>
+        }
       />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">

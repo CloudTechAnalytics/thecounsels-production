@@ -10,6 +10,7 @@ import { DocumentUploadDialog } from '@/features/documents/components/document-u
 import { DOCUMENT_CATEGORIES, type DocumentFilters, type DocumentWithMatter } from '@/features/documents/services/documents.service'
 import { DocumentViewer } from '@/features/matters/components/document-viewer'
 import { PageHeader } from '@/shared/components/page-header'
+import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
 import { Input } from '@/shared/components/ui/input'
 import { Button } from '@/shared/components/ui/button'
@@ -49,7 +50,25 @@ export function DocumentsPage() {
       <PageHeader
         title="Documents"
         description="Every file across the firm — contracts, court orders, evidence and more."
-        actions={canUpload ? <Button onClick={() => setUploadOpen(true)}><UploadCloud className="h-4 w-4" /> Upload</Button> : undefined}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              filename="documents"
+              disabled={!data?.length}
+              sheets={() => [{
+                name: 'Documents',
+                rows: (data ?? []).map((d) => ({
+                  Name: d.name,
+                  Category: d.category ?? '',
+                  Matter: d.matter?.matter_number ?? 'General',
+                  Size: d.size_bytes != null ? formatStorage(d.size_bytes) : '',
+                  Uploaded: d.created_at.slice(0, 10),
+                })),
+              }]}
+            />
+            {canUpload && <Button onClick={() => setUploadOpen(true)}><UploadCloud className="h-4 w-4" /> Upload</Button>}
+          </div>
+        }
       />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">

@@ -1,11 +1,12 @@
 import * as React from 'react'
-import { Building2, Users, ShieldCheck, CreditCard } from 'lucide-react'
+import { Building2, Users, ShieldCheck, CreditCard, LifeBuoy } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { MembersPanel } from '@/features/administration/components/members-panel'
 import { OrganizationSettings } from '@/features/administration/components/organization-settings'
 import { RolesViewer } from '@/features/administration/components/roles-viewer'
 import { PlanSummary } from '@/features/administration/components/plan-summary'
+import { FirmSupportPanel } from '@/features/support/components/firm-support-panel'
 import { PageHeader } from '@/shared/components/page-header'
 import { Badge } from '@/shared/components/ui/badge'
 import { cn } from '@/shared/lib/utils'
@@ -15,6 +16,7 @@ const TABS = [
   { key: 'members', label: 'Members', icon: Users },
   { key: 'roles', label: 'Roles & Permissions', icon: ShieldCheck },
   { key: 'plan', label: 'Plan & Billing', icon: CreditCard },
+  { key: 'support', label: 'Support', icon: LifeBuoy },
 ] as const
 type Tab = (typeof TABS)[number]['key']
 
@@ -64,6 +66,7 @@ export function AdministrationPage() {
       {tab === 'members' && <MembersPanel organizationId={activeOrgId} />}
       {tab === 'roles' && <RolesViewer />}
       {tab === 'plan' && <PlanSummary />}
+      {tab === 'support' && <FirmSupportPanel organizationId={activeOrgId} />}
     </div>
   )
 }

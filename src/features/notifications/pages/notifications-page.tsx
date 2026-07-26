@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow, format, isPast, isToday } from 'date-fns'
 import { BellRing, Activity, Gavel, CheckSquare } from 'lucide-react'
@@ -24,9 +25,18 @@ export function NotificationsPage() {
   const { activeOrgId, profile } = useAuth()
   const { data: activity, isLoading, live } = useLiveActivity(activeOrgId)
 
-  const in14 = new Date()
-  in14.setDate(in14.getDate() + 14)
-  const { data: hearings } = useHearings(activeOrgId, { from: new Date().toISOString(), to: in14.toISOString(), status: 'scheduled' })
+  // Stable 14-day window: recomputing `new Date()` each render would change the
+  // query key every render and the hearings query would never settle.
+  const { from, to } = React.useMemo(() => {
+    const start = new Date()
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(start)
+    end.setDate(start.getDate() + 14)
+    end.setHours(23, 59, 59, 999)
+    return { from: start.toISOString(), to: end.toISOString() }
+  }, [])
+  const in14 = new Date(to)
+  const { data: hearings } = useHearings(activeOrgId, { from, to, status: 'scheduled' })
   const { data: tasks } = useTasks(activeOrgId, { status: 'all', assigneeId: 'all' }, profile?.id ?? null)
 
   const reminders: Reminder[] = [

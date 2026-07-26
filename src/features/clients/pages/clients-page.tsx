@@ -7,6 +7,7 @@ import { ClientFormDialog } from '@/features/clients/components/client-form-dial
 import type { ClientFilters } from '@/features/clients/services/clients.service'
 import type { Client } from '@/shared/types/database.types'
 import { PageHeader } from '@/shared/components/page-header'
+import { ExportButton } from '@/shared/components/export-button'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { Card } from '@/shared/components/ui/card'
 import { Input } from '@/shared/components/ui/input'
@@ -62,7 +63,29 @@ export function ClientsPage() {
       <PageHeader
         title="Clients"
         description="Individuals and corporate clients your firm represents."
-        actions={canCreate ? <Button onClick={openNew}><Plus /> New client</Button> : undefined}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              filename="clients"
+              disabled={!data?.length}
+              sheets={() => [{
+                name: 'Clients',
+                rows: (data ?? []).map((c) => ({
+                  Name: c.display_name,
+                  Type: c.type,
+                  Status: c.status,
+                  Email: c.email ?? '',
+                  Phone: c.phone ?? '',
+                  Company: c.company_name ?? '',
+                  City: c.city ?? '',
+                  Country: c.country ?? '',
+                  Added: c.created_at.slice(0, 10),
+                })),
+              }]}
+            />
+            {canCreate && <Button onClick={openNew}><Plus /> New client</Button>}
+          </div>
+        }
       />
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">

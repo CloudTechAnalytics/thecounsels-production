@@ -41,7 +41,8 @@ import { OrganizationUsersPage } from '@/features/platform/pages/organization-us
 import { AuditLogsPage } from '@/features/platform/pages/audit-logs-page'
 import { PlatformUsersPage } from '@/features/platform/pages/platform-users-page'
 import { PlatformSettingsPage } from '@/features/platform/pages/platform-settings-page'
-import { SupportTicketsPage, SystemHealthPage } from '@/features/platform/pages/platform-stubs'
+import { SupportTicketsPage } from '@/features/platform/pages/support-tickets-page'
+import { SystemHealthPage } from '@/features/platform/pages/system-health-page'
 
 const withPermission = (
   node: React.ReactNode,

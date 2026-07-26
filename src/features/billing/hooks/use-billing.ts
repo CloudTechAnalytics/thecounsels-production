@@ -6,6 +6,13 @@ import type { InvoiceStatus } from '@/shared/types/database.types'
 export function useBillingStats(orgId: string | null) {
   return useQuery({ queryKey: ['billing', orgId, 'stats'], enabled: Boolean(orgId), queryFn: () => billingService.getStats(orgId!) })
 }
+export function usePersonalStats(orgId: string | null, userId: string | null) {
+  return useQuery({
+    queryKey: ['billing', orgId, 'personal-stats', userId],
+    enabled: Boolean(orgId && userId),
+    queryFn: () => billingService.getPersonalStats(orgId!, userId!),
+  })
+}
 export function useUnbilledTime(orgId: string | null) {
   return useQuery({ queryKey: ['billing', orgId, 'time'], enabled: Boolean(orgId), queryFn: () => billingService.listUnbilledTime(orgId!) })
 }

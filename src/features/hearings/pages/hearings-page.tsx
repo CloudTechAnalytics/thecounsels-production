@@ -9,6 +9,7 @@ import { HearingFormDialog } from '@/features/hearings/components/hearing-form-d
 import { HEARING_STATUS_META, type HearingRow } from '@/features/hearings/types'
 import type { HearingFilters } from '@/features/hearings/services/hearings.service'
 import { PageHeader } from '@/shared/components/page-header'
+import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
 import { Input } from '@/shared/components/ui/input'
 import { Button } from '@/shared/components/ui/button'
@@ -111,7 +112,29 @@ export function HearingsPage() {
       <PageHeader
         title="Hearings"
         description="Court dates, mentions, rulings and appearances."
-        actions={canCreate ? <Button onClick={openNew}><Plus /> Schedule hearing</Button> : undefined}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              filename="hearings"
+              disabled={!data?.length}
+              sheets={() => [{
+                name: 'Hearings',
+                rows: (data ?? []).map((h) => ({
+                  Title: h.title,
+                  Matter: h.matter?.matter_number ?? '',
+                  Type: h.type,
+                  Status: HEARING_STATUS_META[h.status].label,
+                  'Date & time': format(new Date(h.hearing_at), 'yyyy-MM-dd HH:mm'),
+                  Court: h.court ?? '',
+                  Judge: h.judge ?? '',
+                  Location: h.location ?? '',
+                  Outcome: h.outcome ?? '',
+                })),
+              }]}
+            />
+            {canCreate && <Button onClick={openNew}><Plus /> Schedule hearing</Button>}
+          </div>
+        }
       />
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">

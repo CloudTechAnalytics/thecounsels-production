@@ -68,6 +68,12 @@ export function TimeEntryDialog({ open, onOpenChange }: { open: boolean; onOpenC
       toast.error('Enter hours and a description')
       return
     }
+    if (billable && (!matterId || matterId === NONE)) {
+      toast.error('Billable time must be linked to a matter', {
+        description: "Pick a matter, or untick 'Billable to client' for internal work.",
+      })
+      return
+    }
     try {
       await add.mutateAsync({
         matterId: matterId === NONE ? '' : matterId,
@@ -92,7 +98,13 @@ export function TimeEntryDialog({ open, onOpenChange }: { open: boolean; onOpenC
           <DialogDescription>Record billable (or non-billable) hours against a matter.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-1.5"><Label>Matter</Label><MatterSelect value={matterId} onChange={setMatterId} /></div>
+          <div className="space-y-1.5">
+            <Label>Matter</Label>
+            <MatterSelect value={matterId} onChange={setMatterId} />
+            {billable && (!matterId || matterId === NONE) && (
+              <p className="text-xs text-warning">Billable time needs a matter so it can reach an invoice.</p>
+            )}
+          </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Hours</Label><Input type="number" step="0.25" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="1.5" /></div>
@@ -130,6 +142,12 @@ export function ExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       toast.error('Enter an amount and a description')
       return
     }
+    if (billable && (!matterId || matterId === NONE)) {
+      toast.error('Billable expenses must be linked to a matter', {
+        description: "Pick a matter, or untick 'Billable to client' for firm overheads.",
+      })
+      return
+    }
     try {
       await add.mutateAsync({
         matterId: matterId === NONE ? '' : matterId,
@@ -154,7 +172,13 @@ export function ExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenCha
           <DialogDescription>Record a disbursement against a matter.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-1.5"><Label>Matter</Label><MatterSelect value={matterId} onChange={setMatterId} /></div>
+          <div className="space-y-1.5">
+            <Label>Matter</Label>
+            <MatterSelect value={matterId} onChange={setMatterId} />
+            {billable && (!matterId || matterId === NONE) && (
+              <p className="text-xs text-warning">Billable expenses need a matter so they can reach an invoice.</p>
+            )}
+          </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Amount (₦)</Label><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>

@@ -1,10 +1,12 @@
 import * as React from 'react'
 import { Banknote, CircleDollarSign, AlertTriangle, Percent, Briefcase, Users } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
+import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useReportData } from '@/features/reports/hooks/use-reports'
 import type { ReportData } from '@/features/reports/services/reports.service'
 import { StatTile } from '@/features/dashboard/components/stat-tile'
 import { PageHeader } from '@/shared/components/page-header'
+import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
@@ -135,16 +137,86 @@ type Tab = (typeof TABS)[number]
 
 export function ReportsPage() {
   const { activeOrgId } = useAuth()
+  const { has } = usePermissions()
+  const canFinancials = has('reports.financial')
+  const visibleTabs = canFinancials ? TABS : TABS.filter((t) => t !== 'Financial')
   const { data, isLoading } = useReportData(activeOrgId)
   const c = useComputed(data)
-  const [tab, setTab] = React.useState<Tab>('Financial')
+  const [tab, setTab] = React.useState<Tab>(canFinancials ? 'Financial' : 'Productivity')
 
   return (
     <div>
-      <PageHeader title="Reports" description="Financial, productivity, matter and client analytics for your firm." />
+      <PageHeader
+        title="Reports"
+        description="Financial, productivity, matter and client analytics for your firm."
+        actions={
+          <ExportButton
+            filename="firm-report"
+            label="Export report"
+            disabled={!c}
+            sheets={() => {
+              if (!c) return []
+              const sheets = []
+              if (canFinancials) {
+                sheets.push(
+                  {
+                    name: 'Financial summary',
+                    rows: [{
+                      Invoiced: c.financial.invoiced,
+                      Collected: c.financial.collected,
+                      Outstanding: c.financial.outstanding,
+                      'Collection rate (%)': c.financial.collectionRate,
+                    }],
+                  },
+                  { name: 'Invoiced by month', rows: c.financial.byMonth.map((r) => ({ Month: r.label, Invoiced: r.value })) },
+                  { name: 'Outstanding by age', rows: c.financial.aging.map((r) => ({ Age: r.label, Outstanding: r.value })) },
+                  {
+                    name: 'Revenue by client',
+                    rows: c.financial.topClients.map((r) => ({ Client: r.name, Invoiced: r.invoiced, Outstanding: r.outstanding })),
+                  },
+                )
+              }
+              sheets.push(
+                {
+                  name: 'Productivity',
+                  rows: c.productivity.map((p) => ({
+                    Lawyer: p.name,
+                    Role: p.role,
+                    'Billable hours': Number(p.billableHours.toFixed(1)),
+                    ...(canFinancials ? { 'Billable value': Math.round(p.billableValue) } : {}),
+                    'Active matters': p.mattersLed,
+                    'Tasks done': p.tasksDone,
+                  })),
+                },
+                { name: 'Matters by status', rows: c.matters.byStatus.map((r) => ({ Status: r.label, Matters: r.value })) },
+                { name: 'Matters by area', rows: c.matters.byArea.map((r) => ({ 'Practice area': r.label, Matters: r.value })) },
+                {
+                  name: 'Clients',
+                  rows: c.clients.rows.map((r) => ({
+                    Client: r.name,
+                    Type: r.type,
+                    Matters: r.matters,
+                    ...(canFinancials ? { Invoiced: r.invoiced, Outstanding: r.outstanding } : {}),
+                  })),
+                },
+              )
+              if (canFinancials) {
+                sheets.push({
+                  name: 'WIP by matter',
+                  rows: c.matters.wipTop.map((w) => ({
+                    Matter: w.matter ? `${w.matter.matter_number ?? ''} ${w.matter.title}`.trim() : '—',
+                    'Unbilled value': Math.round(w.value),
+                  })),
+                })
+              }
+              return sheets
+            }}
+          />
+        }
+      />
 
       <div className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
-        {TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -199,7 +271,8 @@ export function ReportsPage() {
             <Table>
               <TableHeader><TableRow>
                 <TableHead>Lawyer</TableHead><TableHead className="text-right">Billable hrs</TableHead>
-                <TableHead className="text-right">Billable value</TableHead><TableHead className="text-right">Active matters</TableHead><TableHead className="text-right">Tasks done</TableHead>
+                {canFinancials && <TableHead className="text-right">Billable value</TableHead>}
+                <TableHead className="text-right">Active matters</TableHead><TableHead className="text-right">Tasks done</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {c.productivity.map((p) => (
@@ -209,7 +282,7 @@ export function ReportsPage() {
                       <div><p className="text-sm font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{p.role}</p></div>
                     </div></TableCell>
                     <TableCell className="text-right text-sm">{p.billableHours.toFixed(1)}</TableCell>
-                    <TableCell className="text-right text-sm font-medium">{formatNaira(Math.round(p.billableValue))}</TableCell>
+                    {canFinancials && <TableCell className="text-right text-sm font-medium">{formatNaira(Math.round(p.billableValue))}</TableCell>}
                     <TableCell className="text-right text-sm">{p.mattersLed}</TableCell>
                     <TableCell className="text-right text-sm">{p.tasksDone}</TableCell>
                   </TableRow>
@@ -228,7 +301,7 @@ export function ReportsPage() {
             <Card className="p-6"><h2 className="mb-4 text-sm font-semibold">By status</h2>{c.matters.byStatus.length ? <DistributionBars data={c.matters.byStatus} /> : <p className="py-8 text-center text-sm text-muted-foreground">No matters yet.</p>}</Card>
             <Card className="p-6"><h2 className="mb-4 text-sm font-semibold">By practice area</h2>{c.matters.byArea.length ? <DistributionBars data={c.matters.byArea} /> : <p className="py-8 text-center text-sm text-muted-foreground">No matters yet.</p>}</Card>
           </div>
-          <Card className="overflow-hidden">
+          {canFinancials && <Card className="overflow-hidden">
             <div className="border-b border-border px-5 py-3.5"><h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Work in progress (unbilled)</h2></div>
             {c.matters.wipTop.length > 0 ? (
               <Table>
@@ -241,7 +314,7 @@ export function ReportsPage() {
                 </TableBody>
               </Table>
             ) : <p className="px-6 py-10 text-center text-sm text-muted-foreground">No unbilled work.</p>}
-          </Card>
+          </Card>}
         </div>
       ) : (
         <div className="space-y-6">
@@ -254,7 +327,7 @@ export function ReportsPage() {
             <Table>
               <TableHeader><TableRow>
                 <TableHead>Client</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Matters</TableHead>
-                <TableHead className="text-right">Invoiced</TableHead><TableHead className="text-right">Outstanding</TableHead>
+                {canFinancials && <><TableHead className="text-right">Invoiced</TableHead><TableHead className="text-right">Outstanding</TableHead></>}
               </TableRow></TableHeader>
               <TableBody>
                 {c.clients.rows.map((r) => (
@@ -262,8 +335,10 @@ export function ReportsPage() {
                     <TableCell className="text-sm font-medium">{r.name}</TableCell>
                     <TableCell className="text-sm capitalize text-muted-foreground">{r.type}</TableCell>
                     <TableCell className="text-right text-sm">{r.matters}</TableCell>
-                    <TableCell className="text-right text-sm">{formatNaira(r.invoiced)}</TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">{formatNaira(r.outstanding)}</TableCell>
+                    {canFinancials && <>
+                      <TableCell className="text-right text-sm">{formatNaira(r.invoiced)}</TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground">{formatNaira(r.outstanding)}</TableCell>
+                    </>}
                   </TableRow>
                 ))}
               </TableBody>

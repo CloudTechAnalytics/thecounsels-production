@@ -40,7 +40,7 @@ export interface ReportData {
   timeEntries: ReportTime[]
   expenses: ReportExpense[]
   matters: ReportMatter[]
-  tasks: { status: string; assignee_id: string | null }[]
+  tasks: { status: string; assignee_id: string | null; due_date: string | null }[]
   clients: { id: string; display_name: string; type: string }[]
   members: MemberWithRelations[]
 }
@@ -52,7 +52,7 @@ export const reportsService = {
       supabase.from('time_entries').select('minutes,rate,billable,invoiced,user_id,matter_id').eq('organization_id', orgId),
       supabase.from('expenses').select('amount,billable,invoiced,matter_id').eq('organization_id', orgId),
       supabase.from('matters').select('id,status,practice_area,lead_lawyer_id,client_id,title,matter_number,opened_on').eq('organization_id', orgId),
-      supabase.from('tasks').select('status,assignee_id').eq('organization_id', orgId),
+      supabase.from('tasks').select('status,assignee_id,due_date').eq('organization_id', orgId),
       supabase.from('clients').select('id,display_name,type').eq('organization_id', orgId),
       administrationService.listMembers(orgId),
     ])
@@ -64,7 +64,7 @@ export const reportsService = {
       timeEntries: (timeEntries.data ?? []) as unknown as ReportTime[],
       expenses: (expenses.data ?? []) as unknown as ReportExpense[],
       matters: (matters.data ?? []) as unknown as ReportMatter[],
-      tasks: (tasks.data ?? []) as unknown as { status: string; assignee_id: string | null }[],
+      tasks: (tasks.data ?? []) as unknown as { status: string; assignee_id: string | null; due_date: string | null }[],
       clients: (clients.data ?? []) as unknown as { id: string; display_name: string; type: string }[],
       members,
     }

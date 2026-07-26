@@ -27,6 +27,14 @@ export interface BillingStats {
   revenueMTD: number
 }
 
+/** A single member's own numbers — shown to users without `reports.financial`. */
+export interface PersonalStats {
+  billableHoursMTD: number
+  unbilledValue: number
+  expensesMTD: number
+  openTasks: number
+}
+
 export const INVOICE_STATUS_META: Record<string, { label: string; variant: BadgeProps['variant'] }> = {
   draft: { label: 'Draft', variant: 'muted' },
   sent: { label: 'Sent', variant: 'warning' },

@@ -8,6 +8,7 @@ import { useStaffProfiles } from '@/features/staff/hooks/use-staff'
 import { StaffProfileDialog } from '@/features/staff/components/staff-profile-dialog'
 import { AVAILABILITY_META, type StaffMember } from '@/features/staff/types'
 import { PageHeader } from '@/shared/components/page-header'
+import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
 import { Input } from '@/shared/components/ui/input'
 import { Badge } from '@/shared/components/ui/badge'
@@ -52,7 +53,30 @@ export function StaffPage() {
 
   return (
     <div>
-      <PageHeader title="Lawyers & Staff" description="Your firm's team, qualifications and workload." />
+      <PageHeader
+        title="Lawyers & Staff"
+        description="Your firm's team, qualifications and workload."
+        actions={
+          <ExportButton
+            filename="lawyers-staff"
+            disabled={roster.length === 0}
+            sheets={() => [{
+              name: 'Team',
+              rows: roster.map((s) => ({
+                Name: s.member.profile?.full_name ?? '',
+                Email: s.member.profile?.email ?? '',
+                Role: s.member.role?.name ?? '',
+                Title: s.member.title ?? '',
+                'Bar number': s.profile?.bar_number ?? '',
+                'Year admitted': s.profile?.year_admitted ?? '',
+                Specializations: (s.profile?.specializations ?? []).join(', '),
+                Availability: AVAILABILITY_META[s.profile?.availability ?? 'available']?.label ?? '',
+                'Active matters': s.activeMatters,
+              })),
+            }]}
+          />
+        }
+      />
 
       <div className="mb-4 max-w-md">
         <div className="relative">

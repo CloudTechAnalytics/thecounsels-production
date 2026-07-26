@@ -46,6 +46,14 @@ export function LoginPage() {
     <AuthShell
       title="Welcome back"
       subtitle="Sign in to your firm's workspace to continue."
+      back={
+        <Link
+          to="/welcome"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to home
+        </Link>
+      }
       footer={
         <p>
           Trouble signing in?{' '}
@@ -128,15 +136,6 @@ export function LoginPage() {
       <p className="mt-6 text-center text-xs text-muted-foreground">
         Access is provisioned by your firm administrator. There is no public sign-up.
       </p>
-
-      <div className="mt-4 text-center">
-        <Link
-          to="/welcome"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to home
-        </Link>
-      </div>
     </AuthShell>
   )
 }

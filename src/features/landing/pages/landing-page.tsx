@@ -17,6 +17,10 @@ import { Button } from '@/shared/components/ui/button'
 import { APP } from '@/shared/config/env'
 import { cn } from '@/shared/lib/utils'
 
+const CONTACT_EMAIL = 'cloudtechanalytics.consultant@gmail.com'
+const CONTACT_PHONE_DISPLAY = '+234 813 386 0143'
+const CONTACT_PHONE_TEL = '+2348133860143'
+
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 28 },
   show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
@@ -202,7 +206,7 @@ export function LandingPage() {
             </span>
             <div className="leading-tight">
               <p className="font-display text-lg font-semibold text-white">{APP.product}</p>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">by {APP.brand}</p>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">{APP.brand}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -270,7 +274,7 @@ export function LandingPage() {
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
-                <a href="mailto:sales@cloudtech.legal?subject=The Counsel — demo request">Request a demo</a>
+                <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Request a demo</a>
               </Button>
             </motion.div>
             <motion.p variants={fadeUp} className="mt-6 text-xs text-white/35">
@@ -395,7 +399,7 @@ export function LandingPage() {
                 ))}
               </ul>
               <Button asChild className="mt-7" variant={p.highlight ? 'default' : 'outline'}>
-                <a href={`mailto:sales@cloudtech.legal?subject=The Counsel — ${p.name} plan`}>Contact sales</a>
+                <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — ${p.name} plan`}>Contact sales</a>
               </Button>
             </motion.div>
           ))}
@@ -424,7 +428,7 @@ export function LandingPage() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
-              <a href="mailto:sales@cloudtech.legal?subject=The Counsel — demo request">Talk to our team</a>
+              <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Talk to our team</a>
             </Button>
           </motion.div>
         </Reveal>
@@ -433,16 +437,26 @@ export function LandingPage() {
       {/* ── Footer ──────────────────────────────────────────── */}
       <footer className="border-t border-white/10 bg-sidebar py-10 text-white">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <Scale className="h-4 w-4" />
             </span>
-            <span className="font-display font-semibold">{APP.product}</span>
-            <span className="text-xs text-white/40">· {APP.brand}</span>
+            <div className="leading-tight">
+              <p className="font-display font-semibold">{APP.product}</p>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">{APP.brand}</p>
+            </div>
           </div>
-          <p className="text-xs text-white/40">
-            © {year} {APP.brand}. All rights reserved.
-          </p>
+          <div className="flex flex-col items-center gap-1 text-xs text-white/50 sm:items-end">
+            <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors hover:text-primary">
+              {CONTACT_EMAIL}
+            </a>
+            <a href={`tel:${CONTACT_PHONE_TEL}`} className="transition-colors hover:text-primary">
+              {CONTACT_PHONE_DISPLAY}
+            </a>
+            <p className="text-white/40">
+              © {year} {APP.brand}. All rights reserved.
+            </p>
+          </div>
         </div>
       </footer>
     </div>

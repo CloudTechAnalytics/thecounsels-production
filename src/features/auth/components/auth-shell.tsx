@@ -9,11 +9,14 @@ export function AuthShell({
   subtitle,
   children,
   footer,
+  back,
 }: {
   title: string
   subtitle?: string
   children: ReactNode
   footer?: ReactNode
+  /** Optional link rendered top-left above the title (e.g. back to landing). */
+  back?: ReactNode
 }) {
   return (
     <div className="grid min-h-full lg:grid-cols-[1.05fr_1fr]">
@@ -83,6 +86,8 @@ export function AuthShell({
               <p className="text-xs text-muted-foreground">{APP.brand}</p>
             </div>
           </div>
+
+          {back && <div className="mb-6">{back}</div>}
 
           <h1 className="font-display text-3xl font-semibold tracking-tight">{title}</h1>
           {subtitle && <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>}

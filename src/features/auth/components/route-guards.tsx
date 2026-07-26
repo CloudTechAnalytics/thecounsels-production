@@ -12,6 +12,9 @@ export function RequireAuth() {
 
   if (status === 'loading') return <LoadingScreen />
   if (status === 'unauthenticated') {
+    // Fresh visitors to the root see the marketing page; deep links go
+    // straight to login so they return to what they were sent.
+    if (location.pathname === '/') return <Navigate to="/welcome" replace />
     return <Navigate to="/auth/login" replace state={{ from: location.pathname + location.search }} />
   }
   return <Outlet />

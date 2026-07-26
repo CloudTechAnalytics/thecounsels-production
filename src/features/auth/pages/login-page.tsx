@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import { AuthShell } from '@/features/auth/components/auth-shell'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { loginSchema, type LoginValues } from '@/features/auth/schemas'
@@ -128,6 +128,15 @@ export function LoginPage() {
       <p className="mt-6 text-center text-xs text-muted-foreground">
         Access is provisioned by your firm administrator. There is no public sign-up.
       </p>
+
+      <div className="mt-4 text-center">
+        <Link
+          to="/welcome"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to home
+        </Link>
+      </div>
     </AuthShell>
   )
 }

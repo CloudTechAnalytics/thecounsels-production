@@ -8,6 +8,7 @@ import {
   RequirePlatform,
   RequireOrganization,
 } from '@/features/auth/components/route-guards'
+import { LandingPage } from '@/features/landing/pages/landing-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { ForgotPasswordPage } from '@/features/auth/pages/forgot-password-page'
 import { ResetPasswordPage } from '@/features/auth/pages/reset-password-page'
@@ -55,6 +56,8 @@ const withPermission = (
 )
 
 export const router = createBrowserRouter([
+  // Public marketing page; unauthenticated visitors to '/' land here.
+  { path: '/welcome', element: <LandingPage /> },
   {
     path: '/auth',
     children: [

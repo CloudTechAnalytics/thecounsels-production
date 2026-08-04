@@ -31,6 +31,8 @@ export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'void'
 export type TimeEntryStatus = 'draft' | 'submitted' | 'approved' | 'invoiced' | 'paid'
 export type TicketStatus = 'open' | 'in_progress' | 'waiting' | 'resolved' | 'closed'
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
+export type NotificationPriority = 'info' | 'reminder' | 'warning' | 'urgent'
+export type NotificationCategory = 'matters' | 'clients' | 'hearings' | 'billing' | 'tasks' | 'documents' | 'notes'
 export type RoleKey =
   | 'platform_owner'
   | 'platform_admin'
@@ -1046,6 +1048,70 @@ export interface Database {
           },
         ]
       }
+      notifications: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          actor_id: string | null
+          category: NotificationCategory
+          action: string
+          entity_type: string | null
+          entity_id: string | null
+          title: string
+          priority: NotificationPriority
+          is_read: boolean
+          read_at: string | null
+          is_archived: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          actor_id?: string | null
+          category: NotificationCategory
+          action: string
+          entity_type?: string | null
+          entity_id?: string | null
+          title: string
+          priority?: NotificationPriority
+          is_read?: boolean
+          read_at?: string | null
+          is_archived?: boolean
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['notifications']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'notifications_actor_id_fkey'
+            columns: ['actor_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          user_id: string
+          in_app_enabled: boolean
+          browser_enabled: boolean
+          email_enabled: boolean
+          sms_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          in_app_enabled?: boolean
+          browser_enabled?: boolean
+          email_enabled?: boolean
+          sms_enabled?: boolean
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['notification_preferences']['Insert']>
+        Relationships: []
+      }
     }
     Views: { [_ in never]: never }
     Functions: {
@@ -1100,6 +1166,21 @@ export interface Database {
       }
       end_support_session: { Args: { p_id: string }; Returns: undefined }
       set_platform_access: { Args: { p_user: string; p_role: string; p_is_admin: boolean }; Returns: undefined }
+      notify_user: {
+        Args: {
+          p_org: string
+          p_user: string
+          p_actor: string | null
+          p_category: NotificationCategory
+          p_action: string
+          p_entity_type?: string | null
+          p_entity_id?: string | null
+          p_title: string
+          p_priority?: NotificationPriority
+        }
+        Returns: Database['public']['Tables']['notifications']['Row']
+      }
+      mark_all_notifications_read: { Args: { p_org: string }; Returns: undefined }
     }
     Enums: {
       org_status: OrgStatus
@@ -1138,3 +1219,5 @@ export type Invoice = Database['public']['Tables']['invoices']['Row']
 export type InvoiceItem = Database['public']['Tables']['invoice_items']['Row']
 export type Payment = Database['public']['Tables']['payments']['Row']
 export type DocumentRow = Database['public']['Tables']['documents']['Row']
+export type NotificationRow = Database['public']['Tables']['notifications']['Row']
+export type NotificationPreferences = Database['public']['Tables']['notification_preferences']['Row']

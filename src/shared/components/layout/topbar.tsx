@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Bell, Check, LogOut, Menu, Settings, UserCircle } from 'lucide-react'
+import { Check, LogOut, Menu, Settings, UserCircle } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { ROLE_META } from '@/shared/lib/permissions'
 import { initialsOf } from '@/shared/lib/format'
@@ -7,6 +7,7 @@ import { Button } from '@/shared/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar'
 import { Badge } from '@/shared/components/ui/badge'
 import { GlobalSearch } from '@/shared/components/layout/global-search'
+import { NotificationBell } from '@/features/notifications/components/notification-bell'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,15 +33,7 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
       <GlobalSearch />
 
       <div className="ml-auto flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative"
-          aria-label="Notifications"
-          onClick={() => navigate('/notifications')}
-        >
-          <Bell className="h-5 w-5" />
-        </Button>
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

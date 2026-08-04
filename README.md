@@ -49,7 +49,7 @@ src/
   shared/         # ui primitives, components, hooks, lib, types
 supabase/
   migrations/     # ordered SQL: schema, RLS, functions, triggers, seed
-  functions/      # Edge Functions (admin-create-user)
+  functions/      # Edge Functions (admin-create-user, hard-delete-organization)
 ```
 
 ### Multi-tenancy & security
@@ -65,6 +65,7 @@ supabase/
 - Platform Admins create **organizations** and each firm's first **admin**.
 - Firm admins create their own **users** (lawyers, staff) from Firm Settings.
 - Admin-created accounts are provisioned through the `admin-create-user` **Edge Function** (service role), so passwords never touch the browser.
+- Permanently deleting a trashed organization goes through the `hard-delete-organization` **Edge Function**, which purges the login accounts of members who exist only for that firm via the Auth Admin API before removing the organization row — `auth.users` isn't reachable from a plain SQL function.
 
 ---
 

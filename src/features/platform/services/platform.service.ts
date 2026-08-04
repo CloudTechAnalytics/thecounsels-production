@@ -1,5 +1,6 @@
 import { supabase } from '@/shared/lib/supabase'
 import { adminUsersService } from '@/shared/services/admin-users.service'
+import { invokeEdgeFunction } from '@/shared/lib/edge-function'
 import type {
   AuditLog,
   BillingCycle,
@@ -138,9 +139,14 @@ export const platformService = {
     if (error) throw error
   },
 
-  async hardDeleteOrganization(id: string): Promise<void> {
-    const { error } = await supabase.rpc('hard_delete_organization', { p_org: id })
-    if (error) throw error
+  /**
+   * Permanently removes an already-trashed organization via the
+   * hard-delete-organization Edge Function — not a direct RPC. Purging the
+   * login accounts of members who exist only for this org requires the Auth
+   * Admin API (service role), which the SQL RPC alone can't reach.
+   */
+  async hardDeleteOrganization(id: string): Promise<{ purgedAccounts: number; warning?: string }> {
+    return invokeEdgeFunction('hard-delete-organization', { organizationId: id })
   },
 
   async updateOrganization(

@@ -183,8 +183,12 @@ function TrashRowActions({ org }: { org: OrgRow }) {
         }
         onConfirm={async () => {
           try {
-            await hardDelete.mutateAsync(org.id)
-            toast.success('Organization permanently deleted')
+            const result = await hardDelete.mutateAsync(org.id)
+            if (result.warning) {
+              toast.warning('Organization deleted', { description: result.warning })
+            } else {
+              toast.success('Organization permanently deleted')
+            }
             setConfirm(false)
           } catch (err) {
             toast.error('Delete failed', { description: err instanceof Error ? err.message : undefined })

@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { OrganizationLayout } from '@/shared/components/layout/organization-layout'
 import { PlatformLayout } from '@/shared/components/layout/platform-layout'
+import { useAuth } from '@/features/auth/context/auth-provider'
 import {
   RequireAuth,
   RedirectIfAuthenticated,
@@ -57,6 +58,21 @@ const withPermission = (
   </RequirePermission>
 )
 
+/**
+ * Personal account settings (profile, password, theme, notifications,
+ * sessions) apply to every signed-in user — platform staff included — so
+ * this route sits outside both RequirePlatform and RequireOrganization
+ * rather than living inside the firm workspace, which a pure platform admin
+ * (no active org, not in Support Mode) never enters. It borrows whichever
+ * shell fits: PlatformLayout renders fine standalone; OrganizationLayout
+ * needs an active org to render its own children instead of a "no
+ * workspace" state, which support mode / firm membership both provide.
+ */
+function SettingsLayout() {
+  const { isPlatformAdmin, supportOrgId } = useAuth()
+  return isPlatformAdmin && !supportOrgId ? <PlatformLayout /> : <OrganizationLayout />
+}
+
 export const router = createBrowserRouter([
   // Public marketing page; unauthenticated visitors to '/' land here.
   { path: '/welcome', element: <LandingPage /> },
@@ -80,6 +96,14 @@ export const router = createBrowserRouter([
       {
         element: <RequirePasswordChange />,
         children: [
+          // Personal account settings — reachable by any authenticated user,
+          // platform admin or firm member, regardless of org membership.
+          {
+            path: '/settings',
+            element: <SettingsLayout />,
+            children: [{ index: true, element: <SettingsPage /> }],
+          },
+
           // ── CloudTech Platform console ──────────────────────────────
           {
             path: '/platform',
@@ -130,7 +154,6 @@ export const router = createBrowserRouter([
                     path: 'administration',
                     element: withPermission(<AdministrationPage />, ['organization.view', 'members.view'], 'any'),
                   },
-                  { path: 'settings', element: <SettingsPage /> },
                 ],
               },
             ],

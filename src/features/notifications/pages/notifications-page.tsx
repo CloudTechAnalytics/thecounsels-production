@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { formatDistanceToNow, format, isPast, isToday } from 'date-fns'
 import { BellRing, Activity, Gavel, CheckSquare } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
+import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useLiveActivity } from '@/features/notifications/hooks/use-live-activity'
 import { useHearings } from '@/features/hearings/hooks/use-hearings'
 import { useTasks } from '@/features/tasks/hooks/use-tasks'
@@ -23,7 +24,11 @@ interface Reminder {
 
 export function NotificationsPage() {
   const { activeOrgId, profile } = useAuth()
+  const { has, isPlatformAdmin } = usePermissions()
   const { data: activity, isLoading, live } = useLiveActivity(activeOrgId)
+  // Row-level security scopes this feed to the whole firm for admins/audit.read
+  // holders, and to just the signed-in user's own actions for everyone else.
+  const seesFirmWide = isPlatformAdmin || has('audit.read')
 
   // Stable 14-day window: recomputing `new Date()` each render would change the
   // query key every render and the hearings query would never settle.
@@ -62,7 +67,14 @@ export function NotificationsPage() {
 
   return (
     <div>
-      <PageHeader title="Notifications" description="Reminders and a live feed of everything happening at your firm." />
+      <PageHeader
+        title="Notifications"
+        description={
+          seesFirmWide
+            ? 'Reminders and a live feed of everything happening at your firm.'
+            : 'Reminders and a live feed of your own activity.'
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Reminders — actionable, populated as hearings & tasks land */}
@@ -110,7 +122,7 @@ export function NotificationsPage() {
         <Card className="lg:col-span-3">
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="flex items-center gap-2 text-lg">
-              Activity
+              {seesFirmWide ? 'Activity' : 'Your activity'}
               <span className="inline-flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
                 <span className={`h-2 w-2 rounded-full ${live ? 'animate-pulse bg-success' : 'bg-muted-foreground/40'}`} />
                 {live ? 'Live' : 'Connecting…'}
@@ -154,7 +166,9 @@ export function NotificationsPage() {
               <div className="py-10 text-center">
                 <p className="text-sm font-medium">No activity yet</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Actions across your firm will appear here in real time as your team gets to work.
+                  {seesFirmWide
+                    ? 'Actions across your firm will appear here in real time as your team gets to work.'
+                    : 'Your actions will appear here in real time as you get to work.'}
                 </p>
               </div>
             )}

@@ -124,6 +124,7 @@ export const platformService = {
       p_entity_type: 'organization',
       p_entity_id: id,
       p_summary: `Organization status set to ${status}`,
+      p_platform: true,
     })
   },
 
@@ -161,6 +162,7 @@ export const platformService = {
       p_entity_type: 'organization',
       p_entity_id: id,
       p_summary: 'Organization details updated',
+      p_platform: true,
     })
   },
 
@@ -226,6 +228,7 @@ export const platformService = {
         organizationId: organization.id,
         roleKey: 'managing_partner',
         title: 'Managing Partner',
+        platformSeed: true,
       })
     } catch (adminErr) {
       try {
@@ -488,6 +491,7 @@ export const platformService = {
       p_entity_type: 'subscription',
       p_entity_id: id,
       p_summary: `Subscription ${action}`,
+      p_platform: true,
     })
   },
 }

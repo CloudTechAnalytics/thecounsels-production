@@ -7,6 +7,8 @@ export interface CreateUserInput {
   organizationId: string
   roleKey: string
   title?: string
+  /** True only when a Platform Admin is seating an org's first admin as part of creating the organization. */
+  platformSeed?: boolean
 }
 
 /**

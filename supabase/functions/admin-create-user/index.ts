@@ -23,6 +23,10 @@ interface Payload {
   organizationId?: string
   roleKey?: string
   title?: string
+  // True only when a Platform Admin is seating an org's first admin as part
+  // of creating the organization — keeps that entry out of the org's own
+  // audit view (it's a platform action, not something the firm did).
+  platformSeed?: boolean
   // Platform staff creation (no organization):
   platform?: boolean
   platformRole?: string
@@ -53,7 +57,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Invalid JSON body' }, 400)
   }
 
-  const { email, password, fullName, organizationId, roleKey, title, platform, platformRole } = body
+  const { email, password, fullName, organizationId, roleKey, title, platform, platformRole, platformSeed } = body
   if (!email || !password || !fullName) {
     return json({ error: 'email, password and fullName are required' }, 400)
   }
@@ -162,6 +166,7 @@ Deno.serve(async (req: Request) => {
     p_action: 'user.created',
     p_entity_type: 'membership',
     p_summary: `Created ${email} as ${role!.key}`,
+    p_platform: platformSeed === true,
   })
 
   return json({ userId, email }, 201)

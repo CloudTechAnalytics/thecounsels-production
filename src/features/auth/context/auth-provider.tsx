@@ -4,6 +4,7 @@ import { PERMISSION_KEYS, type PermissionKey } from '@/shared/lib/permissions'
 import { authService } from '@/features/auth/services/auth.service'
 import type { ActiveMembership, AuthContextValue, AuthState } from '@/features/auth/types'
 import type { Organization } from '@/shared/types/database.types'
+import { toast } from '@/shared/components/ui/sonner'
 
 const ACTIVE_ORG_KEY = 'counsel.active_org'
 const SUPPORT_KEY = 'counsel.support_org'
@@ -80,63 +81,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // flash a loading screen over an active session.
     setState((prev) => (prev.status === 'authenticated' ? prev : { ...prev, status: 'loading' }))
 
-    const [profile, memberships] = await Promise.all([
-      authService.getProfile(userId),
-      authService.getMemberships(userId),
-    ])
+    try {
+      const [profile, memberships] = await Promise.all([
+        authService.getProfile(userId),
+        authService.getMemberships(userId),
+      ])
 
-    const isPlatformAdmin = Boolean(profile?.is_platform_admin)
+      const isPlatformAdmin = Boolean(profile?.is_platform_admin)
 
-    // Support Mode: a platform admin operating inside a firm's workspace.
-    const supportOrgId = isPlatformAdmin ? sessionStorage.getItem(SUPPORT_KEY) : null
-    if (supportOrgId) {
-      const { data: org } = await supabase.from('organizations').select('*').eq('id', supportOrgId).single()
-      if (org) {
-        setState({
-          userId,
-          profile,
-          memberships,
-          activeOrgId: supportOrgId,
-          activeMembership: supportMembership(userId, org as Organization),
-          permissions: new Set(PERMISSION_KEYS),
-          isPlatformAdmin,
-          supportOrgId,
-          status: 'authenticated',
-        })
-        void authService.touchLastSeen(userId)
-        return
+      // Support Mode: a platform admin operating inside a firm's workspace.
+      const supportOrgId = isPlatformAdmin ? sessionStorage.getItem(SUPPORT_KEY) : null
+      if (supportOrgId) {
+        const { data: org } = await supabase.from('organizations').select('*').eq('id', supportOrgId).single()
+        if (org) {
+          setState({
+            userId,
+            profile,
+            memberships,
+            activeOrgId: supportOrgId,
+            activeMembership: supportMembership(userId, org as Organization),
+            permissions: new Set(PERMISSION_KEYS),
+            isPlatformAdmin,
+            supportOrgId,
+            status: 'authenticated',
+          })
+          void authService.touchLastSeen(userId)
+          return
+        }
+        sessionStorage.removeItem(SUPPORT_KEY) // org vanished — drop support mode
       }
-      sessionStorage.removeItem(SUPPORT_KEY) // org vanished — drop support mode
+
+      const stored = localStorage.getItem(ACTIVE_ORG_KEY)
+      const activeOrgId = pickActiveOrg(memberships, stored, profile?.default_organization_id ?? null)
+      const activeMembership = memberships.find((m) => m.organization_id === activeOrgId) ?? null
+
+      let permissions: Set<PermissionKey>
+      if (isPlatformAdmin) {
+        permissions = new Set(PERMISSION_KEYS)
+      } else if (activeMembership) {
+        permissions = new Set(await authService.getPermissionKeys(activeMembership.role_id))
+      } else {
+        permissions = new Set<PermissionKey>()
+      }
+
+      if (activeOrgId) localStorage.setItem(ACTIVE_ORG_KEY, activeOrgId)
+
+      setState({
+        userId,
+        profile,
+        memberships,
+        activeOrgId,
+        activeMembership,
+        permissions,
+        isPlatformAdmin,
+        supportOrgId: null,
+        status: 'authenticated',
+      })
+
+      void authService.touchLastSeen(userId)
+    } catch (error) {
+      // A failed fetch here must never leave status stuck at 'loading' forever —
+      // surface it and fall back to signed-out so the app is usable again.
+      console.error('Failed to load session profile/memberships:', error)
+      toast.error('Could not load your workspace', {
+        description: error instanceof Error ? error.message : 'Please try signing in again.',
+      })
+      setState({ ...initialState, status: 'unauthenticated' })
     }
-
-    const stored = localStorage.getItem(ACTIVE_ORG_KEY)
-    const activeOrgId = pickActiveOrg(memberships, stored, profile?.default_organization_id ?? null)
-    const activeMembership = memberships.find((m) => m.organization_id === activeOrgId) ?? null
-
-    let permissions: Set<PermissionKey>
-    if (isPlatformAdmin) {
-      permissions = new Set(PERMISSION_KEYS)
-    } else if (activeMembership) {
-      permissions = new Set(await authService.getPermissionKeys(activeMembership.role_id))
-    } else {
-      permissions = new Set<PermissionKey>()
-    }
-
-    if (activeOrgId) localStorage.setItem(ACTIVE_ORG_KEY, activeOrgId)
-
-    setState({
-      userId,
-      profile,
-      memberships,
-      activeOrgId,
-      activeMembership,
-      permissions,
-      isPlatformAdmin,
-      supportOrgId: null,
-      status: 'authenticated',
-    })
-
-    void authService.touchLastSeen(userId)
   }, [])
 
   React.useEffect(() => {

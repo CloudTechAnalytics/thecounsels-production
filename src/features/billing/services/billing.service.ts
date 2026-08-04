@@ -1,40 +1,142 @@
 import { supabase } from '@/shared/lib/supabase'
-import type { InvoiceStatus } from '@/shared/types/database.types'
+import type { InvoiceStatus, TimeEntryStatus } from '@/shared/types/database.types'
 import { timeAmount, type BillingStats, type ExpenseRow, type InvoiceDetail, type InvoiceRow, type PersonalStats, type TimeEntryRow } from '@/features/billing/types'
 import type { ExpenseFormValues, GenerateInvoiceFormValues, PaymentFormValues, TimeEntryFormValues } from '@/features/billing/schemas'
 
-const TIME_SELECT = '*, matter:matters(id, title, matter_number), user:profiles!time_entries_user_id_fkey(id, full_name)'
+const TIME_SELECT =
+  '*, matter:matters(id, title, matter_number), user:profiles!time_entries_user_id_fkey(id, full_name), created_by_profile:profiles!time_entries_created_by_fkey(id, full_name), updated_by_profile:profiles!time_entries_updated_by_fkey(id, full_name)'
 const EXP_SELECT = '*, matter:matters(id, title, matter_number), user:profiles!expenses_user_id_fkey(id, full_name)'
 const INV_SELECT = '*, client:clients(id, display_name), matter:matters(id, matter_number)'
 
+export interface TimeEntryFilters {
+  search?: string
+  status?: TimeEntryStatus | 'all'
+  matterId?: string | 'all'
+  clientId?: string | 'all'
+  billable?: 'all' | 'yes' | 'no'
+  dateFrom?: string
+  dateTo?: string
+}
+export interface TimeEntryPage {
+  rows: TimeEntryRow[]
+  total: number
+}
+export const TIME_ENTRIES_PAGE_SIZE = 25
+
 export const billingService = {
   // Time entries --------------------------------------------------------------
-  async listUnbilledTime(organizationId: string): Promise<TimeEntryRow[]> {
-    const { data, error } = await supabase
+  async listTimeEntries(
+    organizationId: string,
+    filters: TimeEntryFilters = {},
+    pagination?: { page: number; pageSize: number },
+  ): Promise<TimeEntryPage> {
+    // client isn't a direct column on time_entries — resolve via its matters first.
+    let matterIds: string[] | null = null
+    if (filters.clientId && filters.clientId !== 'all') {
+      const { data, error } = await supabase
+        .from('matters')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('client_id', filters.clientId)
+      if (error) throw error
+      matterIds = (data ?? []).map((m) => m.id)
+      if (matterIds.length === 0) return { rows: [], total: 0 }
+    }
+
+    let q = supabase
       .from('time_entries')
-      .select(TIME_SELECT)
+      .select(TIME_SELECT, { count: 'exact' })
       .eq('organization_id', organizationId)
-      .eq('invoiced', false)
       .order('work_date', { ascending: false })
+    if (filters.status && filters.status !== 'all') q = q.eq('status', filters.status)
+    if (filters.matterId && filters.matterId !== 'all') q = q.eq('matter_id', filters.matterId)
+    if (matterIds) q = q.in('matter_id', matterIds)
+    if (filters.billable === 'yes') q = q.eq('billable', true)
+    else if (filters.billable === 'no') q = q.eq('billable', false)
+    if (filters.dateFrom) q = q.gte('work_date', filters.dateFrom)
+    if (filters.dateTo) q = q.lte('work_date', filters.dateTo)
+    if (filters.search?.trim()) q = q.ilike('description', `%${filters.search.trim()}%`)
+
+    if (pagination) {
+      const from = (pagination.page - 1) * pagination.pageSize
+      q = q.range(from, from + pagination.pageSize - 1)
+    } else {
+      // Export path: fetch the full filtered set, capped well above realistic firm volume.
+      q = q.range(0, 9999)
+    }
+
+    const { data, error, count } = await q
     if (error) throw error
-    return (data ?? []) as unknown as TimeEntryRow[]
+    return { rows: (data ?? []) as unknown as TimeEntryRow[], total: count ?? 0 }
   },
   async addTimeEntry(organizationId: string, v: TimeEntryFormValues, userId: string | null): Promise<void> {
-    const { error } = await supabase.from('time_entries').insert({
-      organization_id: organizationId,
-      matter_id: v.matterId || null,
-      user_id: userId,
-      work_date: v.workDate,
-      minutes: Math.round(v.hours * 60),
-      rate: v.rate,
-      description: v.description.trim(),
-      billable: v.billable,
-    })
+    const { data, error } = await supabase
+      .from('time_entries')
+      .insert({
+        organization_id: organizationId,
+        matter_id: v.matterId || null,
+        user_id: userId,
+        work_date: v.workDate,
+        minutes: Math.round(v.hours * 60),
+        rate: v.rate,
+        description: v.description.trim(),
+        billable: v.billable,
+        status: v.status,
+      })
+      .select('id')
+      .single()
     if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'time_entry.created',
+      p_entity_type: 'time_entry',
+      p_entity_id: data.id,
+      p_summary: `Logged time: ${v.description.trim()}`,
+    })
   },
-  async deleteTimeEntry(id: string): Promise<void> {
+  async updateTimeEntry(id: string, organizationId: string, v: TimeEntryFormValues): Promise<void> {
+    const { error } = await supabase
+      .from('time_entries')
+      .update({
+        matter_id: v.matterId || null,
+        work_date: v.workDate,
+        minutes: Math.round(v.hours * 60),
+        rate: v.rate,
+        description: v.description.trim(),
+        billable: v.billable,
+        status: v.status,
+      })
+      .eq('id', id)
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'time_entry.updated',
+      p_entity_type: 'time_entry',
+      p_entity_id: id,
+      p_summary: `Updated time entry: ${v.description.trim()}`,
+    })
+  },
+  async reopenTimeEntry(id: string, organizationId: string): Promise<void> {
+    const { error } = await supabase.from('time_entries').update({ status: 'approved' }).eq('id', id)
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'time_entry.reopened',
+      p_entity_type: 'time_entry',
+      p_entity_id: id,
+      p_summary: 'Reopened a locked time entry',
+    })
+  },
+  async deleteTimeEntry(id: string, organizationId: string): Promise<void> {
     const { error } = await supabase.from('time_entries').delete().eq('id', id)
     if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'time_entry.deleted',
+      p_entity_type: 'time_entry',
+      p_entity_id: id,
+      p_summary: 'Deleted a time entry',
+    })
   },
 
   // Expenses ------------------------------------------------------------------

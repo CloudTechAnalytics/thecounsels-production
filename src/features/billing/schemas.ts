@@ -10,6 +10,7 @@ export const timeEntrySchema = z
     rate: z.coerce.number().min(0, 'Enter a rate'),
     description: z.string().min(2, 'Describe the work'),
     billable: z.boolean(),
+    status: z.enum(['draft', 'submitted', 'approved']),
   })
   .refine((v) => !v.billable || Boolean(v.matterId), {
     message: 'Billable time must be linked to a matter',

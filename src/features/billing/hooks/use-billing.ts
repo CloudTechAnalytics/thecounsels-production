@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { billingService } from '@/features/billing/services/billing.service'
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
+import { billingService, TIME_ENTRIES_PAGE_SIZE, type TimeEntryFilters } from '@/features/billing/services/billing.service'
 import type { ExpenseFormValues, GenerateInvoiceFormValues, PaymentFormValues, TimeEntryFormValues } from '@/features/billing/schemas'
 import type { InvoiceStatus } from '@/shared/types/database.types'
 
@@ -13,8 +13,13 @@ export function usePersonalStats(orgId: string | null, userId: string | null) {
     queryFn: () => billingService.getPersonalStats(orgId!, userId!),
   })
 }
-export function useUnbilledTime(orgId: string | null) {
-  return useQuery({ queryKey: ['billing', orgId, 'time'], enabled: Boolean(orgId), queryFn: () => billingService.listUnbilledTime(orgId!) })
+export function useTimeEntries(orgId: string | null, filters: TimeEntryFilters, page: number, pageSize = TIME_ENTRIES_PAGE_SIZE) {
+  return useQuery({
+    queryKey: ['billing', orgId, 'time', filters, page, pageSize],
+    enabled: Boolean(orgId),
+    queryFn: () => billingService.listTimeEntries(orgId!, filters, { page, pageSize }),
+    placeholderData: keepPreviousData,
+  })
 }
 export function useUnbilledExpenses(orgId: string | null) {
   return useQuery({ queryKey: ['billing', orgId, 'expenses'], enabled: Boolean(orgId), queryFn: () => billingService.listUnbilledExpenses(orgId!) })
@@ -32,16 +37,52 @@ function useInvalidate(orgId: string | null) {
 }
 
 export function useAddTimeEntry(orgId: string | null, userId: string | null) {
+  const qc = useQueryClient()
   const invalidate = useInvalidate(orgId)
-  return useMutation({ mutationFn: (v: TimeEntryFormValues) => billingService.addTimeEntry(orgId!, v, userId), onSuccess: invalidate })
+  return useMutation({
+    mutationFn: (v: TimeEntryFormValues) => billingService.addTimeEntry(orgId!, v, userId),
+    onSuccess: () => {
+      invalidate()
+      qc.invalidateQueries({ queryKey: ['matter-summary'] })
+    },
+  })
+}
+export function useUpdateTimeEntry(orgId: string | null) {
+  const qc = useQueryClient()
+  const invalidate = useInvalidate(orgId)
+  return useMutation({
+    mutationFn: ({ id, values }: { id: string; values: TimeEntryFormValues }) => billingService.updateTimeEntry(id, orgId!, values),
+    onSuccess: () => {
+      invalidate()
+      qc.invalidateQueries({ queryKey: ['matter-summary'] })
+    },
+  })
+}
+export function useReopenTimeEntry(orgId: string | null) {
+  const qc = useQueryClient()
+  const invalidate = useInvalidate(orgId)
+  return useMutation({
+    mutationFn: (id: string) => billingService.reopenTimeEntry(id, orgId!),
+    onSuccess: () => {
+      invalidate()
+      qc.invalidateQueries({ queryKey: ['matter-summary'] })
+    },
+  })
 }
 export function useAddExpense(orgId: string | null, userId: string | null) {
   const invalidate = useInvalidate(orgId)
   return useMutation({ mutationFn: (v: ExpenseFormValues) => billingService.addExpense(orgId!, v, userId), onSuccess: invalidate })
 }
 export function useDeleteTimeEntry(orgId: string | null) {
+  const qc = useQueryClient()
   const invalidate = useInvalidate(orgId)
-  return useMutation({ mutationFn: (id: string) => billingService.deleteTimeEntry(id), onSuccess: invalidate })
+  return useMutation({
+    mutationFn: (id: string) => billingService.deleteTimeEntry(id, orgId!),
+    onSuccess: () => {
+      invalidate()
+      qc.invalidateQueries({ queryKey: ['matter-summary'] })
+    },
+  })
 }
 export function useDeleteExpense(orgId: string | null) {
   const invalidate = useInvalidate(orgId)

@@ -14,14 +14,14 @@ export function ExportButton({
   disabled,
 }: {
   filename: string
-  /** Sheets to write; pass a function when rows are expensive to build. */
-  sheets: ExportSheet[] | (() => ExportSheet[])
+  /** Sheets to write; pass a function when rows are expensive to build, or async to fetch them fresh (e.g. the full filtered set behind pagination). */
+  sheets: ExportSheet[] | (() => ExportSheet[] | Promise<ExportSheet[]>)
   label?: string
   disabled?: boolean
 }) {
-  const onClick = () => {
+  const onClick = async () => {
     try {
-      const resolved = typeof sheets === 'function' ? sheets() : sheets
+      const resolved = typeof sheets === 'function' ? await sheets() : sheets
       const total = resolved.reduce((s, sh) => s + sh.rows.length, 0)
       if (total === 0) {
         toast.info('Nothing to export')

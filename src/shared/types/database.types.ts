@@ -28,6 +28,7 @@ export type HearingStatus = 'scheduled' | 'adjourned' | 'held' | 'cancelled'
 export type TaskStatus = 'todo' | 'in_progress' | 'done'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'void'
+export type TimeEntryStatus = 'draft' | 'submitted' | 'approved' | 'invoiced' | 'paid'
 export type TicketStatus = 'open' | 'in_progress' | 'waiting' | 'resolved' | 'closed'
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type RoleKey =
@@ -814,6 +815,9 @@ export interface Database {
           billable: boolean
           invoiced: boolean
           invoice_id: string | null
+          status: TimeEntryStatus
+          created_by: string | null
+          updated_by: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -827,6 +831,9 @@ export interface Database {
           billable?: boolean
           invoiced?: boolean
           invoice_id?: string | null
+          status?: TimeEntryStatus
+          created_by?: string | null
+          updated_by?: string | null
         }
         Update: Partial<Database['public']['Tables']['time_entries']['Insert']>
         Relationships: [
@@ -835,6 +842,20 @@ export interface Database {
             columns: ['matter_id']
             isOneToOne: false
             referencedRelation: 'matters'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'time_entries_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'time_entries_updated_by_fkey'
+            columns: ['updated_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
             referencedColumns: ['id']
           },
         ]

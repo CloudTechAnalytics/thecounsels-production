@@ -6,15 +6,14 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
   useBillingStats,
   usePersonalStats,
-  useUnbilledTime,
   useUnbilledExpenses,
   useInvoices,
-  useDeleteTimeEntry,
   useDeleteExpense,
 } from '@/features/billing/hooks/use-billing'
 import { TimeEntryDialog, ExpenseDialog } from '@/features/billing/components/log-dialogs'
+import { TimeEntriesTab } from '@/features/billing/components/time-entries-tab'
 import { GenerateInvoiceDialog, InvoiceDetailDialog } from '@/features/billing/components/invoice-dialogs'
-import { INVOICE_STATUS_META, timeAmount, type ExpenseRow, type InvoiceRow, type TimeEntryRow } from '@/features/billing/types'
+import { INVOICE_STATUS_META, type ExpenseRow, type InvoiceRow } from '@/features/billing/types'
 import { StatTile } from '@/features/dashboard/components/stat-tile'
 import { PageHeader } from '@/shared/components/page-header'
 import { ExportButton } from '@/shared/components/export-button'
@@ -35,13 +34,11 @@ export function BillingPage() {
   // Firm-wide financials are restricted; everyone else gets their own numbers.
   const stats = useBillingStats(canFinancials ? activeOrgId : null)
   const personal = usePersonalStats(canFinancials ? null : activeOrgId, userId)
-  const time = useUnbilledTime(activeOrgId)
   const expenses = useUnbilledExpenses(activeOrgId)
   const invoices = useInvoices(activeOrgId)
-  const [tab, setTab] = React.useState<'work' | 'invoices'>('work')
+  const [tab, setTab] = React.useState<'time' | 'expenses' | 'invoices'>('time')
 
-  // Without reports.financial you see (and can delete) only your own entries.
-  const timeRows = (time.data ?? []).filter((t) => canFinancials || t.user?.id === userId)
+  // Without reports.financial you see (and can delete) only your own expenses.
   const expenseRows = (expenses.data ?? []).filter((e) => canFinancials || e.user?.id === userId)
 
   const [timeOpen, setTimeOpen] = React.useState(false)
@@ -51,6 +48,8 @@ export function BillingPage() {
 
   const s = stats.data
   const p = personal.data
+
+  const tabs = (canInvoice ? (['time', 'expenses', 'invoices'] as const) : (['time', 'expenses'] as const))
 
   return (
     <div>
@@ -85,21 +84,21 @@ export function BillingPage() {
 
       <div className="mt-6 flex items-end justify-between gap-3 border-b border-border">
         <div className="flex gap-1">
-          {(canInvoice ? (['work', 'invoices'] as const) : (['work'] as const)).map((t) => (
+          {tabs.map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={cn(
-                'border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
+                'border-b-2 px-4 py-2.5 text-sm font-medium transition-colors capitalize',
                 tab === t ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
               )}
             >
-              {t === 'work' ? 'Unbilled work' : 'Invoices'}
+              {t === 'time' ? 'Time entries' : t}
             </button>
           ))}
         </div>
         <div className="pb-1.5">
-          {tab === 'invoices' && canInvoice ? (
+          {tab === 'invoices' && canInvoice && (
             <ExportButton
               filename="invoices"
               disabled={!invoices.data?.length}
@@ -118,47 +117,31 @@ export function BillingPage() {
                 })),
               }]}
             />
-          ) : (
+          )}
+          {tab === 'expenses' && (
             <ExportButton
-              filename="unbilled-work"
-              disabled={timeRows.length === 0 && expenseRows.length === 0}
-              sheets={() => [
-                {
-                  name: 'Unbilled time',
-                  rows: timeRows.map((t) => ({
-                    Date: t.work_date,
-                    Description: t.description,
-                    Matter: t.matter?.matter_number ?? '',
-                    Lawyer: t.user?.full_name ?? '',
-                    Hours: Number((t.minutes / 60).toFixed(2)),
-                    Rate: Number(t.rate),
-                    Amount: timeAmount(t.minutes, Number(t.rate)),
-                    Billable: t.billable ? 'Yes' : 'No',
-                  })),
-                },
-                {
-                  name: 'Unbilled expenses',
-                  rows: expenseRows.map((e) => ({
-                    Date: e.expense_date,
-                    Description: e.description,
-                    Matter: e.matter?.matter_number ?? '',
-                    Category: e.category ?? '',
-                    Amount: Number(e.amount),
-                    Billable: e.billable ? 'Yes' : 'No',
-                  })),
-                },
-              ]}
+              filename="unbilled-expenses"
+              disabled={expenseRows.length === 0}
+              sheets={() => [{
+                name: 'Unbilled expenses',
+                rows: expenseRows.map((e) => ({
+                  Date: e.expense_date,
+                  Description: e.description,
+                  Matter: e.matter?.matter_number ?? '',
+                  Category: e.category ?? '',
+                  Amount: Number(e.amount),
+                  Billable: e.billable ? 'Yes' : 'No',
+                })),
+              }]}
             />
           )}
         </div>
       </div>
 
       <div className="mt-6">
-        {tab === 'invoices' && canInvoice ? (
-          <InvoicesTab invoices={invoices} onOpen={setInvoiceId} />
-        ) : (
-          <UnbilledWork timeRows={timeRows} expenseRows={expenseRows} timeLoading={time.isLoading} expensesLoading={expenses.isLoading} />
-        )}
+        {tab === 'time' && <TimeEntriesTab />}
+        {tab === 'expenses' && <ExpensesTab rows={expenseRows} loading={expenses.isLoading} />}
+        {tab === 'invoices' && canInvoice && <InvoicesTab invoices={invoices} onOpen={setInvoiceId} />}
       </div>
 
       <TimeEntryDialog open={timeOpen} onOpenChange={setTimeOpen} />
@@ -169,19 +152,8 @@ export function BillingPage() {
   )
 }
 
-function UnbilledWork({
-  timeRows,
-  expenseRows,
-  timeLoading,
-  expensesLoading,
-}: {
-  timeRows: TimeEntryRow[]
-  expenseRows: ExpenseRow[]
-  timeLoading: boolean
-  expensesLoading: boolean
-}) {
+function ExpensesTab({ rows, loading }: { rows: ExpenseRow[]; loading: boolean }) {
   const { activeOrgId } = useAuth()
-  const delTime = useDeleteTimeEntry(activeOrgId)
   const delExp = useDeleteExpense(activeOrgId)
 
   const del = async (fn: () => Promise<void>) => {
@@ -189,75 +161,36 @@ function UnbilledWork({
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Unbilled time</h2>
-        <Card className="overflow-hidden">
-          {timeLoading ? (
-            <div className="space-y-2 p-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-          ) : timeRows.length > 0 ? (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Description</TableHead><TableHead>Matter</TableHead><TableHead>Date</TableHead>
-                <TableHead className="text-right">Hours</TableHead><TableHead className="text-right">Amount</TableHead><TableHead></TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {timeRows.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="text-sm">{t.description}{!t.billable && <Badge variant="muted" className="ml-2">Non-billable</Badge>}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {t.matter?.matter_number ?? (t.billable ? <Badge variant="warning">No matter — can't be invoiced</Badge> : '—')}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{format(new Date(t.work_date), 'MMM d')}</TableCell>
-                    <TableCell className="text-right text-sm">{(t.minutes / 60).toFixed(2)}</TableCell>
-                    <TableCell className="text-right text-sm font-medium">{formatNaira(timeAmount(t.minutes, Number(t.rate)))}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => del(() => delTime.mutateAsync(t.id))}><Trash2 className="h-4 w-4" /></Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="px-6 py-10 text-center text-sm text-muted-foreground">No unbilled time. Log time to start building an invoice.</p>
-          )}
-        </Card>
-      </div>
-
-      <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Unbilled expenses</h2>
-        <Card className="overflow-hidden">
-          {expensesLoading ? (
-            <div className="space-y-2 p-4">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-          ) : expenseRows.length > 0 ? (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Description</TableHead><TableHead>Matter</TableHead><TableHead>Category</TableHead>
-                <TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead><TableHead></TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {expenseRows.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell className="text-sm">{e.description}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {e.matter?.matter_number ?? (e.billable ? <Badge variant="warning">No matter — can't be invoiced</Badge> : '—')}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{e.category ?? '—'}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{format(new Date(e.expense_date), 'MMM d')}</TableCell>
-                    <TableCell className="text-right text-sm font-medium">{formatNaira(Number(e.amount))}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => del(() => delExp.mutateAsync(e.id))}><Trash2 className="h-4 w-4" /></Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="px-6 py-10 text-center text-sm text-muted-foreground">No unbilled expenses.</p>
-          )}
-        </Card>
-      </div>
-    </div>
+    <Card className="overflow-hidden">
+      {loading ? (
+        <div className="space-y-2 p-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+      ) : rows.length > 0 ? (
+        <Table>
+          <TableHeader><TableRow>
+            <TableHead>Description</TableHead><TableHead>Matter</TableHead><TableHead>Category</TableHead>
+            <TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead><TableHead></TableHead>
+          </TableRow></TableHeader>
+          <TableBody>
+            {rows.map((e) => (
+              <TableRow key={e.id}>
+                <TableCell className="text-sm">{e.description}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {e.matter?.matter_number ?? (e.billable ? <Badge variant="warning">No matter — can't be invoiced</Badge> : '—')}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{e.category ?? '—'}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{format(new Date(e.expense_date), 'MMM d')}</TableCell>
+                <TableCell className="text-right text-sm font-medium">{formatNaira(Number(e.amount))}</TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => del(() => delExp.mutateAsync(e.id))}><Trash2 className="h-4 w-4" /></Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      ) : (
+        <p className="px-6 py-10 text-center text-sm text-muted-foreground">No unbilled expenses.</p>
+      )}
+    </Card>
   )
 }
 

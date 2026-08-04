@@ -57,7 +57,7 @@ export function PlatformDashboardPage() {
       />
 
       {/* KPI row */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid grid-flow-col auto-cols-[minmax(140px,1fr)] gap-4 overflow-x-auto pb-1">
         <KpiCard label="Organizations" value={s?.totalOrganizations ?? 0} hint="Customer firms" icon={Globe} loading={stats.isLoading} />
         <KpiCard label="Paid Orgs" value={s?.paidOrganizations ?? 0} hint="Active plans" icon={Building2} loading={stats.isLoading} />
         <KpiCard label="Trial Orgs" value={s?.trialOrganizations ?? 0} hint="On trial" icon={Building2} loading={stats.isLoading} />
@@ -67,7 +67,7 @@ export function PlatformDashboardPage() {
       </div>
 
       {/* Secondary status row */}
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mt-4 grid grid-flow-col auto-cols-[minmax(140px,1fr)] gap-4 overflow-x-auto pb-1">
         <KpiCard label="Total Users" value={s?.totalUsers ?? 0} icon={Users2} loading={stats.isLoading} />
         <KpiCard label="Platform Team" value={s?.platformUsers ?? 0} icon={ShieldCheck} loading={stats.isLoading} />
         <KpiCard label="Active Today" value={s?.signedInToday ?? 0} icon={Zap} loading={stats.isLoading} />

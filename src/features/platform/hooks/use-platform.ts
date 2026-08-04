@@ -40,7 +40,7 @@ export function usePlatformActivity() {
 
   useEffect(() => {
     const channel = supabase
-      .channel('platform-activity')
+      .channel(`platform-activity:${Date.now()}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'audit_logs' },

@@ -19,7 +19,7 @@ export function useMatterEvents(matterId: string | undefined) {
   useEffect(() => {
     if (!matterId) return
     const channel = supabase
-      .channel(`matter-events:${matterId}`)
+      .channel(`matter-events:${matterId}:${Date.now()}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'matter_events', filter: `matter_id=eq.${matterId}` },

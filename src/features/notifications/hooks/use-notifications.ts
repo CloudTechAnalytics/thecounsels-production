@@ -49,7 +49,7 @@ export function useNotificationsRealtime(orgId: string | null, userId: string | 
   React.useEffect(() => {
     if (!orgId || !userId) return
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(`notifications:${userId}:${Date.now()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },

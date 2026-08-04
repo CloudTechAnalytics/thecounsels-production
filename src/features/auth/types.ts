@@ -30,6 +30,10 @@ export interface AuthState {
 export interface AuthContextValue extends AuthState {
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
+  /** Revoke every other session, keeping this device signed in. */
+  signOutOtherSessions: () => Promise<void>
+  /** Revoke every session including this one. */
+  signOutEverywhere: () => Promise<void>
   sendPasswordReset: (email: string) => Promise<void>
   updatePassword: (newPassword: string) => Promise<void>
   setActiveOrg: (orgId: string) => void

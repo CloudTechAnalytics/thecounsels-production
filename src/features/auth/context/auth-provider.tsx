@@ -72,6 +72,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
+    // Sign-in fires this before the profile/membership fetch below resolves.
+    // Without flipping to 'loading' here, status stays stuck at the stale
+    // 'unauthenticated' value for that window, and RequireAuth bounces a
+    // just-signed-in user straight back to the marketing page. Skip the flip
+    // when already authenticated so background token-refresh events don't
+    // flash a loading screen over an active session.
+    setState((prev) => (prev.status === 'authenticated' ? prev : { ...prev, status: 'loading' }))
+
     const [profile, memberships] = await Promise.all([
       authService.getProfile(userId),
       authService.getMemberships(userId),

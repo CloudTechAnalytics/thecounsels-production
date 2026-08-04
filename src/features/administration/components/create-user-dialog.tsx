@@ -79,8 +79,8 @@ export function CreateUserDialog({ organizationId }: { organizationId: string })
         <DialogHeader>
           <DialogTitle>Add a user</DialogTitle>
           <DialogDescription>
-            Create an account for a lawyer or staff member. They can sign in immediately and change their
-            password.
+            Create an account for a lawyer or staff member. They'll sign in with this temporary password
+            and be required to set their own before they can access the workspace.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -150,7 +150,9 @@ export function CreateUserDialog({ organizationId }: { organizationId: string })
                 )}
               />
             </div>
-            <FormDescription>Share the temporary password securely.</FormDescription>
+            <FormDescription>
+              Share this password securely — they'll be asked to change it on first sign-in.
+            </FormDescription>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
                 Cancel

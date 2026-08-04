@@ -40,8 +40,8 @@ export function DashboardPage() {
         description={orgName ? `Here's what's happening at ${orgName} today.` : undefined}
       />
 
-      {/* KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* KPIs — always a single row; scrolls horizontally instead of wrapping */}
+      <div className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">
         {canFinancials ? (
           <StatTile
             label="Revenue (MTD)"

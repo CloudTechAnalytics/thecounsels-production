@@ -8,7 +8,6 @@ import {
   Receipt,
   BarChart3,
   Bell,
-  Settings,
 } from 'lucide-react'
 import { ModulePlaceholder } from '@/shared/components/module-placeholder'
 
@@ -173,22 +172,6 @@ export const NotificationsPage = () => (
       'Email architecture ready',
       'Per-user preferences',
       'Read / unread state',
-    ]}
-  />
-)
-
-export const SettingsPage = () => (
-  <ModulePlaceholder
-    title="Settings"
-    description="Your profile, security and preferences."
-    icon={Settings}
-    highlights={[
-      'Profile & avatar',
-      'Change password',
-      'Notification preferences',
-      'Active sessions',
-      'Theme & appearance',
-      'Two-factor (roadmap)',
     ]}
   />
 )

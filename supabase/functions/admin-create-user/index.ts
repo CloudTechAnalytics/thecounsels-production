@@ -132,7 +132,14 @@ Deno.serve(async (req: Request) => {
     // CloudTech platform staff — no organization membership.
     const { error } = await admin
       .from('profiles')
-      .update({ full_name: fullName, is_platform_admin: true, platform_role: platformRole ?? 'support' })
+      .update({
+        full_name: fullName,
+        is_platform_admin: true,
+        platform_role: platformRole ?? 'support',
+        // Only a freshly created account carries the temp password we just set —
+        // an existing account being re-seated keeps whatever password it already has.
+        must_change_password: isNewUser,
+      })
       .eq('id', userId)
     if (error) {
       await rollbackIfNew()
@@ -160,7 +167,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: memErr.message }, 400)
   }
 
-  await admin.from('profiles').update({ full_name: fullName }).eq('id', userId)
+  await admin.from('profiles').update({ full_name: fullName, must_change_password: isNewUser }).eq('id', userId)
   await admin.rpc('log_audit', {
     p_org: organizationId,
     p_action: 'user.created',

@@ -17,7 +17,7 @@ export function RevenueAnalyticsPage() {
     <div>
       <PageHeader title="Revenue Analytics" description="Recurring-revenue movement, mix and forecast across the platform." />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid grid-flow-col auto-cols-[minmax(140px,1fr)] gap-4 overflow-x-auto pb-1">
         <KpiCard label="MRR" value={formatMoneyCompact(data?.mrr ?? 0)} hint="Monthly recurring" icon={TrendingUp} loading={isLoading} />
         <KpiCard label="ARR" value={formatMoneyCompact(data?.arr ?? 0)} hint="Annualised" icon={CircleDollarSign} loading={isLoading} />
         <KpiCard label="ARPA" value={formatMoneyCompact(data?.arpa ?? 0)} hint="Avg / account" icon={Wallet} loading={isLoading} />

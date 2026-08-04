@@ -40,3 +40,21 @@ export const resetPasswordSchema = z
     path: ['confirm'],
   })
 export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>
+
+/** Voluntary change from an already-signed-in session — unlike a recovery
+ * reset, the current password is known and re-verified before swapping it. */
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Enter your current password'),
+    password: strongPassword,
+    confirm: z.string(),
+  })
+  .refine((v) => v.password === v.confirm, {
+    message: 'Passwords do not match',
+    path: ['confirm'],
+  })
+  .refine((v) => v.password !== v.currentPassword, {
+    message: 'Choose a password you haven\'t used before',
+    path: ['password'],
+  })
+export type ChangePasswordValues = z.infer<typeof changePasswordSchema>

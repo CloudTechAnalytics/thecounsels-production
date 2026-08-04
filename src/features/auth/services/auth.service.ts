@@ -40,6 +40,18 @@ export const authService = {
     if (error) throw error
   },
 
+  /** Revoke every session but this one — the other devices' refresh tokens stop working. */
+  async signOutOtherSessions(): Promise<void> {
+    const { error } = await supabase.auth.signOut({ scope: 'others' })
+    if (error) throw error
+  },
+
+  /** Revoke this session too, ending in a normal sign-out redirect. */
+  async signOutEverywhere(): Promise<void> {
+    const { error } = await supabase.auth.signOut({ scope: 'global' })
+    if (error) throw error
+  },
+
   async sendPasswordReset(email: string): Promise<void> {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
@@ -50,6 +62,12 @@ export const authService = {
   async updatePassword(newPassword: string): Promise<void> {
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     if (error) throw error
+    // Setting a real password (forced change, or a normal recovery reset)
+    // always satisfies the "must change" requirement, if one was set.
+    const { data } = await supabase.auth.getUser()
+    if (data.user) {
+      await supabase.from('profiles').update({ must_change_password: false }).eq('id', data.user.id)
+    }
   },
 
   async getProfile(userId: string): Promise<Profile | null> {

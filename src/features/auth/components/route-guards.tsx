@@ -35,6 +35,13 @@ export function RequirePlatform() {
   return <Outlet />
 }
 
+/** Force a temp-password holder to set their own password before reaching the app. */
+export function RequirePasswordChange() {
+  const { profile } = useAuth()
+  if (profile?.must_change_password) return <Navigate to="/auth/change-password" replace />
+  return <Outlet />
+}
+
 /** Law-firm workspace — non-platform users, or platform staff in Support Mode. */
 export function RequireOrganization() {
   const { isPlatformAdmin, supportOrgId } = useAuth()

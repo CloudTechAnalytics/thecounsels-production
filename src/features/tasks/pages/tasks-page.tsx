@@ -70,7 +70,7 @@ export function TasksPage() {
         }
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid grid-flow-col auto-cols-[minmax(110px,1fr)] gap-3 overflow-x-auto pb-1">
         <Card className="p-4"><p className="text-xs text-muted-foreground">Open</p><p className="font-display text-2xl font-semibold">{open.length}</p></Card>
         <Card className="p-4"><p className="text-xs text-muted-foreground">Overdue</p><p className="font-display text-2xl font-semibold text-destructive">{overdue.length}</p></Card>
         <Card className="p-4"><p className="text-xs text-muted-foreground">Completed</p><p className="font-display text-2xl font-semibold text-success">{done.length}</p></Card>

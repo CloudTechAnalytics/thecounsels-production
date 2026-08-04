@@ -7,17 +7,19 @@ import {
   RequirePermission,
   RequirePlatform,
   RequireOrganization,
+  RequirePasswordChange,
 } from '@/features/auth/components/route-guards'
 import { LandingPage } from '@/features/landing/pages/landing-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { ForgotPasswordPage } from '@/features/auth/pages/forgot-password-page'
 import { ResetPasswordPage } from '@/features/auth/pages/reset-password-page'
+import { ChangePasswordPage } from '@/features/auth/pages/change-password-page'
 import { AcceptInvitePage } from '@/features/auth/pages/accept-invite-page'
 
 // Organization (law firm) workspace
 import { DashboardPage } from '@/features/dashboard/pages/dashboard-page'
 import { AdministrationPage } from '@/features/administration/pages/administration-page'
-import { SettingsPage } from '@/app/placeholder-pages'
+import { SettingsPage } from '@/features/settings/pages/settings-page'
 import { BillingPage } from '@/features/billing/pages/billing-page'
 import { ReportsPage } from '@/features/reports/pages/reports-page'
 import { ClientsPage } from '@/features/clients/pages/clients-page'
@@ -71,57 +73,66 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth />,
     children: [
-      // ── CloudTech Platform console ──────────────────────────────
+      // Forced stop between signing in with a temp password and the app — reachable
+      // regardless of the must_change_password flag, unlike everything below it.
+      { path: '/auth/change-password', element: <ChangePasswordPage /> },
+
       {
-        path: '/platform',
-        element: <RequirePlatform />,
+        element: <RequirePasswordChange />,
         children: [
+          // ── CloudTech Platform console ──────────────────────────────
           {
-            element: <PlatformLayout />,
+            path: '/platform',
+            element: <RequirePlatform />,
             children: [
-              { index: true, element: <PlatformDashboardPage /> },
-              { path: 'organizations', element: <OrganizationsPage /> },
-              { path: 'organization-users', element: <OrganizationUsersPage /> },
-              { path: 'subscriptions', element: <SubscriptionsPage /> },
-              { path: 'billing', element: <PlatformBillingPage /> },
-              { path: 'revenue', element: <RevenueAnalyticsPage /> },
-              { path: 'analytics', element: <AnalyticsPage /> },
-              { path: 'tickets', element: <SupportTicketsPage /> },
-              { path: 'audit', element: <AuditLogsPage /> },
-              { path: 'health', element: <SystemHealthPage /> },
-              { path: 'plans', element: <PlansPage /> },
-              { path: 'users', element: <PlatformUsersPage /> },
-              { path: 'settings', element: <PlatformSettingsPage /> },
+              {
+                element: <PlatformLayout />,
+                children: [
+                  { index: true, element: <PlatformDashboardPage /> },
+                  { path: 'organizations', element: <OrganizationsPage /> },
+                  { path: 'organization-users', element: <OrganizationUsersPage /> },
+                  { path: 'subscriptions', element: <SubscriptionsPage /> },
+                  { path: 'billing', element: <PlatformBillingPage /> },
+                  { path: 'revenue', element: <RevenueAnalyticsPage /> },
+                  { path: 'analytics', element: <AnalyticsPage /> },
+                  { path: 'tickets', element: <SupportTicketsPage /> },
+                  { path: 'audit', element: <AuditLogsPage /> },
+                  { path: 'health', element: <SystemHealthPage /> },
+                  { path: 'plans', element: <PlansPage /> },
+                  { path: 'users', element: <PlatformUsersPage /> },
+                  { path: 'settings', element: <PlatformSettingsPage /> },
+                ],
+              },
             ],
           },
-        ],
-      },
 
-      // ── Law-firm workspace ──────────────────────────────────────
-      {
-        path: '/',
-        element: <RequireOrganization />,
-        children: [
+          // ── Law-firm workspace ──────────────────────────────────────
           {
-            element: <OrganizationLayout />,
+            path: '/',
+            element: <RequireOrganization />,
             children: [
-              { index: true, element: <DashboardPage /> },
-              { path: 'matters', element: withPermission(<MattersPage />, 'matters.view') },
-              { path: 'matters/:id', element: withPermission(<MatterDetailPage />, 'matters.view') },
-              { path: 'clients', element: withPermission(<ClientsPage />, 'clients.view') },
-              { path: 'documents', element: withPermission(<DocumentsPage />, 'documents.view') },
-              { path: 'hearings', element: withPermission(<HearingsPage />, 'hearings.view') },
-              { path: 'calendar', element: withPermission(<CalendarPage />, 'calendar.view') },
-              { path: 'tasks', element: withPermission(<TasksPage />, 'tasks.view') },
-              { path: 'staff', element: withPermission(<StaffPage />, 'staff.view') },
-              { path: 'billing', element: withPermission(<BillingPage />, 'billing.view') },
-              { path: 'reports', element: withPermission(<ReportsPage />, 'reports.view') },
-              { path: 'notifications', element: <NotificationsPage /> },
               {
-                path: 'administration',
-                element: withPermission(<AdministrationPage />, ['organization.view', 'members.view'], 'any'),
+                element: <OrganizationLayout />,
+                children: [
+                  { index: true, element: <DashboardPage /> },
+                  { path: 'matters', element: withPermission(<MattersPage />, 'matters.view') },
+                  { path: 'matters/:id', element: withPermission(<MatterDetailPage />, 'matters.view') },
+                  { path: 'clients', element: withPermission(<ClientsPage />, 'clients.view') },
+                  { path: 'documents', element: withPermission(<DocumentsPage />, 'documents.view') },
+                  { path: 'hearings', element: withPermission(<HearingsPage />, 'hearings.view') },
+                  { path: 'calendar', element: withPermission(<CalendarPage />, 'calendar.view') },
+                  { path: 'tasks', element: withPermission(<TasksPage />, 'tasks.view') },
+                  { path: 'staff', element: withPermission(<StaffPage />, 'staff.view') },
+                  { path: 'billing', element: withPermission(<BillingPage />, 'billing.view') },
+                  { path: 'reports', element: withPermission(<ReportsPage />, 'reports.view') },
+                  { path: 'notifications', element: <NotificationsPage /> },
+                  {
+                    path: 'administration',
+                    element: withPermission(<AdministrationPage />, ['organization.view', 'members.view'], 'any'),
+                  },
+                  { path: 'settings', element: <SettingsPage /> },
+                ],
               },
-              { path: 'settings', element: <SettingsPage /> },
             ],
           },
         ],

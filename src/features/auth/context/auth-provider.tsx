@@ -209,8 +209,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut: async () => {
         await authService.signOut()
       },
+      signOutOtherSessions: () => authService.signOutOtherSessions(),
+      signOutEverywhere: async () => {
+        await authService.signOutEverywhere()
+      },
       sendPasswordReset: (email) => authService.sendPasswordReset(email),
-      updatePassword: (pwd) => authService.updatePassword(pwd),
+      updatePassword: async (pwd) => {
+        await authService.updatePassword(pwd)
+        // Refresh so a cleared must_change_password flag is reflected immediately —
+        // otherwise RequirePasswordChange would bounce the user right back.
+        await load(state.userId)
+      },
       setActiveOrg,
       startSupport: async (orgId: string) => {
         sessionStorage.setItem(SUPPORT_KEY, orgId)

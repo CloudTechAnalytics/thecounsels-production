@@ -111,6 +111,7 @@ export interface Database {
           platform_role: string | null
           default_organization_id: string | null
           last_seen_at: string | null
+          must_change_password: boolean
         } & Timestamps
         Insert: {
           id: string
@@ -123,6 +124,7 @@ export interface Database {
           platform_role?: string | null
           default_organization_id?: string | null
           last_seen_at?: string | null
+          must_change_password?: boolean
         }
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>
         Relationships: []

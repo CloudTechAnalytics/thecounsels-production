@@ -53,12 +53,19 @@ begin
   return new;
 end $$;
 
+drop trigger if exists trg_track_hearing_scheduled on public.hearings;
 create trigger trg_track_hearing_scheduled
   after insert on public.hearings for each row execute function public.track_hearing_scheduled();
+
+drop trigger if exists trg_track_task_added on public.tasks;
 create trigger trg_track_task_added
   after insert on public.tasks for each row execute function public.track_task_added();
+
+drop trigger if exists trg_track_task_completed on public.tasks;
 create trigger trg_track_task_completed
   after update on public.tasks for each row execute function public.track_task_completed();
+
+drop trigger if exists trg_track_invoice_created on public.invoices;
 create trigger trg_track_invoice_created
   after insert on public.invoices for each row execute function public.track_invoice_created();
 

@@ -13,6 +13,13 @@ import {
   Clock,
   CheckCircle2,
   ChevronDown,
+  User,
+  Users,
+  TrendingUp,
+  Building2,
+  PhoneCall,
+  UploadCloud,
+  ClipboardCheck,
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { APP } from '@/shared/config/env'
@@ -47,6 +54,59 @@ function Reveal({ children, className }: { children: React.ReactNode; className?
     </motion.div>
   )
 }
+
+const STATS = [
+  { value: '6', label: 'Purpose-built modules, working as one workspace' },
+  { value: '₦', label: 'Native naira billing & invoicing' },
+  { value: 'Row-level', label: 'Security isolating every firm’s data by default' },
+  { value: '14-day', label: 'Free trial on Professional, no card required' },
+]
+
+const SEGMENTS = [
+  {
+    icon: User,
+    title: 'Solo practitioners',
+    text: 'Every hat, one hub — track matters, bill clients and manage hearings without the overhead of a team.',
+  },
+  {
+    icon: Users,
+    title: 'Small chambers',
+    text: 'Get organised as you grow, with a shared calendar, a shared client base, and one source of truth for every matter.',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Growing firms',
+    text: 'Billing, permissions and reporting that scale with headcount, so more staff doesn’t mean more chaos.',
+  },
+  {
+    icon: Building2,
+    title: 'Enterprise chambers',
+    text: 'Multi-partner visibility, granular role permissions, and firm-wide reporting for chambers running at scale.',
+  },
+]
+
+const TRUST = [
+  {
+    icon: ShieldCheck,
+    title: 'Security',
+    text: 'Row-level tenant isolation, role-based permissions and an audit log on every action — your data is scoped to your firm, and no one else’s.',
+  },
+  {
+    icon: PhoneCall,
+    title: 'Real support',
+    text: 'Reach a real person by email or phone when you need help — not a ticket queue that goes quiet.',
+  },
+  {
+    icon: UploadCloud,
+    title: 'Onboarding & migration',
+    text: 'Our team helps you move matters, clients and documents in, so you start with a workspace that already reflects your practice.',
+  },
+  {
+    icon: ClipboardCheck,
+    title: 'Guided provisioning',
+    text: 'Accounts, roles and permissions are set up by our team before your first login — no self-serve setup to get wrong.',
+  },
+]
 
 const FEATURES = [
   {
@@ -348,6 +408,28 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* ── Stats strip ─────────────────────────────────────── */}
+      <section className="border-b border-border bg-card/40">
+        <Reveal className="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-6 py-12 sm:grid-cols-4">
+          {STATS.map((s) => (
+            <motion.div key={s.label} variants={fadeUp} className="text-center sm:text-left">
+              <p className="font-display text-3xl font-semibold text-primary sm:text-4xl">{s.value}</p>
+              <p className="mt-1 text-xs leading-snug text-muted-foreground sm:text-sm">{s.label}</p>
+            </motion.div>
+          ))}
+        </Reveal>
+      </section>
+
+      {/* ── Mission statement ───────────────────────────────── */}
+      <section className="mx-auto max-w-3xl px-6 py-20 text-center">
+        <Reveal>
+          <motion.p variants={fadeUp} className="font-display text-2xl font-medium leading-snug text-foreground sm:text-3xl">
+            Legal work is detail work. The Counsel exists so your team spends that care on cases —
+            not on spreadsheets, shared drives, and missed filing dates.
+          </motion.p>
+        </Reveal>
+      </section>
+
       {/* ── Features ────────────────────────────────────────── */}
       <section id="features" className="mx-auto max-w-6xl px-6 py-24">
         <Reveal className="mx-auto max-w-2xl text-center">
@@ -404,6 +486,65 @@ export function LandingPage() {
                 </div>
                 <h3 className="font-display text-lg font-semibold">{s.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.text}</p>
+              </motion.div>
+            ))}
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── Solutions for every size ─────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-6 py-24">
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+            Solutions
+          </motion.p>
+          <motion.h2 variants={fadeUp} className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
+            Built for every kind of practice
+          </motion.h2>
+          <motion.p variants={fadeUp} className="mt-4 text-muted-foreground">
+            From a single-desk practice to a multi-partner chambers — the same system scales with you.
+          </motion.p>
+        </Reveal>
+
+        <Reveal className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {SEGMENTS.map((s) => (
+            <motion.div
+              key={s.title}
+              variants={fadeUp}
+              whileHover={reduce ? undefined : { y: -6 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+              className="rounded-xl border border-border bg-card p-6 shadow-card transition-shadow hover:shadow-elevated"
+            >
+              <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/12 text-primary">
+                <s.icon className="h-5 w-5" />
+              </span>
+              <h3 className="font-display text-lg font-semibold">{s.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.text}</p>
+            </motion.div>
+          ))}
+        </Reveal>
+      </section>
+
+      {/* ── Trust ─────────────────────────────────────────────── */}
+      <section className="border-y border-border bg-card/60">
+        <div className="mx-auto max-w-6xl px-6 py-24">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Trusted beyond the software
+            </motion.p>
+            <motion.h2 variants={fadeUp} className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
+              We stay with you after launch
+            </motion.h2>
+          </Reveal>
+
+          <Reveal className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {TRUST.map((t) => (
+              <motion.div key={t.title} variants={fadeUp} className="text-center sm:text-left">
+                <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg bg-primary/12 text-primary sm:mx-0">
+                  <t.icon className="h-5 w-5" />
+                </span>
+                <h3 className="mt-4 font-display text-lg font-semibold">{t.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t.text}</p>
               </motion.div>
             ))}
           </Reveal>
@@ -536,27 +677,97 @@ export function LandingPage() {
       </section>
 
       {/* ── Footer ──────────────────────────────────────────── */}
-      <footer className="border-t border-white/10 bg-sidebar py-10 text-white">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Scale className="h-4 w-4" />
-            </span>
-            <div className="leading-tight">
-              <p className="font-display font-semibold">{APP.product}</p>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">{APP.brand}</p>
+      <footer className="border-t border-white/10 bg-sidebar py-16 text-white">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                  <Scale className="h-4 w-4" />
+                </span>
+                <div className="leading-tight">
+                  <p className="font-display font-semibold">{APP.product}</p>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">{APP.brand}</p>
+                </div>
+              </div>
+              <p className="mt-4 max-w-[220px] text-sm leading-relaxed text-white/50">
+                One secure workspace for matters, billing, hearings, documents and reports — built
+                for modern law firms.
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">Product</p>
+              <ul className="mt-4 space-y-2.5 text-sm text-white/60">
+                <li>
+                  <a href="#features" className="transition-colors hover:text-primary">
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a href="#how-it-works" className="transition-colors hover:text-primary">
+                    How it works
+                  </a>
+                </li>
+                <li>
+                  <a href="#pricing" className="transition-colors hover:text-primary">
+                    Pricing
+                  </a>
+                </li>
+                <li>
+                  <a href="#faq" className="transition-colors hover:text-primary">
+                    FAQ
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">Company</p>
+              <ul className="mt-4 space-y-2.5 text-sm text-white/60">
+                <li>
+                  <a href="#contact" className="transition-colors hover:text-primary">
+                    Contact
+                  </a>
+                </li>
+                <li>
+                  <button type="button" onClick={goToLogin} className="transition-colors hover:text-primary">
+                    Log in
+                  </button>
+                </li>
+                <li>
+                  <a
+                    href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}
+                    className="transition-colors hover:text-primary"
+                  >
+                    Book a demo
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">Get in touch</p>
+              <ul className="mt-4 space-y-2.5 text-sm text-white/60">
+                <li>
+                  <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors hover:text-primary">
+                    {CONTACT_EMAIL}
+                  </a>
+                </li>
+                <li>
+                  <a href={`tel:${CONTACT_PHONE_TEL}`} className="transition-colors hover:text-primary">
+                    {CONTACT_PHONE_DISPLAY}
+                  </a>
+                </li>
+              </ul>
             </div>
           </div>
-          <div className="flex flex-col items-center gap-1 text-xs text-white/50 sm:items-end">
-            <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors hover:text-primary">
-              {CONTACT_EMAIL}
-            </a>
-            <a href={`tel:${CONTACT_PHONE_TEL}`} className="transition-colors hover:text-primary">
-              {CONTACT_PHONE_DISPLAY}
-            </a>
-            <p className="text-white/40">
+
+          <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-8 text-xs text-white/40 sm:flex-row">
+            <p>
               © {year} {APP.brand}. All rights reserved.
             </p>
+            <p>Built for firms practicing under Nigerian law.</p>
           </div>
         </div>
       </footer>

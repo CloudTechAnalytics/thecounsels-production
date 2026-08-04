@@ -43,7 +43,8 @@ export function UserMenu({ settingsPath = '/settings' }: { settingsPath?: string
           )}
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate(settingsPath)}>
+        {/* Personal account (profile, password, theme, sessions) — same route for everyone. */}
+        <DropdownMenuItem onClick={() => navigate('/settings')}>
           <UserCircle /> Profile
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate(settingsPath)}>

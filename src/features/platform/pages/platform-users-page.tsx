@@ -1,9 +1,11 @@
 import * as React from 'react'
 import { format } from 'date-fns'
-import { UserPlus, MoreHorizontal, ShieldOff, Loader2 } from 'lucide-react'
+import { UserPlus, MoreHorizontal, ShieldOff, KeyRound, Loader2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePlatformUsers, useCreatePlatformUser, useSetPlatformAccess } from '@/features/platform/hooks/use-platform'
 import { PLATFORM_ROLES, platformRoleLabel, type PlatformUser } from '@/features/platform/types'
+import { adminUsersService } from '@/shared/services/admin-users.service'
+import { ResetPasswordDialog } from '@/shared/components/reset-password-dialog'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -90,7 +92,9 @@ function RowActions({ user }: { user: PlatformUser }) {
   const { userId } = useAuth()
   const setAccess = useSetPlatformAccess()
   const [confirmRevoke, setConfirmRevoke] = React.useState(false)
+  const [resetOpen, setResetOpen] = React.useState(false)
   const isSelf = user.id === userId
+  const name = user.full_name ?? user.email
 
   const changeRole = async (role: string) => {
     try {
@@ -119,6 +123,9 @@ function RowActions({ user }: { user: PlatformUser }) {
           {!isSelf && (
             <>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setResetOpen(true)}>
+                <KeyRound /> Reset password
+              </DropdownMenuItem>
               <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setConfirmRevoke(true)}>
                 <ShieldOff /> Revoke platform access
               </DropdownMenuItem>
@@ -126,6 +133,16 @@ function RowActions({ user }: { user: PlatformUser }) {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <ResetPasswordDialog
+        open={resetOpen}
+        onOpenChange={setResetOpen}
+        name={name}
+        onSubmit={async (newPassword) => {
+          await adminUsersService.resetPassword({ userId: user.id, newPassword })
+          toast.success('Password reset', { description: `${name} will be asked to set their own on next sign-in.` })
+        }}
+      />
 
       <ConfirmDialog
         open={confirmRevoke}

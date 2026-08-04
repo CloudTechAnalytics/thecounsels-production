@@ -20,11 +20,13 @@ export function ForgotPasswordPage() {
   })
 
   const onSubmit = async (values: ForgotPasswordValues) => {
-    // Always resolve to the same UI state to avoid leaking which emails exist.
+    // Always resolve to the same UI state to avoid leaking which emails exist —
+    // but still surface the real failure to the console so a misconfigured
+    // project (rate limit, SMTP, redirect URL) is debuggable instead of silent.
     try {
       await sendPasswordReset(values.email)
-    } catch {
-      /* intentionally swallowed */
+    } catch (err) {
+      console.error('Password reset request failed:', err)
     }
     setSentTo(values.email)
   }

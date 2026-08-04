@@ -27,4 +27,11 @@ export const adminUsersService = {
   createPlatformUser(input: { email: string; password: string; fullName: string; platformRole: string }) {
     return invokeCreate({ ...input, platform: true })
   },
+  /**
+   * Admin-assisted reset — sets someone else's password directly, bypassing
+   * email. Omit organizationId to reset a platform staff account.
+   */
+  resetPassword(input: { userId: string; newPassword: string; organizationId?: string }): Promise<{ userId: string }> {
+    return invokeEdgeFunction('admin-reset-password', { ...input })
+  },
 }

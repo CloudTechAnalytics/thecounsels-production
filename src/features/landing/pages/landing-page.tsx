@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion, type Variants } from 'framer-motion'
 import {
   Scale,
@@ -16,6 +16,7 @@ import {
 import { Button } from '@/shared/components/ui/button'
 import { APP } from '@/shared/config/env'
 import { cn } from '@/shared/lib/utils'
+import { useAuth } from '@/features/auth/context/auth-provider'
 
 const CONTACT_EMAIL = 'cloudtechanalytics.consultant@gmail.com'
 const CONTACT_PHONE_DISPLAY = '+234 813 386 0143'
@@ -134,7 +135,10 @@ function HeroEmblem() {
   const spin = 56 // seconds per revolution
 
   return (
-    <div className="relative mx-auto flex h-[360px] w-[360px] items-center justify-center sm:h-[430px] sm:w-[430px]" aria-hidden>
+    <div
+      className="relative mx-auto flex aspect-square w-[min(84vw,430px)] items-center justify-center"
+      aria-hidden
+    >
       {/* concentric seal rings */}
       <div className="absolute inset-0 rounded-full border border-dashed border-primary/30" />
       <div className="absolute inset-[13%] rounded-full border border-primary/15" />
@@ -148,8 +152,8 @@ function HeroEmblem() {
       >
         {ORBIT.map((o, i) => {
           const angle = (i / ORBIT.length) * 2 * Math.PI - Math.PI / 2
-          const x = 50 + Math.cos(angle) * 50
-          const y = 50 + Math.sin(angle) * 50
+          const x = 50 + Math.cos(angle) * 44
+          const y = 50 + Math.sin(angle) * 44
           return (
             <div
               key={o.label}
@@ -161,10 +165,12 @@ function HeroEmblem() {
                 transition={{ duration: spin, repeat: Infinity, ease: 'linear' }}
                 className="flex flex-col items-center gap-1"
               >
-                <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-primary/40 bg-sidebar text-primary shadow-elevated">
-                  <o.icon className="h-5 w-5" />
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/40 bg-sidebar text-primary shadow-elevated sm:h-12 sm:w-12 sm:rounded-xl">
+                  <o.icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
                 </span>
-                <span className="text-[10px] font-medium uppercase tracking-wider text-white/40">{o.label}</span>
+                <span className="text-[7px] font-medium uppercase tracking-wider text-white/40 sm:text-[10px]">
+                  {o.label}
+                </span>
               </motion.div>
             </div>
           )
@@ -176,11 +182,15 @@ function HeroEmblem() {
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.9, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="relative flex h-44 w-44 flex-col items-center justify-center rounded-full bg-gradient-to-b from-primary to-[#8a6428] text-primary-foreground shadow-gold sm:h-52 sm:w-52"
+        className="relative flex h-[30%] w-[30%] flex-col items-center justify-center rounded-full bg-gradient-to-b from-primary to-[#8a6428] p-2 text-center text-primary-foreground shadow-gold"
       >
-        <Scale className="h-16 w-16 sm:h-20 sm:w-20" strokeWidth={1.25} />
-        <p className="mt-2 font-display text-sm font-semibold tracking-wide">{APP.product}</p>
-        <p className="text-[9px] uppercase tracking-[0.22em] opacity-80">Est. one firm · one system</p>
+        <Scale className="h-[26%] w-[26%]" strokeWidth={1.25} />
+        <p className="mt-[6%] font-display text-[10px] font-semibold leading-tight tracking-wide sm:text-sm">
+          {APP.product}
+        </p>
+        <p className="text-[5px] uppercase leading-tight tracking-[0.18em] opacity-80 sm:text-[9px] sm:tracking-[0.22em]">
+          Est. one firm · one system
+        </p>
       </motion.div>
     </div>
   )
@@ -189,6 +199,15 @@ function HeroEmblem() {
 export function LandingPage() {
   const reduce = useReducedMotion()
   const year = new Date().getFullYear()
+  const navigate = useNavigate()
+  const { status, signOut } = useAuth()
+
+  const goToLogin = async () => {
+    // A stale session must never bounce this click straight to the dashboard —
+    // landing-page "Log in" always lands on the login form.
+    if (status === 'authenticated') await signOut()
+    navigate('/auth/login')
+  }
 
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
@@ -204,26 +223,38 @@ export function LandingPage() {
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-gold">
               <Scale className="h-5 w-5" />
             </span>
-            <div className="leading-tight">
-              <p className="font-display text-lg font-semibold text-white">{APP.product}</p>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">{APP.brand}</p>
-            </div>
+            <p className="font-display text-lg font-semibold text-white">{APP.product}</p>
           </div>
+
+          <nav className="hidden items-center gap-8 md:flex">
+            <a href="#features" className="text-sm text-white/60 transition-colors hover:text-white">
+              Products
+            </a>
+            <a href="#how-it-works" className="text-sm text-white/60 transition-colors hover:text-white">
+              Solutions
+            </a>
+            <a href="#pricing" className="text-sm text-white/60 transition-colors hover:text-white">
+              Resources
+            </a>
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="text-sm text-white/60 transition-colors hover:text-white"
+            >
+              Contacts
+            </a>
+          </nav>
+
           <div className="flex items-center gap-3">
-            <a
-              href="#pricing"
-              className="hidden text-sm text-white/60 transition-colors hover:text-white sm:block"
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              onClick={goToLogin}
             >
-              Pricing
-            </a>
-            <a
-              href="#features"
-              className="hidden text-sm text-white/60 transition-colors hover:text-white sm:block"
-            >
-              Features
-            </a>
-            <Button asChild size="sm">
-              <Link to="/auth/login">Sign in</Link>
+              Log in
+            </Button>
+            <Button asChild size="sm" className="shadow-gold">
+              <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Book a Demo</a>
             </Button>
           </div>
         </div>
@@ -253,28 +284,32 @@ export function LandingPage() {
           <motion.div variants={stagger} initial="hidden" animate="show">
             <motion.p
               variants={fadeUp}
-              className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium tracking-wide text-primary"
+              className="mb-4 flex items-center gap-2 text-sm font-medium uppercase tracking-[0.18em] text-white/50"
             >
-              <Sparkles className="h-3.5 w-3.5" /> {APP.tagline}
+              <Sparkles className="h-3.5 w-3.5 text-primary" /> {APP.brand}
             </motion.p>
             <motion.h1
               variants={fadeUp}
               className="font-display text-4xl font-semibold leading-[1.1] sm:text-5xl lg:text-[3.4rem]"
             >
-              Run a modern practice, <span className="text-primary">elegantly</span>.
+              Run Your
+              <br />
+              <span className="text-primary">Law Firm</span>
+              <br />
+              with Confidence.
             </motion.h1>
             <motion.p variants={fadeUp} className="mt-6 max-w-lg text-lg leading-relaxed text-white/60">
-              Matters, hearings, documents, billing and reports — one secure workspace for your whole
-              firm, built for the way legal practice actually works.
+              Manage cases, clients, hearings, documents, billing, and legal operations from one
+              secure workspace built for modern law firms.
             </motion.p>
             <motion.div variants={fadeUp} className="mt-9 flex flex-wrap items-center gap-4">
+              <Button asChild size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
+                <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Book a Demo</a>
+              </Button>
               <Button asChild size="lg" className="shadow-gold">
                 <Link to="/auth/login">
-                  Sign in to your workspace <ArrowRight className="h-4 w-4" />
+                  Start Your Digital Practice <ArrowRight className="h-4 w-4" />
                 </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
-                <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Request a demo</a>
               </Button>
             </motion.div>
             <motion.p variants={fadeUp} className="mt-6 text-xs text-white/35">
@@ -327,7 +362,7 @@ export function LandingPage() {
       </section>
 
       {/* ── How it works ────────────────────────────────────── */}
-      <section className="border-y border-border bg-card/60">
+      <section id="how-it-works" className="border-y border-border bg-card/60">
         <div className="mx-auto max-w-6xl px-6 py-24">
           <Reveal className="mx-auto max-w-2xl text-center">
             <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">

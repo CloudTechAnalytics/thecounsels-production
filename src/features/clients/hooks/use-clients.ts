@@ -16,7 +16,10 @@ export function useClients(organizationId: string | null, filters: ClientFilters
 
 function useInvalidate(organizationId: string | null) {
   const qc = useQueryClient()
-  return () => qc.invalidateQueries({ queryKey: ['clients', organizationId ?? 'none'] })
+  return () => {
+    qc.invalidateQueries({ queryKey: ['clients', organizationId ?? 'none'] })
+    qc.invalidateQueries({ queryKey: ['reports'] })
+  }
 }
 
 export function useCreateClient(organizationId: string | null, createdBy: string | null) {

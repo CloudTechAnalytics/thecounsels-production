@@ -33,6 +33,7 @@ function useInvalidate(organizationId: string | null) {
   return () => {
     qc.invalidateQueries({ queryKey: ['matters', organizationId] })
     qc.invalidateQueries({ queryKey: ['matter'] })
+    qc.invalidateQueries({ queryKey: ['reports'] })
   }
 }
 

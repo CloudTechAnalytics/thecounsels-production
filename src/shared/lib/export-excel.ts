@@ -34,3 +34,23 @@ export function exportToExcel(filename: string, sheets: ExportSheet[]): void {
   const stamp = new Date().toISOString().slice(0, 10)
   XLSX.writeFile(wb, `${filename}-${stamp}.xlsx`)
 }
+
+/**
+ * Download a single sheet as CSV. Unlike .xlsx, CSV has no concept of multiple
+ * tabs, so only the first sheet is used — callers with multiple sheets should
+ * pick the one that matters most, or export to Excel instead.
+ */
+export function exportToCsv(filename: string, sheet: ExportSheet): void {
+  const ws = XLSX.utils.json_to_sheet(sheet.rows)
+  const csv = XLSX.utils.sheet_to_csv(ws)
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const stamp = new Date().toISOString().slice(0, 10)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${filename}-${stamp}.csv`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}

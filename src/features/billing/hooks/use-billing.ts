@@ -33,7 +33,10 @@ export function useInvoice(id: string | undefined) {
 
 function useInvalidate(orgId: string | null) {
   const qc = useQueryClient()
-  return () => qc.invalidateQueries({ queryKey: ['billing', orgId] })
+  return () => {
+    qc.invalidateQueries({ queryKey: ['billing', orgId] })
+    qc.invalidateQueries({ queryKey: ['reports'] })
+  }
 }
 
 export function useAddTimeEntry(orgId: string | null, userId: string | null) {
@@ -107,6 +110,7 @@ export function useSetInvoiceStatus(orgId: string | null) {
       qc.invalidateQueries({ queryKey: ['billing', orgId] })
       qc.invalidateQueries({ queryKey: ['invoice', vars.id] })
       qc.invalidateQueries({ queryKey: ['matter-summary'] })
+      qc.invalidateQueries({ queryKey: ['reports'] })
     },
   })
 }
@@ -119,6 +123,7 @@ export function useAddPayment(orgId: string | null, userId: string | null) {
       qc.invalidateQueries({ queryKey: ['billing', orgId] })
       qc.invalidateQueries({ queryKey: ['invoice', vars.invoiceId] })
       qc.invalidateQueries({ queryKey: ['matter-summary'] })
+      qc.invalidateQueries({ queryKey: ['reports'] })
     },
   })
 }

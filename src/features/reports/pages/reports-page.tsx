@@ -1,15 +1,23 @@
 import * as React from 'react'
-import { Banknote, CircleDollarSign, AlertTriangle, Percent, Briefcase, Users } from 'lucide-react'
+import {
+  Banknote, CircleDollarSign, AlertTriangle, Percent, Briefcase, Users,
+  UserPlus, Clock, Gavel, ListChecks,
+} from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useReportData } from '@/features/reports/hooks/use-reports'
-import type { ReportData } from '@/features/reports/services/reports.service'
+import { useReportData, useReportKpis } from '@/features/reports/hooks/use-reports'
+import type { ReportData, ReportFilters } from '@/features/reports/services/reports.service'
+import { useMatters, useFirmMembers } from '@/features/matters/hooks/use-matters'
+import { useClients } from '@/features/clients/hooks/use-clients'
+import { PRACTICE_AREAS, MATTER_STATUS_META } from '@/features/matters/types'
 import { StatTile } from '@/features/dashboard/components/stat-tile'
 import { PageHeader } from '@/shared/components/page-header'
 import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
+import { Input } from '@/shared/components/ui/input'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { BarChart, DistributionBars } from '@/shared/components/bar-chart'
 import { formatNaira, formatMoneyCompact, titleCase, initialsOf } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
@@ -82,7 +90,7 @@ function useComputed(data: ReportData | undefined) {
         const billableValue = mine.filter((t) => t.billable).reduce((s, t) => s + timeAmt(t.minutes, Number(t.rate)), 0)
         const mattersLed = matters.filter((x) => x.lead_lawyer_id === uid && ACTIVE.includes(x.status)).length
         const tasksDone = tasks.filter((x) => x.assignee_id === uid && x.status === 'done').length
-        return { id: m.id, name: memberName.get(uid) ?? '—', role: m.role?.name ?? '', billableHours: billableMin / 60, billableValue, mattersLed, tasksDone }
+        return { id: m.id, userId: uid, name: memberName.get(uid) ?? '—', role: m.role?.name ?? '', billableHours: billableMin / 60, billableValue, mattersLed, tasksDone }
       })
       .sort((a, b) => b.billableValue - a.billableValue)
     const hoursChart = productivity.filter((p) => p.billableHours > 0).slice(0, 8).map((p) => ({ label: p.name.split(' ')[0], value: Math.round(p.billableHours) }))
@@ -134,15 +142,83 @@ function useComputed(data: ReportData | undefined) {
 
 const TABS = ['Financial', 'Productivity', 'Matters', 'Clients'] as const
 type Tab = (typeof TABS)[number]
+const ALL = 'all'
+
+function FiltersBar({ filters, set }: { filters: ReportFilters; set: <K extends keyof ReportFilters>(key: K, value: ReportFilters[K]) => void }) {
+  const { activeOrgId } = useAuth()
+  const { data: matters } = useMatters(activeOrgId, {})
+  const { data: members } = useFirmMembers(activeOrgId)
+  const { data: clients } = useClients(activeOrgId, {})
+
+  return (
+    <div className="mb-6 flex flex-wrap gap-3">
+      <Input type="date" value={filters.dateFrom ?? ''} onChange={(e) => set('dateFrom', e.target.value || undefined)} className="w-36" aria-label="From date" />
+      <Input type="date" value={filters.dateTo ?? ''} onChange={(e) => set('dateTo', e.target.value || undefined)} className="w-36" aria-label="To date" />
+      <Select value={filters.lawyerId ?? ALL} onValueChange={(v) => set('lawyerId', v)}>
+        <SelectTrigger className="w-44"><SelectValue placeholder="All lawyers" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>All lawyers</SelectItem>
+          {members?.map((m) => <SelectItem key={m.user_id} value={m.user_id}>{m.profile?.full_name ?? m.profile?.email}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select value={filters.clientId ?? ALL} onValueChange={(v) => set('clientId', v)}>
+        <SelectTrigger className="w-44"><SelectValue placeholder="All clients" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>All clients</SelectItem>
+          {clients?.map((c) => <SelectItem key={c.id} value={c.id}>{c.display_name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select value={filters.matterId ?? ALL} onValueChange={(v) => set('matterId', v)}>
+        <SelectTrigger className="w-48"><SelectValue placeholder="All matters" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>All matters</SelectItem>
+          {matters?.map((m) => <SelectItem key={m.id} value={m.id}>{m.matter_number} — {m.title}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select value={filters.practiceArea ?? ALL} onValueChange={(v) => set('practiceArea', v)}>
+        <SelectTrigger className="w-48"><SelectValue placeholder="All practice areas" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>All practice areas</SelectItem>
+          {PRACTICE_AREAS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Input
+        value={filters.court ?? ''}
+        onChange={(e) => set('court', e.target.value || undefined)}
+        placeholder="Court…"
+        className="w-40"
+      />
+      <Select value={filters.status ?? ALL} onValueChange={(v) => set('status', v as ReportFilters['status'])}>
+        <SelectTrigger className="w-40"><SelectValue placeholder="All statuses" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>All statuses</SelectItem>
+          {Object.entries(MATTER_STATUS_META).map(([v, meta]) => (
+            <SelectItem key={v} value={v}>{meta.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
 
 export function ReportsPage() {
-  const { activeOrgId } = useAuth()
+  const { activeOrgId, activeMembership } = useAuth()
   const { has } = usePermissions()
   const canFinancials = has('reports.financial')
   const visibleTabs = canFinancials ? TABS : TABS.filter((t) => t !== 'Financial')
-  const { data, isLoading } = useReportData(activeOrgId)
+
+  const [filters, setFilters] = React.useState<ReportFilters>({})
+  const setFilter = <K extends keyof ReportFilters>(key: K, value: ReportFilters[K]) =>
+    setFilters((prev) => ({ ...prev, [key]: value }))
+
+  const { data: kpis, isLoading: kpisLoading } = useReportKpis(activeOrgId, filters)
+  const { data, isLoading } = useReportData(activeOrgId, filters)
   const c = useComputed(data)
   const [tab, setTab] = React.useState<Tab>(canFinancials ? 'Financial' : 'Productivity')
+
+  const productivityRows = canFinancials
+    ? c?.productivity ?? []
+    : (c?.productivity ?? []).filter((p) => p.id === activeMembership?.id)
 
   return (
     <div>
@@ -153,6 +229,7 @@ export function ReportsPage() {
           <ExportButton
             filename="firm-report"
             label="Export report"
+            csv
             disabled={!c}
             sheets={() => {
               if (!c) return []
@@ -179,13 +256,13 @@ export function ReportsPage() {
               sheets.push(
                 {
                   name: 'Productivity',
-                  rows: c.productivity.map((p) => ({
+                  rows: productivityRows.map((p) => ({
                     Lawyer: p.name,
                     Role: p.role,
                     'Billable hours': Number(p.billableHours.toFixed(1)),
                     ...(canFinancials ? { 'Billable value': Math.round(p.billableValue) } : {}),
-                    'Active matters': p.mattersLed,
-                    'Tasks done': p.tasksDone,
+                    'Matters led': p.mattersLed,
+                    'Tasks completed (assigned)': p.tasksDone,
                   })),
                 },
                 { name: 'Matters by status', rows: c.matters.byStatus.map((r) => ({ Status: r.label, Matters: r.value })) },
@@ -214,6 +291,21 @@ export function ReportsPage() {
           />
         }
       />
+
+      <FiltersBar filters={filters} set={setFilter} />
+
+      {/* KPI summary row — persistent across tabs, org-wide (not per-lawyer attributed), fixes the "shows 0" bugs */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <StatTile label="Active Matters" value={String(kpis?.activeMatters ?? 0)} icon={Briefcase} loading={kpisLoading} />
+        <StatTile label="Closed Matters" value={String(kpis?.closedMatters ?? 0)} icon={Briefcase} loading={kpisLoading} />
+        <StatTile label="Active Clients" value={String(kpis?.activeClients ?? 0)} icon={Users} loading={kpisLoading} />
+        <StatTile label="New Clients" value={String(kpis?.newClients ?? 0)} icon={UserPlus} loading={kpisLoading} />
+        <StatTile label="Billable Hours" value={`${kpis?.billableHours ?? 0}h`} icon={Clock} loading={kpisLoading} />
+        {canFinancials && <StatTile label="Revenue" value={formatMoneyCompact(kpis?.revenue ?? 0)} icon={Banknote} loading={kpisLoading} />}
+        {canFinancials && <StatTile label="Outstanding Invoices" value={formatMoneyCompact(kpis?.outstandingInvoices ?? 0)} icon={AlertTriangle} loading={kpisLoading} />}
+        <StatTile label="Hearings This Week" value={String(kpis?.hearingsThisWeek ?? 0)} icon={Gavel} loading={kpisLoading} />
+        <StatTile label="Tasks Due" value={String(kpis?.tasksDue ?? 0)} icon={ListChecks} loading={kpisLoading} />
+      </div>
 
       <div className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
         {visibleTabs.map((t) => (
@@ -264,7 +356,10 @@ export function ReportsPage() {
         </div>
       ) : tab === 'Productivity' ? (
         <div className="space-y-6">
-          {c.hoursChart.length > 0 && (
+          {!canFinancials && (
+            <p className="text-sm text-muted-foreground">You're seeing your own productivity numbers. Firm-wide figures require financial reporting access.</p>
+          )}
+          {c.hoursChart.length > 0 && canFinancials && (
             <Card className="p-6"><h2 className="mb-4 text-sm font-semibold">Billable hours by lawyer</h2><BarChart data={c.hoursChart} formatValue={(n) => `${n}h`} /></Card>
           )}
           <Card className="overflow-hidden">
@@ -272,10 +367,10 @@ export function ReportsPage() {
               <TableHeader><TableRow>
                 <TableHead>Lawyer</TableHead><TableHead className="text-right">Billable hrs</TableHead>
                 {canFinancials && <TableHead className="text-right">Billable value</TableHead>}
-                <TableHead className="text-right">Active matters</TableHead><TableHead className="text-right">Tasks done</TableHead>
+                <TableHead className="text-right">Matters led</TableHead><TableHead className="text-right">Tasks completed (assigned)</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {c.productivity.map((p) => (
+                {productivityRows.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell><div className="flex items-center gap-2.5">
                       <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/12 text-[10px] font-semibold text-primary">{initialsOf(p.name, 'U')}</span>

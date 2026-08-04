@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { platformService, type PlanInput } from '@/features/platform/services/platform.service'
+import { supabase } from '@/shared/lib/supabase'
+import type { AuditLog } from '@/shared/types/database.types'
 
 const keys = {
   stats: ['platform', 'stats'] as const,
@@ -28,8 +31,36 @@ export function usePlatformOrganizations(includeDeleted = false) {
     queryFn: () => platformService.listOrganizations(includeDeleted),
   })
 }
+/** Recent platform-wide activity, kept current via a Realtime subscription. */
 export function usePlatformActivity() {
-  return useQuery({ queryKey: keys.activity, queryFn: () => platformService.getRecentActivity() })
+  const qc = useQueryClient()
+  const [live, setLive] = useState(false)
+
+  const query = useQuery({ queryKey: keys.activity, queryFn: () => platformService.getRecentActivity() })
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('platform-activity')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'audit_logs' },
+        (payload) => {
+          const row = payload.new as AuditLog
+          qc.setQueryData<AuditLog[]>(keys.activity, (old) => {
+            if (!old) return [row]
+            if (old.some((r) => r.id === row.id)) return old
+            return [row, ...old].slice(0, 12)
+          })
+        },
+      )
+      .subscribe((status) => setLive(status === 'SUBSCRIBED'))
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [qc])
+
+  return { ...query, live }
 }
 export function useOrganizationGrowth() {
   return useQuery({ queryKey: keys.growth, queryFn: () => platformService.getOrganizationGrowth() })

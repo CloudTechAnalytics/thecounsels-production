@@ -1,8 +1,9 @@
 import * as React from 'react'
 import { Outlet } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bell, Menu, ShieldCheck } from 'lucide-react'
+import { Menu, ShieldCheck } from 'lucide-react'
 import { PlatformSidebar } from '@/shared/components/layout/platform-sidebar'
+import { PlatformNotifications } from '@/shared/components/layout/platform-notifications'
 import { UserMenu } from '@/shared/components/layout/user-menu'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
@@ -49,9 +50,7 @@ export function PlatformLayout() {
             <ShieldCheck className="h-3.5 w-3.5" /> Platform Console
           </Badge>
           <div className="ml-auto flex items-center gap-1.5">
-            <Button variant="ghost" size="icon" aria-label="Notifications">
-              <Bell className="h-5 w-5" />
-            </Button>
+            <PlatformNotifications />
             <UserMenu settingsPath="/platform/settings" />
           </div>
         </header>

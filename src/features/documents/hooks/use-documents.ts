@@ -12,19 +12,34 @@ export function useDocuments(organizationId: string | null, filters: DocumentFil
 
 function useInvalidate(organizationId: string | null) {
   const qc = useQueryClient()
-  return () => qc.invalidateQueries({ queryKey: ['org-documents', organizationId] })
+  return (matterId?: string | null) => {
+    qc.invalidateQueries({ queryKey: ['org-documents', organizationId] })
+    if (matterId) qc.invalidateQueries({ queryKey: ['matter-summary', matterId] })
+  }
 }
 
 export function useUploadDocuments(organizationId: string | null, uploadedBy: string | null) {
   const invalidate = useInvalidate(organizationId)
   return useMutation({
-    mutationFn: (params: { file: File; matterId?: string | null; category?: string | null }) =>
+    mutationFn: (params: { file: File; matterId?: string | null; category?: string | null; displayName?: string }) =>
       documentsService.upload({ organizationId: organizationId!, uploadedBy, ...params }),
-    onSuccess: invalidate,
+    onSuccess: (_d, vars) => invalidate(vars.matterId),
+  })
+}
+
+export function useUpdateDocument(organizationId: string | null) {
+  const invalidate = useInvalidate(organizationId)
+  return useMutation({
+    mutationFn: ({ doc, patch }: { doc: DocumentRow; patch: { display_name?: string; category?: string | null } }) =>
+      documentsService.update(doc, patch),
+    onSuccess: (_d, vars) => invalidate(vars.doc.matter_id),
   })
 }
 
 export function useDeleteOrgDocument(organizationId: string | null) {
   const invalidate = useInvalidate(organizationId)
-  return useMutation({ mutationFn: (doc: DocumentRow) => documentsService.remove(doc), onSuccess: invalidate })
+  return useMutation({
+    mutationFn: (doc: DocumentRow) => documentsService.remove(doc),
+    onSuccess: (_d, doc) => invalidate(doc.matter_id),
+  })
 }

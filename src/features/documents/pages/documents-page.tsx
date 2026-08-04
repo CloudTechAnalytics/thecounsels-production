@@ -1,12 +1,14 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { Search, UploadCloud, FileText, Eye, Trash2, MoreHorizontal, FolderOpen } from 'lucide-react'
+import { Search, UploadCloud, FileText, FolderOpen } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useMatters } from '@/features/matters/hooks/use-matters'
 import { useDocuments, useDeleteOrgDocument } from '@/features/documents/hooks/use-documents'
 import { DocumentUploadDialog } from '@/features/documents/components/document-upload-dialog'
+import { DocumentActionsMenu } from '@/features/documents/components/document-actions-menu'
+import { DocumentRenameDialog } from '@/features/documents/components/document-rename-dialog'
 import { DOCUMENT_CATEGORIES, type DocumentFilters, type DocumentWithMatter } from '@/features/documents/services/documents.service'
 import { DocumentViewer } from '@/features/matters/components/document-viewer'
 import { PageHeader } from '@/shared/components/page-header'
@@ -19,12 +21,6 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/shared/components/ui/dropdown-menu'
 import { formatStorage } from '@/shared/lib/format'
 import { toast } from '@/shared/components/ui/sonner'
 
@@ -40,9 +36,11 @@ export function DocumentsPage() {
 
   const [uploadOpen, setUploadOpen] = React.useState(false)
   const [viewing, setViewing] = React.useState<DocumentWithMatter | null>(null)
+  const [renaming, setRenaming] = React.useState<DocumentWithMatter | null>(null)
   const [toDelete, setToDelete] = React.useState<DocumentWithMatter | null>(null)
 
   const canUpload = has('documents.upload')
+  const canRename = has('documents.update')
   const canDelete = has('documents.delete')
 
   return (
@@ -58,7 +56,7 @@ export function DocumentsPage() {
               sheets={() => [{
                 name: 'Documents',
                 rows: (data ?? []).map((d) => ({
-                  Name: d.name,
+                  Name: d.display_name,
                   Category: d.category ?? '',
                   Matter: d.matter?.matter_number ?? 'General',
                   Size: d.size_bytes != null ? formatStorage(d.size_bytes) : '',
@@ -115,7 +113,7 @@ export function DocumentsPage() {
                       <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                         <FileText className="h-5 w-5" />
                       </span>
-                      <span className="truncate text-sm font-medium hover:underline">{d.name}</span>
+                      <span className="truncate text-sm font-medium hover:underline">{d.display_name}</span>
                     </button>
                   </TableCell>
                   <TableCell>{d.category ? <Badge variant="outline">{d.category}</Badge> : <span className="text-sm text-muted-foreground">—</span>}</TableCell>
@@ -129,21 +127,14 @@ export function DocumentsPage() {
                   <TableCell className="text-sm text-muted-foreground">{d.size_bytes != null ? formatStorage(d.size_bytes) : '—'}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{format(new Date(d.created_at), 'MMM d, yyyy')}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => setViewing(d)}><Eye className="h-4 w-4" /> View</Button>
-                      {canDelete && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="Actions"><MoreHorizontal className="h-4 w-4" /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setToDelete(d)}>
-                              <Trash2 /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </div>
+                    <DocumentActionsMenu
+                      doc={d}
+                      onView={() => setViewing(d)}
+                      canRename={canRename}
+                      canDelete={canDelete}
+                      onRename={() => setRenaming(d)}
+                      onDelete={() => setToDelete(d)}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
@@ -165,6 +156,7 @@ export function DocumentsPage() {
 
       <DocumentUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
       <DocumentViewer doc={viewing} open={Boolean(viewing)} onOpenChange={(o) => !o && setViewing(null)} />
+      <DocumentRenameDialog doc={renaming} open={Boolean(renaming)} onOpenChange={(o) => !o && setRenaming(null)} />
 
       <ConfirmDialog
         open={Boolean(toDelete)}
@@ -173,7 +165,7 @@ export function DocumentsPage() {
         destructive
         confirmLabel="Delete"
         loading={del.isPending}
-        description={<>This permanently removes <strong>{toDelete?.name}</strong> from storage.</>}
+        description={<>This permanently removes <strong>{toDelete?.display_name}</strong> from storage.</>}
         onConfirm={async () => {
           if (!toDelete) return
           try {

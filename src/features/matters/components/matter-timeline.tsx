@@ -29,6 +29,7 @@ const EVENT_ICON: Record<string, LucideIcon> = {
   note_added: StickyNote,
   document_added: FileUp,
   document_removed: FileX,
+  document_renamed: PencilLine,
   hearing_scheduled: Gavel,
   task_added: ListChecks,
   task_completed: CheckCheck,

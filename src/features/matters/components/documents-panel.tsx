@@ -1,21 +1,16 @@
 import * as React from 'react'
 import { format } from 'date-fns'
-import { UploadCloud, FileText, Eye, Trash2, Loader2, MoreHorizontal } from 'lucide-react'
+import { UploadCloud, FileText, Loader2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useMatterDocuments, useUploadDocument, useDeleteDocument } from '@/features/matters/hooks/use-documents'
+import { useDocuments, useUploadDocuments, useDeleteOrgDocument } from '@/features/documents/hooks/use-documents'
+import { DocumentActionsMenu } from '@/features/documents/components/document-actions-menu'
+import { DocumentRenameDialog } from '@/features/documents/components/document-rename-dialog'
 import { DocumentViewer } from '@/features/matters/components/document-viewer'
-import type { DocumentRow } from '@/shared/types/database.types'
+import type { DocumentWithMatter } from '@/features/documents/services/documents.service'
 import { Card } from '@/shared/components/ui/card'
-import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/shared/components/ui/dropdown-menu'
 import { formatStorage } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
 import { toast } from '@/shared/components/ui/sonner'
@@ -25,16 +20,18 @@ const ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,image/*'
 export function DocumentsPanel({ matterId }: { matterId: string }) {
   const { activeOrgId, profile } = useAuth()
   const { has } = usePermissions()
-  const { data, isLoading } = useMatterDocuments(matterId)
-  const upload = useUploadDocument(activeOrgId, matterId, profile?.id ?? null)
-  const del = useDeleteDocument(matterId)
+  const { data, isLoading } = useDocuments(activeOrgId, { matterId })
+  const upload = useUploadDocuments(activeOrgId, profile?.id ?? null)
+  const del = useDeleteOrgDocument(activeOrgId)
 
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = React.useState(false)
-  const [viewing, setViewing] = React.useState<DocumentRow | null>(null)
-  const [toDelete, setToDelete] = React.useState<DocumentRow | null>(null)
+  const [viewing, setViewing] = React.useState<DocumentWithMatter | null>(null)
+  const [renaming, setRenaming] = React.useState<DocumentWithMatter | null>(null)
+  const [toDelete, setToDelete] = React.useState<DocumentWithMatter | null>(null)
 
   const canUpload = has('documents.upload')
+  const canRename = has('documents.update')
   const canDelete = has('documents.delete')
 
   const handleFiles = async (files: FileList | null) => {
@@ -45,7 +42,7 @@ export function DocumentsPanel({ matterId }: { matterId: string }) {
         continue
       }
       try {
-        await upload.mutateAsync(file)
+        await upload.mutateAsync({ file, matterId })
         toast.success(`Uploaded ${file.name}`)
       } catch (err) {
         toast.error(`Could not upload ${file.name}`, { description: err instanceof Error ? err.message : undefined })
@@ -112,29 +109,20 @@ export function DocumentsPanel({ matterId }: { matterId: string }) {
                   <FileText className="h-5 w-5" />
                 </span>
                 <button className="min-w-0 flex-1 text-left" onClick={() => setViewing(d)}>
-                  <p className="truncate text-sm font-medium hover:underline">{d.name}</p>
+                  <p className="truncate text-sm font-medium hover:underline">{d.display_name}</p>
                   <p className="text-xs text-muted-foreground">
                     {d.size_bytes != null ? `${formatStorage(d.size_bytes)} · ` : ''}
                     {format(new Date(d.created_at), 'MMM d, yyyy')}
                   </p>
                 </button>
-                <Button variant="ghost" size="sm" onClick={() => setViewing(d)}>
-                  <Eye className="h-4 w-4" /> View
-                </Button>
-                {canDelete && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" aria-label="Actions">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setToDelete(d)}>
-                        <Trash2 /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                <DocumentActionsMenu
+                  doc={d}
+                  onView={() => setViewing(d)}
+                  canRename={canRename}
+                  canDelete={canDelete}
+                  onRename={() => setRenaming(d)}
+                  onDelete={() => setToDelete(d)}
+                />
               </li>
             ))}
           </ul>
@@ -146,6 +134,7 @@ export function DocumentsPanel({ matterId }: { matterId: string }) {
       </Card>
 
       <DocumentViewer doc={viewing} open={Boolean(viewing)} onOpenChange={(o) => !o && setViewing(null)} />
+      <DocumentRenameDialog doc={renaming} open={Boolean(renaming)} onOpenChange={(o) => !o && setRenaming(null)} />
 
       <ConfirmDialog
         open={Boolean(toDelete)}
@@ -154,7 +143,7 @@ export function DocumentsPanel({ matterId }: { matterId: string }) {
         destructive
         confirmLabel="Delete"
         loading={del.isPending}
-        description={<>This permanently removes <strong>{toDelete?.name}</strong> from storage.</>}
+        description={<>This permanently removes <strong>{toDelete?.display_name}</strong> from storage.</>}
         onConfirm={async () => {
           if (!toDelete) return
           try {

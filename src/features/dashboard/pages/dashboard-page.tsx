@@ -1,16 +1,20 @@
 import { Link } from 'react-router-dom'
-import { Banknote, Briefcase, CheckSquare, Clock, Gavel, Sparkles, TrendingUp, ArrowRight } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { Banknote, Briefcase, CheckSquare, Clock, Gavel, Sparkles, TrendingUp, ArrowRight, Users, AlertCircle, History } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useActivityTrend } from '@/features/dashboard/hooks/use-activity-trend'
 import { useDashboardKpis } from '@/features/dashboard/hooks/use-dashboard-kpis'
 import { useFirmInsights } from '@/features/dashboard/hooks/use-firm-insights'
+import { useRecentMatters } from '@/features/dashboard/hooks/use-recent-matters'
 import { useBillingStats, usePersonalStats } from '@/features/billing/hooks/use-billing'
 import { StatTile } from '@/features/dashboard/components/stat-tile'
-import { formatMoneyCompact } from '@/shared/lib/format'
+import { MATTER_STATUS_META } from '@/features/matters/types'
+import { formatMoneyCompact, initialsOf } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
 import { PageHeader } from '@/shared/components/page-header'
 import { Sparkline } from '@/shared/components/sparkline'
+import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 
@@ -24,6 +28,7 @@ export function DashboardPage() {
   const { data: billing, isLoading: billingLoading } = useBillingStats(canFinancials ? activeOrgId : null)
   const { data: personal, isLoading: personalLoading } = usePersonalStats(canFinancials ? null : activeOrgId, userId)
   const { data: insights, isLoading: insightsLoading } = useFirmInsights(activeOrgId, canFinancials)
+  const { data: recentMatters, isLoading: recentMattersLoading } = useRecentMatters(activeOrgId)
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'there'
   const orgName = activeMembership?.organization.name
@@ -83,6 +88,22 @@ export function DashboardPage() {
             hint="Assigned to you, not yet done"
             icon={CheckSquare}
             loading={personalLoading}
+          />
+        )}
+        <StatTile
+          label="Active clients"
+          value={String(kpis?.activeClients ?? 0)}
+          hint="Currently active"
+          icon={Users}
+          loading={kpisLoading}
+        />
+        {canFinancials && (
+          <StatTile
+            label="Outstanding invoices"
+            value={formatMoneyCompact(billing?.outstanding ?? 0)}
+            hint="Invoiced, not yet collected"
+            icon={AlertCircle}
+            loading={billingLoading}
           />
         )}
       </div>
@@ -176,6 +197,53 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Recently updated matters */}
+      <Card className="mt-6">
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-lg">Recently updated matters</CardTitle>
+            <p className="mt-0.5 text-sm text-muted-foreground">Latest activity across your firm's matters</p>
+          </div>
+          <History className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {recentMattersLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : recentMatters && recentMatters.length > 0 ? (
+            <ul className="divide-y divide-border/70">
+              {recentMatters.map((m) => {
+                const status = MATTER_STATUS_META[m.status]
+                return (
+                  <li key={m.id}>
+                    <Link to={`/matters/${m.id}`} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:opacity-80">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-xs font-semibold text-primary">
+                        {initialsOf(m.lead_lawyer?.full_name, 'M')}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{m.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {m.matter_number} {m.client ? `· ${m.client.display_name}` : ''}
+                        </p>
+                      </div>
+                      <Badge variant={status.variant}>{status.label}</Badge>
+                      <span className="w-28 shrink-0 text-right text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(m.updated_at), { addSuffix: true })}
+                      </span>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <p className="py-8 text-center text-sm text-muted-foreground">No matters yet.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

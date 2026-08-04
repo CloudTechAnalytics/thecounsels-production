@@ -5,6 +5,7 @@ import { useMatters } from '@/features/matters/hooks/use-matters'
 import { useUploadDocuments } from '@/features/documents/hooks/use-documents'
 import { DOCUMENT_CATEGORIES } from '@/features/documents/services/documents.service'
 import { Button } from '@/shared/components/ui/button'
+import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import {
   Dialog,
@@ -21,13 +22,23 @@ import { toast } from '@/shared/components/ui/sonner'
 const NONE = '__none__'
 const ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,image/*'
 
+function stripExtension(filename: string): string {
+  const i = filename.lastIndexOf('.')
+  return i > 0 ? filename.slice(0, i) : filename
+}
+
+interface QueuedFile {
+  file: File
+  displayName: string
+}
+
 export function DocumentUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { activeOrgId, profile } = useAuth()
   const { data: matters } = useMatters(activeOrgId, {})
   const upload = useUploadDocuments(activeOrgId, profile?.id ?? null)
   const inputRef = React.useRef<HTMLInputElement>(null)
 
-  const [files, setFiles] = React.useState<File[]>([])
+  const [files, setFiles] = React.useState<QueuedFile[]>([])
   const [category, setCategory] = React.useState<string>(NONE)
   const [matterId, setMatterId] = React.useState<string>(NONE)
 
@@ -45,7 +56,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: { open: boolean; on
       return
     }
     let ok = 0
-    for (const file of files) {
+    for (const { file, displayName } of files) {
       if (file.size > 50 * 1024 * 1024) {
         toast.error(`${file.name} is larger than 50 MB`)
         continue
@@ -53,6 +64,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: { open: boolean; on
       try {
         await upload.mutateAsync({
           file,
+          displayName,
           category: category === NONE ? null : category,
           matterId: matterId === NONE ? null : matterId,
         })
@@ -90,7 +102,11 @@ export function DocumentUploadDialog({ open, onOpenChange }: { open: boolean; on
               accept={ACCEPT}
               className="hidden"
               onChange={(e) => {
-                setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])])
+                const added = Array.from(e.target.files ?? []).map((file) => ({
+                  file,
+                  displayName: stripExtension(file.name),
+                }))
+                setFiles((prev) => [...prev, ...added])
                 e.target.value = ''
               }}
             />
@@ -104,8 +120,14 @@ export function DocumentUploadDialog({ open, onOpenChange }: { open: boolean; on
               {files.map((f, i) => (
                 <li key={i} className="flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm">
                   <FileText className="h-4 w-4 shrink-0 text-primary" />
-                  <span className="min-w-0 flex-1 truncate">{f.name}</span>
-                  <span className="text-xs text-muted-foreground">{formatStorage(f.size)}</span>
+                  <Input
+                    value={f.displayName}
+                    onChange={(e) =>
+                      setFiles((prev) => prev.map((qf, j) => (j === i ? { ...qf, displayName: e.target.value } : qf)))
+                    }
+                    className="h-7 min-w-0 flex-1"
+                  />
+                  <span className="shrink-0 text-xs text-muted-foreground">{formatStorage(f.file.size)}</span>
                   <button onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))} aria-label="Remove">
                     <X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
                   </button>

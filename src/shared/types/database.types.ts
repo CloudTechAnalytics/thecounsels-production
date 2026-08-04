@@ -769,6 +769,7 @@ export interface Database {
           organization_id: string
           matter_id: string | null
           name: string
+          display_name: string
           storage_path: string
           mime_type: string | null
           size_bytes: number | null
@@ -781,6 +782,7 @@ export interface Database {
           organization_id: string
           matter_id?: string | null
           name: string
+          display_name: string
           storage_path: string
           mime_type?: string | null
           size_bytes?: number | null

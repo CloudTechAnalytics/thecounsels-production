@@ -16,6 +16,14 @@
       rel="stylesheet"
     />
     <title>The Counsel — CloudTech Legal Suite</title>
+    <script>
+      // Applied before paint so a stored/system dark preference never flashes light first.
+      try {
+        var t = localStorage.getItem('counsel.theme')
+        var dark = t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) document.documentElement.classList.add('dark')
+      } catch (e) {}
+    </script>
   </head>
   <body class="h-full">
     <div id="root" class="h-full"></div>

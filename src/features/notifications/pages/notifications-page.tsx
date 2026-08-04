@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { formatDistanceToNow, format, isPast, isToday } from 'date-fns'
 import {
   BellRing, Gavel, CheckSquare, Search, MoreHorizontal, CheckCheck, Archive, ArchiveRestore, Trash2,
-  ChevronLeft, ChevronRight, Bell as BellIcon, Smartphone, Mail, MessageSquare,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
@@ -13,14 +13,12 @@ import {
   useDeleteNotification,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
-  useNotificationPreferences,
   useNotifications,
   useSetNotificationArchived,
-  useUpdateNotificationPreferences,
 } from '@/features/notifications/hooks/use-notifications'
+import { NotificationPreferencesCard } from '@/features/notifications/components/notification-preferences-card'
 import { NOTIFICATIONS_PAGE_SIZE, type NotificationFilters } from '@/features/notifications/services/notifications.service'
 import { NOTIFICATION_CATEGORY_META, NOTIFICATION_PRIORITY_META, resolveNotificationHref } from '@/features/notifications/types'
-import { isBrowserPushSupported, requestBrowserPushPermission } from '@/features/notifications/lib/browser-push'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
@@ -258,95 +256,6 @@ function NotificationsList() {
   )
 }
 
-function Toggle({ checked, onChange, disabled, label, hint, icon: Icon }: {
-  checked: boolean
-  onChange: (b: boolean) => void
-  disabled?: boolean
-  label: string
-  hint: string
-  icon: typeof BellIcon
-}) {
-  return (
-    <label className={cn('flex items-start justify-between gap-4 rounded-lg border border-border px-4 py-3', disabled ? 'opacity-60' : 'cursor-pointer')}>
-      <span className="flex items-start gap-3">
-        <Icon className="mt-0.5 h-4 w-4 text-muted-foreground" />
-        <span>
-          <span className="text-sm font-medium">{label}</span>
-          <span className="block text-xs text-muted-foreground">{hint}</span>
-        </span>
-      </span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        disabled={disabled}
-        onClick={() => onChange(!checked)}
-        className={cn('relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors', checked ? 'bg-primary' : 'bg-muted', disabled && 'cursor-not-allowed')}
-      >
-        <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all', checked ? 'left-[18px]' : 'left-0.5')} />
-      </button>
-    </label>
-  )
-}
-
-function PreferencesTab() {
-  const { profile } = useAuth()
-  const userId = profile?.id ?? null
-  const { data: prefs, isLoading } = useNotificationPreferences(userId)
-  const update = useUpdateNotificationPreferences(userId)
-
-  const toggleBrowser = async (next: boolean) => {
-    if (next) {
-      const permission = await requestBrowserPushPermission()
-      if (permission !== 'granted') {
-        toast.error('Browser permission denied', { description: 'Allow notifications for this site in your browser settings, then try again.' })
-        return
-      }
-    }
-    update.mutate({ browser_enabled: next })
-  }
-
-  if (isLoading || !prefs) {
-    return <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
-  }
-
-  return (
-    <Card className="max-w-xl space-y-3 p-6">
-      <Toggle
-        icon={BellIcon}
-        label="In-app"
-        hint="Show notifications in the bell and on this page."
-        checked={prefs.in_app_enabled}
-        onChange={(v) => update.mutate({ in_app_enabled: v })}
-      />
-      <Toggle
-        icon={Smartphone}
-        label="Browser"
-        hint={isBrowserPushSupported() ? 'Get a desktop notification while this app is open in a tab.' : 'Not supported in this browser.'}
-        checked={prefs.browser_enabled}
-        disabled={!isBrowserPushSupported()}
-        onChange={toggleBrowser}
-      />
-      <Toggle
-        icon={Mail}
-        label="Email"
-        hint="Coming soon — arrives with the Email Notification Engine milestone."
-        checked={prefs.email_enabled}
-        disabled
-        onChange={() => {}}
-      />
-      <Toggle
-        icon={MessageSquare}
-        label="SMS"
-        hint="Future — no SMS provider is configured yet."
-        checked={prefs.sms_enabled}
-        disabled
-        onChange={() => {}}
-      />
-    </Card>
-  )
-}
-
 export function NotificationsPage() {
   const { isPlatformAdmin } = usePermissions()
   const { has } = usePermissions()
@@ -377,7 +286,7 @@ export function NotificationsPage() {
               </button>
             ))}
           </div>
-          {tab === 'Notifications' ? <NotificationsList /> : <PreferencesTab />}
+          {tab === 'Notifications' ? <NotificationsList /> : <NotificationPreferencesCard />}
         </div>
       </div>
     </div>

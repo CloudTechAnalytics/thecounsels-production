@@ -19,7 +19,7 @@ import { AcceptInvitePage } from '@/features/auth/pages/accept-invite-page'
 // Organization (law firm) workspace
 import { DashboardPage } from '@/features/dashboard/pages/dashboard-page'
 import { AdministrationPage } from '@/features/administration/pages/administration-page'
-import { SettingsPage } from '@/app/placeholder-pages'
+import { SettingsPage } from '@/features/settings/pages/settings-page'
 import { BillingPage } from '@/features/billing/pages/billing-page'
 import { ReportsPage } from '@/features/reports/pages/reports-page'
 import { ClientsPage } from '@/features/clients/pages/clients-page'

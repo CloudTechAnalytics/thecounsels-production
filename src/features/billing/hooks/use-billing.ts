@@ -48,8 +48,15 @@ export function useDeleteExpense(orgId: string | null) {
   return useMutation({ mutationFn: (id: string) => billingService.deleteExpense(id), onSuccess: invalidate })
 }
 export function useGenerateInvoice(orgId: string | null) {
+  const qc = useQueryClient()
   const invalidate = useInvalidate(orgId)
-  return useMutation({ mutationFn: (v: GenerateInvoiceFormValues) => billingService.generateInvoice(orgId!, v), onSuccess: invalidate })
+  return useMutation({
+    mutationFn: (v: GenerateInvoiceFormValues) => billingService.generateInvoice(orgId!, v),
+    onSuccess: () => {
+      invalidate()
+      qc.invalidateQueries({ queryKey: ['matter-summary'] })
+    },
+  })
 }
 export function useSetInvoiceStatus(orgId: string | null) {
   const qc = useQueryClient()
@@ -58,6 +65,7 @@ export function useSetInvoiceStatus(orgId: string | null) {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['billing', orgId] })
       qc.invalidateQueries({ queryKey: ['invoice', vars.id] })
+      qc.invalidateQueries({ queryKey: ['matter-summary'] })
     },
   })
 }
@@ -69,6 +77,7 @@ export function useAddPayment(orgId: string | null, userId: string | null) {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['billing', orgId] })
       qc.invalidateQueries({ queryKey: ['invoice', vars.invoiceId] })
+      qc.invalidateQueries({ queryKey: ['matter-summary'] })
     },
   })
 }

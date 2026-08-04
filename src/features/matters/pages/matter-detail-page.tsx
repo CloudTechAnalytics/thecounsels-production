@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { ArrowLeft, Pencil, Trash2, FileText, StickyNote, LayoutGrid, Activity } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, FileText, StickyNote, LayoutGrid, Activity, Gavel, CheckSquare } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useMatter, useDeleteMatter } from '@/features/matters/hooks/use-matters'
@@ -9,6 +9,10 @@ import { MatterFormDialog } from '@/features/matters/components/matter-form-dial
 import { DocumentsPanel } from '@/features/matters/components/documents-panel'
 import { NotesPanel } from '@/features/matters/components/notes-panel'
 import { MatterTimeline } from '@/features/matters/components/matter-timeline'
+import { MatterHearingsPanel } from '@/features/matters/components/matter-hearings-panel'
+import { MatterTasksPanel } from '@/features/matters/components/matter-tasks-panel'
+import { MatterSummaryCard } from '@/features/matters/components/matter-summary-card'
+import { MatterProgressCard } from '@/features/matters/components/matter-progress-card'
 import { MATTER_STATUS_META } from '@/features/matters/types'
 import { Card } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
@@ -21,7 +25,9 @@ import { toast } from '@/shared/components/ui/sonner'
 
 const TABS = [
   { key: 'overview', label: 'Overview', icon: LayoutGrid },
-  { key: 'tracking', label: 'Tracking', icon: Activity },
+  { key: 'timeline', label: 'Timeline', icon: Activity },
+  { key: 'hearings', label: 'Hearings', icon: Gavel },
+  { key: 'tasks', label: 'Tasks', icon: CheckSquare },
   { key: 'documents', label: 'Documents', icon: FileText },
   { key: 'notes', label: 'Notes', icon: StickyNote },
 ] as const
@@ -149,19 +155,15 @@ export function MatterDetailPage() {
                 </div>
               )}
             </Card>
-            <Card className="p-6">
-              <p className="text-sm font-semibold">Coming with later modules</p>
-              <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                {['Hearings & court dates', 'Tasks & deadlines', 'Time & billing', 'Invoices & expenses'].map((t) => (
-                  <li key={t} className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary/60" /> {t}
-                  </li>
-                ))}
-              </ul>
-            </Card>
+            <div className="space-y-6">
+              <MatterSummaryCard matter={matter} onNavigateTab={setTab} />
+              <MatterProgressCard matter={matter} />
+            </div>
           </div>
         )}
-        {tab === 'tracking' && <MatterTimeline matter={matter} />}
+        {tab === 'timeline' && <MatterTimeline matter={matter} />}
+        {tab === 'hearings' && <MatterHearingsPanel matterId={matter.id} />}
+        {tab === 'tasks' && <MatterTasksPanel matterId={matter.id} />}
         {tab === 'documents' && <DocumentsPanel matterId={matter.id} />}
         {tab === 'notes' && <NotesPanel matterId={matter.id} />}
       </div>

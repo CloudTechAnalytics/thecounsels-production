@@ -12,7 +12,10 @@ export function useHearings(organizationId: string | null, filters: HearingFilte
 
 function useInvalidate(organizationId: string | null) {
   const qc = useQueryClient()
-  return () => qc.invalidateQueries({ queryKey: ['hearings', organizationId] })
+  return () => {
+    qc.invalidateQueries({ queryKey: ['hearings', organizationId] })
+    qc.invalidateQueries({ queryKey: ['matter-summary'] })
+  }
 }
 
 export function useCreateHearing(organizationId: string | null, createdBy: string | null) {

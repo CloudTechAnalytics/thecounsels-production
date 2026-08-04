@@ -1,11 +1,11 @@
 import * as React from 'react'
-import { Link } from 'react-router-dom'
 import { format, isPast } from 'date-fns'
-import { Plus, Gavel, Search, MoreHorizontal, Pencil, Trash2, MapPin, Scale } from 'lucide-react'
+import { Plus, Gavel, Search } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useHearings, useDeleteHearing } from '@/features/hearings/hooks/use-hearings'
 import { HearingFormDialog } from '@/features/hearings/components/hearing-form-dialog'
+import { HearingCard } from '@/features/hearings/components/hearing-card'
 import { HEARING_STATUS_META, type HearingRow } from '@/features/hearings/types'
 import type { HearingFilters } from '@/features/hearings/services/hearings.service'
 import { PageHeader } from '@/shared/components/page-header'
@@ -13,71 +13,10 @@ import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
 import { Input } from '@/shared/components/ui/input'
 import { Button } from '@/shared/components/ui/button'
-import { Badge } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/shared/components/ui/dropdown-menu'
 import { toast } from '@/shared/components/ui/sonner'
-
-function HearingCard({ h, onEdit, onDelete, canEdit, canDelete }: {
-  h: HearingRow
-  onEdit: () => void
-  onDelete: () => void
-  canEdit: boolean
-  canDelete: boolean
-}) {
-  const meta = HEARING_STATUS_META[h.status]
-  return (
-    <Card className="flex items-start gap-4 p-4">
-      <div className="flex w-16 shrink-0 flex-col items-center rounded-lg bg-primary/10 py-2 text-primary">
-        <span className="text-xs font-semibold uppercase">{format(new Date(h.hearing_at), 'MMM')}</span>
-        <span className="font-display text-2xl font-semibold leading-none">{format(new Date(h.hearing_at), 'd')}</span>
-        <span className="mt-1 text-[11px] text-muted-foreground">{format(new Date(h.hearing_at), 'HH:mm')}</span>
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-semibold">{h.title}</p>
-          <Badge variant={meta.variant}>{meta.label}</Badge>
-          <Badge variant="outline" className="capitalize">{h.type}</Badge>
-        </div>
-        {h.matter && (
-          <Link to={`/matters/${h.matter.id}`} className="text-xs text-primary hover:underline">
-            {h.matter.matter_number} — {h.matter.title}
-          </Link>
-        )}
-        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          {h.court && <span className="flex items-center gap-1"><Scale className="h-3 w-3" /> {h.court}</span>}
-          {h.judge && <span>Hon. {h.judge}</span>}
-          {h.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {h.location}</span>}
-        </div>
-        {h.outcome && <p className="mt-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">Outcome:</span> {h.outcome}</p>}
-      </div>
-      {(canEdit || canDelete) && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Actions">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {canEdit && <DropdownMenuItem onClick={onEdit}><Pencil /> Edit / record outcome</DropdownMenuItem>}
-            {canDelete && (
-              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onDelete}>
-                <Trash2 /> Delete
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-    </Card>
-  )
-}
 
 export function HearingsPage() {
   const { activeOrgId } = useAuth()

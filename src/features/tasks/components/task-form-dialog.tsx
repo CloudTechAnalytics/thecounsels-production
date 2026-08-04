@@ -23,24 +23,26 @@ import { toast } from '@/shared/components/ui/sonner'
 
 const NONE = '__none__'
 
-function toDefaults(task?: TaskRow | null): TaskFormValues {
+function toDefaults(task?: TaskRow | null, presetMatterId?: string): TaskFormValues {
   return {
     title: task?.title ?? '',
     description: task?.description ?? '',
     status: task?.status ?? 'todo',
     priority: task?.priority ?? 'medium',
     assigneeId: task?.assignee_id ?? '',
-    matterId: task?.matter_id ?? '',
+    matterId: task?.matter_id ?? presetMatterId ?? '',
     dueDate: task?.due_date ?? '',
   }
 }
 
 export function TaskFormDialog({
   task,
+  presetMatterId,
   open,
   onOpenChange,
 }: {
   task?: TaskRow | null
+  presetMatterId?: string
   open: boolean
   onOpenChange: (o: boolean) => void
 }) {
@@ -52,8 +54,8 @@ export function TaskFormDialog({
 
   const form = useForm<TaskFormValues>({ resolver: zodResolver(taskSchema), defaultValues: toDefaults(task) })
   React.useEffect(() => {
-    if (open) form.reset(toDefaults(task))
-  }, [open, task, form])
+    if (open) form.reset(toDefaults(task, presetMatterId))
+  }, [open, task, presetMatterId, form])
 
   const onSubmit = async (values: TaskFormValues) => {
     const clean = {

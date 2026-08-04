@@ -13,7 +13,10 @@ export function useAddNote(organizationId: string | null, matterId: string, auth
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body: string) => mattersService.addNote(organizationId!, matterId, body, authorId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['matter-notes', matterId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matter-notes', matterId] })
+      qc.invalidateQueries({ queryKey: ['matter-summary', matterId] })
+    },
   })
 }
 
@@ -21,6 +24,9 @@ export function useDeleteNote(matterId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => mattersService.deleteNote(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['matter-notes', matterId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matter-notes', matterId] })
+      qc.invalidateQueries({ queryKey: ['matter-summary', matterId] })
+    },
   })
 }

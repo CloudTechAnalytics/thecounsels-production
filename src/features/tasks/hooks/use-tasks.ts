@@ -13,7 +13,10 @@ export function useTasks(organizationId: string | null, filters: TaskFilters, cu
 
 function useInvalidate(organizationId: string | null) {
   const qc = useQueryClient()
-  return () => qc.invalidateQueries({ queryKey: ['tasks', organizationId] })
+  return () => {
+    qc.invalidateQueries({ queryKey: ['tasks', organizationId] })
+    qc.invalidateQueries({ queryKey: ['matter-summary'] })
+  }
 }
 
 export function useCreateTask(organizationId: string | null, createdBy: string | null) {

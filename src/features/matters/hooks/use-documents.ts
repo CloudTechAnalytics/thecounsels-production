@@ -15,7 +15,10 @@ export function useUploadDocument(organizationId: string | null, matterId: strin
   return useMutation({
     mutationFn: (file: File) =>
       documentsService.upload({ organizationId: organizationId!, matterId, file, uploadedBy }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['documents', matterId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['documents', matterId] })
+      qc.invalidateQueries({ queryKey: ['matter-summary', matterId] })
+    },
   })
 }
 
@@ -23,6 +26,9 @@ export function useDeleteDocument(matterId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (doc: DocumentRow) => documentsService.remove(doc),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['documents', matterId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['documents', matterId] })
+      qc.invalidateQueries({ queryKey: ['matter-summary', matterId] })
+    },
   })
 }

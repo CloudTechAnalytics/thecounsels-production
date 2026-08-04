@@ -1,7 +1,7 @@
 import { supabase } from '@/shared/lib/supabase'
 import type { MatterStatus } from '@/shared/types/database.types'
 import type { MatterFormValues } from '@/features/matters/schemas'
-import type { MatterEventRow, MatterNoteRow, MatterRow } from '@/features/matters/types'
+import type { MatterEventRow, MatterNoteRow, MatterRow, MatterSummary } from '@/features/matters/types'
 
 const MATTER_SELECT =
   '*, client:clients(id, display_name, type), lead_lawyer:profiles!matters_lead_lawyer_id_fkey(id, full_name, avatar_url)'
@@ -138,5 +138,33 @@ export const mattersService = {
       .from('matter_events')
       .insert({ organization_id: organizationId, matter_id: matterId, actor_id: actorId, kind: 'update', summary })
     if (error) throw error
+  },
+
+  // Summary widget --------------------------------------------------------
+  async getSummary(matterId: string): Promise<MatterSummary> {
+    const [docs, notes, hearings, tasks, invoices] = await Promise.all([
+      supabase.from('documents').select('id', { count: 'exact', head: true }).eq('matter_id', matterId),
+      supabase.from('matter_notes').select('id', { count: 'exact', head: true }).eq('matter_id', matterId),
+      supabase.from('hearings').select('hearing_at, status').eq('matter_id', matterId),
+      supabase.from('tasks').select('status').eq('matter_id', matterId),
+      supabase.from('invoices').select('total, amount_paid, status').eq('matter_id', matterId),
+    ])
+    for (const r of [docs, notes, hearings, tasks, invoices]) if (r.error) throw r.error
+
+    const hearingRows = hearings.data ?? []
+    const taskRows = tasks.data ?? []
+    const invoiceRows = (invoices.data ?? []).filter((i) => i.status !== 'void')
+
+    return {
+      documents: docs.count ?? 0,
+      notes: notes.count ?? 0,
+      hearings: hearingRows.length,
+      upcomingHearings: hearingRows.filter((h) => h.status === 'scheduled' && new Date(h.hearing_at) > new Date()).length,
+      tasks: taskRows.length,
+      openTasks: taskRows.filter((t) => t.status !== 'done').length,
+      invoicesCount: invoiceRows.length,
+      invoicesTotal: invoiceRows.reduce((s, i) => s + Number(i.total), 0),
+      invoicesOutstanding: invoiceRows.reduce((s, i) => s + Number(i.total) - Number(i.amount_paid), 0),
+    }
   },
 }

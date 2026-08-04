@@ -32,9 +32,9 @@ function toLocalInput(iso?: string): string {
   return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16)
 }
 
-function toDefaults(hearing?: HearingRow | null, presetDate?: string): HearingFormValues {
+function toDefaults(hearing?: HearingRow | null, presetDate?: string, presetMatterId?: string): HearingFormValues {
   return {
-    matterId: hearing?.matter_id ?? '',
+    matterId: hearing?.matter_id ?? presetMatterId ?? '',
     title: hearing?.title ?? '',
     hearingAt: toLocalInput(hearing?.hearing_at ?? presetDate),
     type: hearing?.type ?? 'hearing',
@@ -50,11 +50,13 @@ function toDefaults(hearing?: HearingRow | null, presetDate?: string): HearingFo
 export function HearingFormDialog({
   hearing,
   presetDate,
+  presetMatterId,
   open,
   onOpenChange,
 }: {
   hearing?: HearingRow | null
   presetDate?: string
+  presetMatterId?: string
   open: boolean
   onOpenChange: (o: boolean) => void
 }) {
@@ -66,8 +68,8 @@ export function HearingFormDialog({
 
   const form = useForm<HearingFormValues>({ resolver: zodResolver(hearingSchema), defaultValues: toDefaults(hearing) })
   React.useEffect(() => {
-    if (open) form.reset(toDefaults(hearing, presetDate))
-  }, [open, hearing, presetDate, form])
+    if (open) form.reset(toDefaults(hearing, presetDate, presetMatterId))
+  }, [open, hearing, presetDate, presetMatterId, form])
 
   const onSubmit = async (values: HearingFormValues) => {
     const clean = { ...values, matterId: values.matterId === NONE ? '' : values.matterId }

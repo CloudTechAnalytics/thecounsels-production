@@ -17,6 +17,18 @@ export interface MatterNoteRow extends MatterNote {
   author: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
 }
 
+export interface MatterSummary {
+  documents: number
+  notes: number
+  hearings: number
+  upcomingHearings: number
+  tasks: number
+  openTasks: number
+  invoicesCount: number
+  invoicesTotal: number
+  invoicesOutstanding: number
+}
+
 export const PRACTICE_AREAS = [
   'Corporate & Commercial',
   'Litigation',

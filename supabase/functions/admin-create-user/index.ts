@@ -103,6 +103,11 @@ Deno.serve(async (req: Request) => {
     user_metadata: { full_name: fullName },
   })
 
+  // Track whether *this call* created the account — only a freshly created
+  // account should be rolled back below. Never delete a pre-existing user
+  // just because a later step failed.
+  const isNewUser = !createErr && Boolean(created?.user?.id)
+
   let userId = created?.user?.id
   if (createErr || !userId) {
     const { data: list } = await admin.auth.admin.listUsers()
@@ -111,13 +116,24 @@ Deno.serve(async (req: Request) => {
     userId = existing.id
   }
 
+  // `profiles` is populated by an on_auth_user_created trigger the instant the
+  // auth user above is created — before this account is seated anywhere. If a
+  // later step fails, roll the auth user back (cascades to profiles) instead
+  // of leaving an orphaned account with no organization or platform role.
+  const rollbackIfNew = async () => {
+    if (isNewUser && userId) await admin.auth.admin.deleteUser(userId)
+  }
+
   if (platform) {
     // CloudTech platform staff — no organization membership.
     const { error } = await admin
       .from('profiles')
       .update({ full_name: fullName, is_platform_admin: true, platform_role: platformRole ?? 'support' })
       .eq('id', userId)
-    if (error) return json({ error: error.message }, 400)
+    if (error) {
+      await rollbackIfNew()
+      return json({ error: error.message }, 400)
+    }
     return json({ userId, email }, 201)
   }
 
@@ -135,7 +151,10 @@ Deno.serve(async (req: Request) => {
     },
     { onConflict: 'organization_id,user_id' },
   )
-  if (memErr) return json({ error: memErr.message }, 400)
+  if (memErr) {
+    await rollbackIfNew()
+    return json({ error: memErr.message }, 400)
+  }
 
   await admin.from('profiles').update({ full_name: fullName }).eq('id', userId)
   await admin.rpc('log_audit', {

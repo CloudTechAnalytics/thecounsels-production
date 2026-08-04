@@ -12,6 +12,7 @@ import {
   Sparkles,
   Clock,
   CheckCircle2,
+  ChevronDown,
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { APP } from '@/shared/config/env'
@@ -117,6 +118,29 @@ const PLANS = [
     price: '₦250,000',
     tagline: 'For firms that run on their data',
     features: ['Everything in Professional', 'Advanced analytics', 'Priority support', 'Custom onboarding'],
+  },
+]
+
+const FAQS = [
+  {
+    q: 'Who can create an account?',
+    a: 'Firm accounts are provisioned by our team — there’s no public self-signup. Once your firm is onboarded, your admin invites lawyers and staff from inside the app.',
+  },
+  {
+    q: 'Is our data secure?',
+    a: 'Every firm’s data is isolated with row-level security, access is role-based, and every action is captured in an audit log.',
+  },
+  {
+    q: 'Can we bring in our existing matters and clients?',
+    a: 'Our onboarding team helps you migrate matters, clients and documents when you get started, so you’re not starting from a blank workspace.',
+  },
+  {
+    q: 'Does billing work in naira?',
+    a: 'Yes — time, disbursements and invoices are tracked and billed in naira by default.',
+  },
+  {
+    q: 'Can we change plans later?',
+    a: 'Yes. Upgrade, downgrade or add seats at any time by reaching out to your account contact.',
   },
 ]
 
@@ -233,13 +257,10 @@ export function LandingPage() {
             <a href="#how-it-works" className="text-sm text-white/60 transition-colors hover:text-white">
               Solutions
             </a>
-            <a href="#pricing" className="text-sm text-white/60 transition-colors hover:text-white">
+            <a href="#faq" className="text-sm text-white/60 transition-colors hover:text-white">
               Resources
             </a>
-            <a
-              href={`mailto:${CONTACT_EMAIL}`}
-              className="text-sm text-white/60 transition-colors hover:text-white"
-            >
+            <a href="#contact" className="text-sm text-white/60 transition-colors hover:text-white">
               Contacts
             </a>
           </nav>
@@ -441,15 +462,48 @@ export function LandingPage() {
         </Reveal>
       </section>
 
-      {/* ── CTA band ────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-sidebar text-white">
+      {/* ── FAQ ─────────────────────────────────────────────── */}
+      <section id="faq" className="border-y border-border bg-card/60">
+        <div className="mx-auto max-w-3xl px-6 py-24">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Resources
+            </motion.p>
+            <motion.h2 variants={fadeUp} className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
+              Frequently asked questions
+            </motion.h2>
+          </Reveal>
+
+          <Reveal className="mt-12 space-y-3">
+            {FAQS.map((f) => (
+              <motion.details
+                key={f.q}
+                variants={fadeUp}
+                className="group rounded-xl border border-border bg-card p-5 open:shadow-card"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-base font-semibold marker:content-none">
+                  {f.q}
+                  <ChevronDown className="h-4 w-4 shrink-0 text-primary transition-transform group-open:rotate-180" />
+                </summary>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
+              </motion.details>
+            ))}
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── CTA band / Contact ──────────────────────────────── */}
+      <section id="contact" className="relative overflow-hidden bg-sidebar text-white">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-70"
           style={{ background: 'radial-gradient(40rem 20rem at 50% 120%, hsl(var(--primary) / 0.25), transparent)' }}
         />
         <Reveal className="relative mx-auto max-w-3xl px-6 py-24 text-center">
-          <motion.h2 variants={fadeUp} className="font-display text-3xl font-semibold sm:text-4xl">
+          <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+            Contact
+          </motion.p>
+          <motion.h2 variants={fadeUp} className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
             Ready to run a modern practice?
           </motion.h2>
           <motion.p variants={fadeUp} className="mx-auto mt-4 max-w-xl text-white/60">
@@ -465,6 +519,18 @@ export function LandingPage() {
             <Button asChild size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
               <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Talk to our team</a>
             </Button>
+          </motion.div>
+          <motion.div
+            variants={fadeUp}
+            className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/50"
+          >
+            <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors hover:text-primary">
+              {CONTACT_EMAIL}
+            </a>
+            <span className="hidden text-white/20 sm:inline">•</span>
+            <a href={`tel:${CONTACT_PHONE_TEL}`} className="transition-colors hover:text-primary">
+              {CONTACT_PHONE_DISPLAY}
+            </a>
           </motion.div>
         </Reveal>
       </section>

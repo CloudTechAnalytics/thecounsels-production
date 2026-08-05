@@ -17,6 +17,11 @@ function useInvalidate(organizationId: string | null) {
     qc.invalidateQueries({ queryKey: ['tasks', organizationId] })
     qc.invalidateQueries({ queryKey: ['matter-summary'] })
     qc.invalidateQueries({ queryKey: ['reports'] })
+    // A newly (re)assigned task changes the assignee's "My open tasks"
+    // dashboard stat and, since assignment can now grant matter access,
+    // potentially their visible matters too.
+    qc.invalidateQueries({ queryKey: ['billing', organizationId, 'personal-stats'] })
+    qc.invalidateQueries({ queryKey: ['matters'] })
   }
 }
 

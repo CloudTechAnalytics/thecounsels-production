@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0034 — Fix track_matter_assignment_removed during cascading
+-- Migration 0033 — Fix track_matter_assignment_removed during cascading
 -- matter deletion. Same class of bug as 0028's track_document_removed fix.
 --
 -- trg_track_matter_assignment_removed (0030) fires AFTER DELETE on

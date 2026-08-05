@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0033 — Fix has_matter_access() being unusable on the matters
+-- Migration 0034 — Fix has_matter_access() being unusable on the matters
 -- table's own policies.
 --
 -- has_matter_access(matter_id) works by re-querying `matters` from inside

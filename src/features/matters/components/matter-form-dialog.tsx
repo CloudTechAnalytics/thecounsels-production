@@ -24,6 +24,17 @@ import { toast } from '@/shared/components/ui/sonner'
 
 const NONE = '__none__'
 
+/** Supabase's PostgrestError puts the actionable info in `hint`, not
+ * `message` — a plain `.message` can read as "row-level security policy
+ * violated" with no clue which check failed. Surface both, plus the code. */
+function describeSaveError(err: unknown): string | undefined {
+  if (!err || typeof err !== 'object') return err instanceof Error ? err.message : undefined
+  const e = err as { message?: string; hint?: string; code?: string }
+  const parts = [e.message?.trim(), e.hint?.trim()].filter((s): s is string => Boolean(s))
+  const text = Array.from(new Set(parts)).join(' — ')
+  return e.code ? `${text || 'Unknown error'} (${e.code})` : text || undefined
+}
+
 function toDefaults(matter?: MatterRow | null): MatterFormValues {
   return {
     title: matter?.title ?? '',
@@ -72,7 +83,9 @@ export function MatterFormDialog({
       toast.success(matter ? 'Matter updated' : 'Matter opened')
       onOpenChange(false)
     } catch (err) {
-      toast.error('Could not save matter', { description: err instanceof Error ? err.message : undefined })
+      // eslint-disable-next-line no-console
+      console.error('Matter save failed:', err)
+      toast.error('Could not save matter', { description: describeSaveError(err) })
     }
   }
 

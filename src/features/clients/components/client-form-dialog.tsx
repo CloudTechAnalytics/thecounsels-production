@@ -29,6 +29,10 @@ function toDefaults(client?: Client | null): ClientFormValues {
     companyName: client?.company_name ?? '',
     email: client?.email ?? '',
     phone: client?.phone ?? '',
+    contactName: client?.contact_name ?? '',
+    contactTitle: client?.contact_title ?? '',
+    contactEmail: client?.contact_email ?? '',
+    contactPhone: client?.contact_phone ?? '',
     website: client?.website ?? '',
     address: client?.address ?? '',
     city: client?.city ?? '',
@@ -173,9 +177,9 @@ export function ClientFormDialog({
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{type === 'corporate' ? 'Company email' : 'Email'}</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="jane@acme.com" {...field} />
+                      <Input type="email" placeholder={type === 'corporate' ? 'info@acme.com' : 'jane@example.com'} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -186,7 +190,7 @@ export function ClientFormDialog({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>{type === 'corporate' ? 'Company phone' : 'Phone'}</FormLabel>
                     <FormControl>
                       <Input placeholder="+234…" {...field} />
                     </FormControl>
@@ -194,6 +198,69 @@ export function ClientFormDialog({
                 )}
               />
             </div>
+
+            {type === 'corporate' && (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-sm font-medium">Primary contact</p>
+                  <p className="text-xs text-muted-foreground">Who at this company your firm should actually reach out to.</p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="contactName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Jane Doe" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="contactTitle"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="General Counsel" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="contactEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="jane@acme.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="contactPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact phone</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+234…" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </>
+            )}
 
             <FormField
               control={form.control}

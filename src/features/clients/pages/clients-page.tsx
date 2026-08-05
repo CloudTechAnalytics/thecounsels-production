@@ -77,6 +77,10 @@ export function ClientsPage() {
                   Email: c.email ?? '',
                   Phone: c.phone ?? '',
                   Company: c.company_name ?? '',
+                  'Contact name': c.contact_name ?? '',
+                  'Contact title': c.contact_title ?? '',
+                  'Contact email': c.contact_email ?? '',
+                  'Contact phone': c.contact_phone ?? '',
                   City: c.city ?? '',
                   Country: c.country ?? '',
                   Added: c.created_at.slice(0, 10),
@@ -94,7 +98,7 @@ export function ClientsPage() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, company or email…"
+            placeholder="Search by name, company, contact or email…"
             className="pl-9"
           />
         </div>
@@ -158,19 +162,31 @@ export function ClientsPage() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <div className="space-y-0.5 text-sm">
-                      {c.email && (
-                        <span className="flex items-center gap-1.5 text-muted-foreground">
-                          <Mail className="h-3 w-3" /> {c.email}
-                        </span>
-                      )}
-                      {c.phone && (
-                        <span className="flex items-center gap-1.5 text-muted-foreground">
-                          <Phone className="h-3 w-3" /> {c.phone}
-                        </span>
-                      )}
-                      {!c.email && !c.phone && <span className="text-muted-foreground">—</span>}
-                    </div>
+                    {(() => {
+                      const displayEmail = c.contact_email || c.email
+                      const displayPhone = c.contact_phone || c.phone
+                      return (
+                        <div className="space-y-0.5 text-sm">
+                          {c.contact_name && (
+                            <span className="flex items-center gap-1.5 font-medium">
+                              <User className="h-3 w-3 text-muted-foreground" /> {c.contact_name}
+                              {c.contact_title && <span className="font-normal text-muted-foreground">· {c.contact_title}</span>}
+                            </span>
+                          )}
+                          {displayEmail && (
+                            <span className="flex items-center gap-1.5 text-muted-foreground">
+                              <Mail className="h-3 w-3" /> {displayEmail}
+                            </span>
+                          )}
+                          {displayPhone && (
+                            <span className="flex items-center gap-1.5 text-muted-foreground">
+                              <Phone className="h-3 w-3" /> {displayPhone}
+                            </span>
+                          )}
+                          {!c.contact_name && !displayEmail && !displayPhone && <span className="text-muted-foreground">—</span>}
+                        </div>
+                      )
+                    })()}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {[c.city, c.country].filter(Boolean).join(', ') || '—'}

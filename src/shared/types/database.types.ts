@@ -352,6 +352,10 @@ export interface Database {
           status: ClientStatus
           notes: string | null
           created_by: string | null
+          contact_name: string | null
+          contact_title: string | null
+          contact_email: string | null
+          contact_phone: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -370,6 +374,10 @@ export interface Database {
           status?: ClientStatus
           notes?: string | null
           created_by?: string | null
+          contact_name?: string | null
+          contact_title?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
         }
         Update: Partial<Database['public']['Tables']['clients']['Insert']>
         Relationships: [

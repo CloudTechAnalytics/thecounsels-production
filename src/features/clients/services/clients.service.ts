@@ -17,6 +17,10 @@ function toRow(values: ClientFormValues) {
     company_name: values.companyName?.trim() || null,
     email: values.email?.trim() || null,
     phone: values.phone?.trim() || null,
+    contact_name: values.contactName?.trim() || null,
+    contact_title: values.contactTitle?.trim() || null,
+    contact_email: values.contactEmail?.trim() || null,
+    contact_phone: values.contactPhone?.trim() || null,
     website: values.website?.trim() || null,
     address: values.address?.trim() || null,
     city: values.city?.trim() || null,
@@ -38,7 +42,7 @@ export const clientsService = {
     if (filters.status && filters.status !== 'all') q = q.eq('status', filters.status)
     if (filters.search?.trim()) {
       const s = `%${filters.search.trim()}%`
-      q = q.or(`display_name.ilike.${s},email.ilike.${s},company_name.ilike.${s}`)
+      q = q.or(`display_name.ilike.${s},email.ilike.${s},company_name.ilike.${s},contact_name.ilike.${s},contact_email.ilike.${s}`)
     }
     const { data, error } = await q
     if (error) throw error

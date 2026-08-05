@@ -1,7 +1,7 @@
 import { supabase } from '@/shared/lib/supabase'
 import type { MatterStatus } from '@/shared/types/database.types'
 import type { MatterFormValues } from '@/features/matters/schemas'
-import type { MatterEventRow, MatterNoteRow, MatterRow, MatterSummary } from '@/features/matters/types'
+import type { MatterAssignmentRow, MatterEventRow, MatterNoteRow, MatterRow, MatterSummary } from '@/features/matters/types'
 
 const MATTER_SELECT =
   '*, client:clients(id, display_name, type), lead_lawyer:profiles!matters_lead_lawyer_id_fkey(id, full_name, avatar_url)'
@@ -137,6 +137,29 @@ export const mattersService = {
     const { error } = await supabase
       .from('matter_events')
       .insert({ organization_id: organizationId, matter_id: matterId, actor_id: actorId, kind: 'update', summary })
+    if (error) throw error
+  },
+
+  // Team assignments ------------------------------------------------------
+  async listAssignments(matterId: string): Promise<MatterAssignmentRow[]> {
+    const { data, error } = await supabase
+      .from('matter_assignments')
+      .select('*, user:profiles(id, full_name, avatar_url)')
+      .eq('matter_id', matterId)
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    return (data ?? []) as unknown as MatterAssignmentRow[]
+  },
+
+  async assignMember(organizationId: string, matterId: string, userId: string, assignedBy: string | null): Promise<void> {
+    const { error } = await supabase
+      .from('matter_assignments')
+      .insert({ organization_id: organizationId, matter_id: matterId, user_id: userId, assigned_by: assignedBy })
+    if (error) throw error
+  },
+
+  async unassignMember(matterId: string, userId: string): Promise<void> {
+    const { error } = await supabase.from('matter_assignments').delete().eq('matter_id', matterId).eq('user_id', userId)
     if (error) throw error
   },
 

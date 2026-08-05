@@ -13,6 +13,7 @@ import { MatterHearingsPanel } from '@/features/matters/components/matter-hearin
 import { MatterTasksPanel } from '@/features/matters/components/matter-tasks-panel'
 import { MatterSummaryCard } from '@/features/matters/components/matter-summary-card'
 import { MatterProgressCard } from '@/features/matters/components/matter-progress-card'
+import { MatterTeamCard } from '@/features/matters/components/matter-team-card'
 import { MATTER_STATUS_META } from '@/features/matters/types'
 import { Card } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
@@ -158,6 +159,7 @@ export function MatterDetailPage() {
             <div className="space-y-6">
               <MatterSummaryCard matter={matter} onNavigateTab={setTab} />
               <MatterProgressCard matter={matter} />
+              <MatterTeamCard matterId={matter.id} />
             </div>
           </div>
         )}

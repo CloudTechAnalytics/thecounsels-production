@@ -61,3 +61,38 @@ export function useDeleteMatter(organizationId: string | null) {
     onSuccess: invalidate,
   })
 }
+
+// Team assignments ------------------------------------------------------------
+export function useMatterAssignments(matterId: string | undefined) {
+  return useQuery({
+    queryKey: ['matter-assignments', matterId],
+    enabled: Boolean(matterId),
+    queryFn: () => mattersService.listAssignments(matterId!),
+  })
+}
+
+function useInvalidateAssignments(matterId: string | undefined) {
+  const qc = useQueryClient()
+  return () => {
+    qc.invalidateQueries({ queryKey: ['matter-assignments', matterId] })
+    qc.invalidateQueries({ queryKey: ['matter', matterId] })
+    qc.invalidateQueries({ queryKey: ['matter-events', matterId] })
+    qc.invalidateQueries({ queryKey: ['matters'] })
+  }
+}
+
+export function useAssignMatterMember(organizationId: string | null, matterId: string | undefined, assignedBy: string | null) {
+  const invalidate = useInvalidateAssignments(matterId)
+  return useMutation({
+    mutationFn: (userId: string) => mattersService.assignMember(organizationId!, matterId!, userId, assignedBy),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUnassignMatterMember(matterId: string | undefined) {
+  const invalidate = useInvalidateAssignments(matterId)
+  return useMutation({
+    mutationFn: (userId: string) => mattersService.unassignMember(matterId!, userId),
+    onSuccess: invalidate,
+  })
+}

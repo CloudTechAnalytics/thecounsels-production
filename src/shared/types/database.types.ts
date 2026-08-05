@@ -445,6 +445,34 @@ export interface Database {
           },
         ]
       }
+      matter_assignments: {
+        Row: {
+          id: string
+          organization_id: string
+          matter_id: string
+          user_id: string
+          assigned_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          matter_id: string
+          user_id: string
+          assigned_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['matter_assignments']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'matter_assignments_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       matter_notes: {
         Row: {
           id: string
@@ -1219,6 +1247,7 @@ export type Client = Database['public']['Tables']['clients']['Row']
 export type ClientInsert = Database['public']['Tables']['clients']['Insert']
 export type Matter = Database['public']['Tables']['matters']['Row']
 export type MatterNote = Database['public']['Tables']['matter_notes']['Row']
+export type MatterAssignment = Database['public']['Tables']['matter_assignments']['Row']
 export type MatterEvent = Database['public']['Tables']['matter_events']['Row']
 export type Hearing = Database['public']['Tables']['hearings']['Row']
 export type Task = Database['public']['Tables']['tasks']['Row']

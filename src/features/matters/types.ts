@@ -1,9 +1,13 @@
 import type { BadgeProps } from '@/shared/components/ui/badge'
-import type { Client, Matter, MatterEvent, MatterNote, MatterStatus, Profile } from '@/shared/types/database.types'
+import type { Client, Matter, MatterAssignment, MatterEvent, MatterNote, MatterStatus, Profile } from '@/shared/types/database.types'
 
 export interface MatterRow extends Matter {
   client: Pick<Client, 'id' | 'display_name' | 'type'> | null
   lead_lawyer: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
+}
+
+export interface MatterAssignmentRow extends MatterAssignment {
+  user: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
 }
 
 export interface MatterEventRow extends MatterEvent {

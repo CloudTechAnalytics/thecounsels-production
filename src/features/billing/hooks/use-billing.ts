@@ -128,10 +128,10 @@ export function useSetInvoiceStatus(orgId: string | null) {
     onSuccess: (_d, vars) => invalidateInvoice(vars.id),
   })
 }
-export function useDeleteDraftInvoice(orgId: string | null) {
+export function useDeleteInvoice(orgId: string | null) {
   const invalidate = useInvalidate(orgId)
   return useMutation({
-    mutationFn: (id: string) => billingService.deleteDraftInvoice(id, orgId!),
+    mutationFn: (id: string) => billingService.deleteInvoice(id, orgId!),
     onSuccess: invalidate,
   })
 }

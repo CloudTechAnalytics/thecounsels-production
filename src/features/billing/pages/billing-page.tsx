@@ -1,27 +1,51 @@
 import * as React from 'react'
 import { format } from 'date-fns'
-import { Banknote, Clock, Wallet, FileText, CircleDollarSign, AlertTriangle, Plus, Trash2, Receipt } from 'lucide-react'
+import {
+  Banknote,
+  Clock,
+  Wallet,
+  FileText,
+  CircleDollarSign,
+  AlertTriangle,
+  Plus,
+  Trash2,
+  Receipt,
+  Search,
+  MoreHorizontal,
+} from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
+import { useMatters } from '@/features/matters/hooks/use-matters'
+import { useClients } from '@/features/clients/hooks/use-clients'
 import {
   useBillingStats,
   usePersonalStats,
   useUnbilledExpenses,
   useInvoices,
   useDeleteExpense,
+  useDeleteInvoice,
 } from '@/features/billing/hooks/use-billing'
 import { TimeEntryDialog, ExpenseDialog } from '@/features/billing/components/log-dialogs'
 import { TimeEntriesTab } from '@/features/billing/components/time-entries-tab'
 import { GenerateInvoiceDialog, InvoiceDetailDialog } from '@/features/billing/components/invoice-dialogs'
-import { INVOICE_STATUS_META, type ExpenseRow, type InvoiceRow } from '@/features/billing/types'
+import { EXPENSE_CATEGORIES, INVOICE_STATUS_META, isInvoiceOverdue, type ExpenseRow, type InvoiceRow } from '@/features/billing/types'
 import { StatTile } from '@/features/dashboard/components/stat-tile'
 import { PageHeader } from '@/shared/components/page-header'
 import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
+import { Input } from '@/shared/components/ui/input'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/shared/components/ui/dropdown-menu'
 import { formatNaira, formatMoneyCompact } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
 import { toast } from '@/shared/components/ui/sonner'
@@ -85,60 +109,19 @@ export function BillingPage() {
         </div>
       )}
 
-      <div className="mt-6 flex items-end justify-between gap-3 border-b border-border">
-        <div className="flex gap-1">
-          {tabs.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={cn(
-                'border-b-2 px-4 py-2.5 text-sm font-medium transition-colors capitalize',
-                tab === t ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {t === 'time' ? 'Time entries' : t}
-            </button>
-          ))}
-        </div>
-        <div className="pb-1.5">
-          {tab === 'invoices' && canInvoice && (
-            <ExportButton
-              filename="invoices"
-              disabled={!invoices.data?.length}
-              sheets={() => [{
-                name: 'Invoices',
-                rows: (invoices.data ?? []).map((inv) => ({
-                  'Invoice #': inv.invoice_number ?? '',
-                  Client: inv.client?.display_name ?? '',
-                  Matter: inv.matter?.matter_number ?? '',
-                  Issued: inv.issue_date,
-                  Due: inv.due_date ?? '',
-                  Status: INVOICE_STATUS_META[inv.status].label,
-                  Total: Number(inv.total),
-                  Paid: Number(inv.amount_paid),
-                  Balance: Number(inv.total) - Number(inv.amount_paid),
-                })),
-              }]}
-            />
-          )}
-          {tab === 'expenses' && (
-            <ExportButton
-              filename="unbilled-expenses"
-              disabled={expenseRows.length === 0}
-              sheets={() => [{
-                name: 'Unbilled expenses',
-                rows: expenseRows.map((e) => ({
-                  Date: e.expense_date,
-                  Description: e.description,
-                  Matter: e.matter?.matter_number ?? '',
-                  Category: e.category ?? '',
-                  Amount: Number(e.amount),
-                  Billable: e.billable ? 'Yes' : 'No',
-                })),
-              }]}
-            />
-          )}
-        </div>
+      <div className="mt-6 flex gap-1 border-b border-border">
+        {tabs.map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={cn(
+              'border-b-2 px-4 py-2.5 text-sm font-medium transition-colors capitalize',
+              tab === t ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {t === 'time' ? 'Time entries' : t}
+          </button>
+        ))}
       </div>
 
       <div className="mt-6">
@@ -157,43 +140,114 @@ export function BillingPage() {
 
 function ExpensesTab({ rows, loading }: { rows: ExpenseRow[]; loading: boolean }) {
   const { activeOrgId } = useAuth()
+  const { data: matters } = useMatters(activeOrgId, {})
   const delExp = useDeleteExpense(activeOrgId)
+
+  const [search, setSearch] = React.useState('')
+  const [matterId, setMatterId] = React.useState('all')
+  const [category, setCategory] = React.useState('all')
+  const [billable, setBillable] = React.useState<'all' | 'yes' | 'no'>('all')
+  const [dateFrom, setDateFrom] = React.useState('')
+  const [dateTo, setDateTo] = React.useState('')
+
+  const filtered = rows.filter((e) => {
+    if (search.trim() && !e.description.toLowerCase().includes(search.trim().toLowerCase())) return false
+    if (matterId !== 'all' && e.matter?.id !== matterId) return false
+    if (category !== 'all' && e.category !== category) return false
+    if (billable === 'yes' && !e.billable) return false
+    if (billable === 'no' && e.billable) return false
+    if (dateFrom && e.expense_date < dateFrom) return false
+    if (dateTo && e.expense_date > dateTo) return false
+    return true
+  })
 
   const del = async (fn: () => Promise<void>) => {
     try { await fn() } catch (err) { toast.error('Could not delete', { description: err instanceof Error ? err.message : undefined }) }
   }
 
   return (
-    <Card className="overflow-hidden">
-      {loading ? (
-        <div className="space-y-2 p-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-      ) : rows.length > 0 ? (
-        <Table>
-          <TableHeader><TableRow>
-            <TableHead>Description</TableHead><TableHead>Matter</TableHead><TableHead>Category</TableHead>
-            <TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead><TableHead></TableHead>
-          </TableRow></TableHeader>
-          <TableBody>
-            {rows.map((e) => (
-              <TableRow key={e.id}>
-                <TableCell className="text-sm">{e.description}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {e.matter?.matter_number ?? (e.billable ? <Badge variant="warning">No matter — can't be invoiced</Badge> : '—')}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{e.category ?? '—'}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{format(new Date(e.expense_date), 'MMM d')}</TableCell>
-                <TableCell className="text-right text-sm font-medium">{formatNaira(Number(e.amount))}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => del(() => delExp.mutateAsync(e.id))}><Trash2 className="h-4 w-4" /></Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      ) : (
-        <p className="px-6 py-10 text-center text-sm text-muted-foreground">No unbilled expenses.</p>
-      )}
-    </Card>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-1 flex-wrap gap-3">
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search description…" className="pl-9" />
+          </div>
+          <Select value={matterId} onValueChange={setMatterId}>
+            <SelectTrigger className="w-48"><SelectValue placeholder="All matters" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All matters</SelectItem>
+              {matters?.map((m) => <SelectItem key={m.id} value={m.id}>{m.matter_number} — {m.title}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="w-40"><SelectValue placeholder="All categories" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              {EXPENSE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={billable} onValueChange={(v) => setBillable(v as typeof billable)}>
+            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Billable & non</SelectItem>
+              <SelectItem value="yes">Billable only</SelectItem>
+              <SelectItem value="no">Non-billable only</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-36" aria-label="From date" />
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-36" aria-label="To date" />
+        </div>
+        <ExportButton
+          filename="unbilled-expenses"
+          disabled={filtered.length === 0}
+          sheets={() => [{
+            name: 'Unbilled expenses',
+            rows: filtered.map((e) => ({
+              Date: e.expense_date,
+              Description: e.description,
+              Matter: e.matter?.matter_number ?? '',
+              Category: e.category ?? '',
+              Amount: Number(e.amount),
+              Billable: e.billable ? 'Yes' : 'No',
+            })),
+          }]}
+        />
+      </div>
+
+      <Card className="overflow-hidden">
+        {loading ? (
+          <div className="space-y-2 p-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+        ) : filtered.length > 0 ? (
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Description</TableHead><TableHead>Matter</TableHead><TableHead>Category</TableHead>
+              <TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead><TableHead></TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {filtered.map((e) => (
+                <TableRow key={e.id}>
+                  <TableCell className="text-sm">{e.description}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {e.matter?.matter_number ?? (e.billable ? <Badge variant="warning">No matter — can't be invoiced</Badge> : '—')}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{e.category ?? '—'}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{format(new Date(e.expense_date), 'MMM d')}</TableCell>
+                  <TableCell className="text-right text-sm font-medium">{formatNaira(Number(e.amount))}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => del(() => delExp.mutateAsync(e.id))}><Trash2 className="h-4 w-4" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <p className="px-6 py-10 text-center text-sm text-muted-foreground">
+            {rows.length === 0 ? 'No unbilled expenses.' : 'No expenses match your filters.'}
+          </p>
+        )}
+      </Card>
+    </div>
   )
 }
 
@@ -204,36 +258,163 @@ function InvoicesTab({
   invoices: { data?: InvoiceRow[]; isLoading: boolean }
   onOpen: (id: string) => void
 }) {
+  const { activeOrgId } = useAuth()
+  const { data: clients } = useClients(activeOrgId, {})
+  const delInv = useDeleteInvoice(activeOrgId)
+
+  const [search, setSearch] = React.useState('')
+  const [status, setStatus] = React.useState('all')
+  const [clientId, setClientId] = React.useState('all')
+  const [dateFrom, setDateFrom] = React.useState('')
+  const [dateTo, setDateTo] = React.useState('')
+  const [toDelete, setToDelete] = React.useState<InvoiceRow | null>(null)
+
+  const rows = invoices.data ?? []
+  const filtered = rows.filter((inv) => {
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      const hay = `${inv.invoice_number ?? ''} ${inv.client?.display_name ?? ''}`.toLowerCase()
+      if (!hay.includes(q)) return false
+    }
+    if (status === 'overdue') { if (!isInvoiceOverdue(inv)) return false }
+    else if (status !== 'all' && inv.status !== status) return false
+    if (clientId !== 'all' && inv.client?.id !== clientId) return false
+    if (dateFrom && inv.issue_date < dateFrom) return false
+    if (dateTo && inv.issue_date > dateTo) return false
+    return true
+  })
+
+  const confirmDelete = async () => {
+    if (!toDelete) return
+    try {
+      await delInv.mutateAsync(toDelete.id)
+      toast.success('Invoice deleted')
+      setToDelete(null)
+    } catch (err) {
+      toast.error('Could not delete invoice', { description: err instanceof Error ? err.message : undefined })
+    }
+  }
+
   return (
-    <Card className="overflow-hidden">
-      {invoices.isLoading ? (
-        <div className="space-y-2 p-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
-      ) : invoices.data && invoices.data.length > 0 ? (
-        <Table>
-          <TableHeader><TableRow>
-            <TableHead>Invoice</TableHead><TableHead>Client</TableHead><TableHead>Issued</TableHead>
-            <TableHead className="text-right">Total</TableHead><TableHead className="text-right">Balance</TableHead><TableHead>Status</TableHead>
-          </TableRow></TableHeader>
-          <TableBody>
-            {invoices.data.map((inv) => (
-              <TableRow key={inv.id} className="cursor-pointer" onClick={() => onOpen(inv.id)}>
-                <TableCell className="font-mono text-xs">{inv.invoice_number}</TableCell>
-                <TableCell className="text-sm">{inv.client?.display_name ?? '—'}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{format(new Date(inv.issue_date), 'MMM d, yyyy')}</TableCell>
-                <TableCell className="text-right text-sm font-medium">{formatNaira(Number(inv.total))}</TableCell>
-                <TableCell className="text-right text-sm">{formatNaira(Number(inv.total) - Number(inv.amount_paid))}</TableCell>
-                <TableCell><Badge variant={INVOICE_STATUS_META[inv.status].variant}>{INVOICE_STATUS_META[inv.status].label}</Badge></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      ) : (
-        <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/12 text-primary"><Receipt className="h-7 w-7" /></span>
-          <p className="font-display text-lg font-semibold">No invoices yet</p>
-          <p className="max-w-sm text-sm text-muted-foreground">Log time and expenses, then generate an invoice from unbilled work.</p>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-1 flex-wrap gap-3">
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search invoice # or client…" className="pl-9" />
+          </div>
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              {(Object.keys(INVOICE_STATUS_META) as (keyof typeof INVOICE_STATUS_META)[]).map((s) => (
+                <SelectItem key={s} value={s}>{INVOICE_STATUS_META[s].label}</SelectItem>
+              ))}
+              <SelectItem value="overdue">Overdue</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={clientId} onValueChange={setClientId}>
+            <SelectTrigger className="w-44"><SelectValue placeholder="All clients" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All clients</SelectItem>
+              {clients?.map((c) => <SelectItem key={c.id} value={c.id}>{c.display_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-36" aria-label="From date" />
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-36" aria-label="To date" />
         </div>
-      )}
-    </Card>
+        <ExportButton
+          filename="invoices"
+          disabled={filtered.length === 0}
+          sheets={() => [{
+            name: 'Invoices',
+            rows: filtered.map((inv) => ({
+              'Invoice #': inv.invoice_number ?? '',
+              Client: inv.client?.display_name ?? '',
+              Matter: inv.matter?.matter_number ?? '',
+              Issued: inv.issue_date,
+              Due: inv.due_date ?? '',
+              Status: INVOICE_STATUS_META[inv.status].label,
+              Total: Number(inv.total),
+              Paid: Number(inv.amount_paid),
+              Balance: Number(inv.total) - Number(inv.amount_paid),
+            })),
+          }]}
+        />
+      </div>
+
+      <Card className="overflow-hidden">
+        {invoices.isLoading ? (
+          <div className="space-y-2 p-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+        ) : filtered.length > 0 ? (
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Invoice</TableHead><TableHead>Client</TableHead><TableHead>Issued</TableHead>
+              <TableHead className="text-right">Total</TableHead><TableHead className="text-right">Balance</TableHead>
+              <TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {filtered.map((inv) => (
+                <TableRow key={inv.id}>
+                  <TableCell className="cursor-pointer font-mono text-xs" onClick={() => onOpen(inv.id)}>{inv.invoice_number}</TableCell>
+                  <TableCell className="cursor-pointer text-sm" onClick={() => onOpen(inv.id)}>{inv.client?.display_name ?? '—'}</TableCell>
+                  <TableCell className="cursor-pointer text-sm text-muted-foreground" onClick={() => onOpen(inv.id)}>
+                    {format(new Date(inv.issue_date), 'MMM d, yyyy')}
+                  </TableCell>
+                  <TableCell className="cursor-pointer text-right text-sm font-medium" onClick={() => onOpen(inv.id)}>{formatNaira(Number(inv.total))}</TableCell>
+                  <TableCell className="cursor-pointer text-right text-sm" onClick={() => onOpen(inv.id)}>
+                    {formatNaira(Number(inv.total) - Number(inv.amount_paid))}
+                  </TableCell>
+                  <TableCell className="cursor-pointer" onClick={() => onOpen(inv.id)}>
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant={INVOICE_STATUS_META[inv.status].variant}>{INVOICE_STATUS_META[inv.status].label}</Badge>
+                      {isInvoiceOverdue(inv) && <Badge variant="destructive">Overdue</Badge>}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label="Actions"><MoreHorizontal className="h-4 w-4" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onOpen(inv.id)}>View</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setToDelete(inv)}>
+                          <Trash2 /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/12 text-primary"><Receipt className="h-7 w-7" /></span>
+            <p className="font-display text-lg font-semibold">{rows.length === 0 ? 'No invoices yet' : 'No invoices match your filters'}</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              {rows.length === 0
+                ? 'Log time and expenses, then generate an invoice from unbilled work.'
+                : 'Try adjusting your search or filters.'}
+            </p>
+          </div>
+        )}
+      </Card>
+
+      <ConfirmDialog
+        open={Boolean(toDelete)}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title={toDelete ? `Delete invoice ${toDelete.invoice_number}?` : 'Delete invoice?'}
+        description={
+          toDelete && Number(toDelete.amount_paid) > 0
+            ? `This invoice has ${formatNaira(Number(toDelete.amount_paid))} in recorded payments — deleting it permanently removes that payment history too. Linked time entries and expenses will return to Unbilled Work/Expenses. This cannot be undone.`
+            : 'Linked time entries and expenses will return to Unbilled Work/Expenses. This cannot be undone.'
+        }
+        destructive
+        confirmLabel="Delete invoice"
+        loading={delInv.isPending}
+        onConfirm={confirmDelete}
+      />
+    </div>
   )
 }

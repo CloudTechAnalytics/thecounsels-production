@@ -14,7 +14,7 @@ import {
   useUpdateInvoiceItem,
   useRemoveInvoiceItem,
   useUpdateInvoiceDraft,
-  useDeleteDraftInvoice,
+  useDeleteInvoice,
 } from '@/features/billing/hooks/use-billing'
 import { INVOICE_STATUS_META, isInvoiceOverdue } from '@/features/billing/types'
 import { printInvoice } from '@/features/billing/lib/print-invoice'
@@ -258,7 +258,7 @@ export function InvoiceDetailDialog({
   const setStatus = useSetInvoiceStatus(activeOrgId)
   const addPayment = useAddPayment(activeOrgId, profile?.id ?? null)
   const updateDraft = useUpdateInvoiceDraft(activeOrgId)
-  const deleteDraft = useDeleteDraftInvoice(activeOrgId)
+  const deleteInvoice = useDeleteInvoice(activeOrgId)
 
   const [payAmount, setPayAmount] = React.useState('')
   const [payMethod, setPayMethod] = React.useState('')
@@ -353,9 +353,9 @@ export function InvoiceDetailDialog({
   const confirmDelete = async () => {
     if (!inv) return
     try {
-      await deleteDraft.mutateAsync(inv.id)
+      await deleteInvoice.mutateAsync(inv.id)
       setDeleteOpen(false)
-      toast.success('Draft invoice deleted — linked time and expenses returned to Unbilled')
+      toast.success('Invoice deleted — linked time and expenses returned to Unbilled')
       onOpenChange(false)
     } catch (err) {
       toast.error('Could not delete invoice', { description: err instanceof Error ? err.message : undefined })
@@ -494,23 +494,21 @@ export function InvoiceDetailDialog({
             <DialogFooter className="sm:justify-between">
               <div className="flex flex-wrap gap-2">
                 {isDraft && (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={markSent}
-                      disabled={inv.items.length === 0}
-                      title={inv.items.length === 0 ? 'An invoice cannot be sent until it contains at least one billable item.' : undefined}
-                    >
-                      Mark sent
-                    </Button>
-                    <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDeleteOpen(true)}>
-                      Delete draft
-                    </Button>
-                  </>
+                  <Button
+                    variant="outline"
+                    onClick={markSent}
+                    disabled={inv.items.length === 0}
+                    title={inv.items.length === 0 ? 'An invoice cannot be sent until it contains at least one billable item.' : undefined}
+                  >
+                    Mark sent
+                  </Button>
                 )}
                 {inv.status !== 'void' && inv.status !== 'paid' && !isDraft && (
                   <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setVoidOpen(true)}>Void</Button>
                 )}
+                <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDeleteOpen(true)}>
+                  Delete invoice
+                </Button>
               </div>
               {!isDraft && (
                 <Button onClick={downloadPdf}>
@@ -561,11 +559,15 @@ export function InvoiceDetailDialog({
             <ConfirmDialog
               open={deleteOpen}
               onOpenChange={setDeleteOpen}
-              title={`Delete draft invoice ${inv.invoice_number}?`}
-              description="Linked time entries and expenses will return to Unbilled Work/Expenses. This cannot be undone."
+              title={`Delete invoice ${inv.invoice_number}?`}
+              description={
+                Number(inv.amount_paid) > 0
+                  ? `This invoice has ${formatNaira(Number(inv.amount_paid))} in recorded payments — deleting it permanently removes that payment history too. Linked time entries and expenses will return to Unbilled Work/Expenses. This cannot be undone.`
+                  : 'Linked time entries and expenses will return to Unbilled Work/Expenses. This cannot be undone.'
+              }
               destructive
-              confirmLabel="Delete draft"
-              loading={deleteDraft.isPending}
+              confirmLabel="Delete invoice"
+              loading={deleteInvoice.isPending}
               onConfirm={confirmDelete}
             />
           </>

@@ -240,10 +240,11 @@ export const billingService = {
       p_summary: status === 'void' ? `Voided invoice — reason: ${voidReason ?? ''}` : `Invoice marked ${status}`,
     })
   },
-  async deleteDraftInvoice(id: string, organizationId: string): Promise<void> {
-    const { error } = await supabase.rpc('delete_draft_invoice', { p_invoice: id })
+  /** Deletes an invoice of any status (Managing Partner only, via invoices.manage). */
+  async deleteInvoice(id: string, organizationId: string): Promise<void> {
+    const { error } = await supabase.rpc('delete_invoice', { p_invoice: id })
     if (error) throw error
-    // delete_draft_invoice() already logs its own audit entry server-side.
+    // delete_invoice() already logs its own audit entry server-side.
     void organizationId
   },
 

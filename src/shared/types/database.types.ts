@@ -1243,7 +1243,7 @@ export interface Database {
         }
         Returns: Database['public']['Tables']['invoices']['Row']
       }
-      delete_draft_invoice: { Args: { p_invoice: string }; Returns: undefined }
+      delete_invoice: { Args: { p_invoice: string }; Returns: undefined }
       soft_delete_organization: { Args: { p_org: string }; Returns: undefined }
       restore_organization: { Args: { p_org: string }; Returns: undefined }
       hard_delete_organization: { Args: { p_org: string }; Returns: undefined }

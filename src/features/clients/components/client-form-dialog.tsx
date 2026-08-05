@@ -1,14 +1,18 @@
 import * as React from 'react'
+import { AlertTriangle } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/features/auth/context/auth-provider'
-import { useCreateClient, useUpdateClient } from '@/features/clients/hooks/use-clients'
-import { clientSchema, type ClientFormValues } from '@/features/clients/schemas'
+import { usePermissions } from '@/features/auth/hooks/use-permissions'
+import { useCreateClient, useUpdateClient, useCheckClientDuplicates } from '@/features/clients/hooks/use-clients'
+import { clientSchema, clientDisplayName, type ClientFormValues } from '@/features/clients/schemas'
+import type { DuplicateMatch } from '@/features/clients/services/clients.service'
 import type { Client } from '@/shared/types/database.types'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Separator } from '@/shared/components/ui/separator'
+import { Badge } from '@/shared/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -27,12 +31,13 @@ function toDefaults(client?: Client | null): ClientFormValues {
     firstName: client?.first_name ?? '',
     lastName: client?.last_name ?? '',
     companyName: client?.company_name ?? '',
+    registrationNumber: client?.registration_number ?? '',
     email: client?.email ?? '',
     phone: client?.phone ?? '',
-    contactName: client?.contact_name ?? '',
-    contactTitle: client?.contact_title ?? '',
-    contactEmail: client?.contact_email ?? '',
-    contactPhone: client?.contact_phone ?? '',
+    contactName: '',
+    contactTitle: '',
+    contactEmail: '',
+    contactPhone: '',
     website: client?.website ?? '',
     address: client?.address ?? '',
     city: client?.city ?? '',
@@ -46,32 +51,67 @@ export function ClientFormDialog({
   client,
   open,
   onOpenChange,
+  onViewExisting,
 }: {
   client?: Client | null
   open: boolean
   onOpenChange: (o: boolean) => void
+  /** Called when the user picks "View" on a duplicate match — the dialog
+   * closes itself; the caller decides what "viewing" means (e.g. filter the
+   * list to it). No Client Detail page exists yet to navigate to directly. */
+  onViewExisting?: (displayName: string) => void
 }) {
   const { activeOrgId, profile } = useAuth()
+  const { has } = usePermissions()
+  const canOverrideDuplicate = has('clients.create_duplicate')
   const create = useCreateClient(activeOrgId, profile?.id ?? null)
   const update = useUpdateClient(activeOrgId)
+  const checkDuplicates = useCheckClientDuplicates(activeOrgId)
 
   const form = useForm<ClientFormValues>({ resolver: zodResolver(clientSchema), defaultValues: toDefaults(client) })
+  const [dupMatches, setDupMatches] = React.useState<DuplicateMatch[] | null>(null)
+
   React.useEffect(() => {
-    if (open) form.reset(toDefaults(client))
+    if (open) {
+      form.reset(toDefaults(client))
+      setDupMatches(null)
+    }
   }, [open, client, form])
 
   const type = form.watch('type')
 
+  const doCreate = async (values: ClientFormValues) => {
+    await create.mutateAsync(values)
+    toast.success('Client added')
+    onOpenChange(false)
+  }
+
   const onSubmit = async (values: ClientFormValues) => {
     try {
-      if (client) await update.mutateAsync({ id: client.id, values })
-      else await create.mutateAsync(values)
-      toast.success(client ? 'Client updated' : 'Client added')
-      onOpenChange(false)
+      if (client) {
+        await update.mutateAsync({ id: client.id, values })
+        toast.success('Client updated')
+        onOpenChange(false)
+        return
+      }
+
+      const matches = await checkDuplicates.mutateAsync({
+        name: clientDisplayName(values),
+        email: values.email,
+        phone: values.phone,
+        registrationNumber: values.registrationNumber,
+      })
+      if (matches.length > 0) {
+        setDupMatches(matches)
+        return
+      }
+      await doCreate(values)
     } catch (err) {
       toast.error('Could not save client', { description: err instanceof Error ? err.message : undefined })
     }
   }
+
+  const isExactBlock = dupMatches?.some((m) => m.match_type === 'exact') ?? false
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -80,6 +120,65 @@ export function ClientFormDialog({
           <DialogTitle>{client ? 'Edit client' : 'New client'}</DialogTitle>
           <DialogDescription>Individuals and corporate clients for your firm.</DialogDescription>
         </DialogHeader>
+
+        {dupMatches && (
+          <div className="space-y-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+              <div className="min-w-0 flex-1 text-sm">
+                <p className="font-medium">
+                  {isExactBlock
+                    ? 'A client matching this already exists — you can\'t create a duplicate.'
+                    : `This looks similar to ${dupMatches.length === 1 ? 'an existing client' : `${dupMatches.length} existing clients`}.`}
+                </p>
+                <ul className="mt-1.5 space-y-1">
+                  {dupMatches.map((m) => (
+                    <li key={m.id} className="flex items-center justify-between gap-2">
+                      <span className="truncate">
+                        {m.display_name} <Badge variant="muted" className="ml-1 capitalize">{m.type}</Badge>
+                      </span>
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        className="h-auto shrink-0 p-0"
+                        onClick={() => {
+                          onOpenChange(false)
+                          onViewExisting?.(m.display_name)
+                        }}
+                      >
+                        View
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setDupMatches(null)}>
+                Back to editing
+              </Button>
+              {!isExactBlock && canOverrideDuplicate && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={create.isPending}
+                  onClick={async () => {
+                    try {
+                      await doCreate(form.getValues())
+                    } catch (err) {
+                      toast.error('Could not save client', { description: err instanceof Error ? err.message : undefined })
+                    }
+                  }}
+                >
+                  Create anyway
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -127,19 +226,34 @@ export function ClientFormDialog({
             </div>
 
             {type === 'corporate' ? (
-              <FormField
-                control={form.control}
-                name="companyName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Acme Corporation" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="companyName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Acme Corporation" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="registrationNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Registration number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="RC 123456" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
@@ -194,17 +308,20 @@ export function ClientFormDialog({
                     <FormControl>
                       <Input placeholder="+234…" {...field} />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
 
-            {type === 'corporate' && (
+            {type === 'corporate' && !client && (
               <>
                 <Separator />
                 <div>
                   <p className="text-sm font-medium">Primary contact</p>
-                  <p className="text-xs text-muted-foreground">Who at this company your firm should actually reach out to.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Who at this company your firm should actually reach out to. More contacts can be added afterward.
+                  </p>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
@@ -255,6 +372,7 @@ export function ClientFormDialog({
                         <FormControl>
                           <Input placeholder="+234…" {...field} />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -332,7 +450,7 @@ export function ClientFormDialog({
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" loading={create.isPending || update.isPending}>
+              <Button type="submit" loading={create.isPending || update.isPending || checkDuplicates.isPending}>
                 {client ? 'Save changes' : 'Add client'}
               </Button>
             </DialogFooter>

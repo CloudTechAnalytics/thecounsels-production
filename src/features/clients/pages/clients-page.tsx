@@ -1,9 +1,10 @@
 import * as React from 'react'
-import { Search, Plus, Users, Building2, User, MoreHorizontal, Pencil, Trash2, Mail, Phone, AlertTriangle } from 'lucide-react'
+import { Search, Plus, Users, Building2, User, MoreHorizontal, Pencil, Trash2, Mail, Phone, AlertTriangle, Contact } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useClients, useDeleteClient, useClientMatterCount } from '@/features/clients/hooks/use-clients'
 import { ClientFormDialog } from '@/features/clients/components/client-form-dialog'
+import { ManageContactsDialog } from '@/features/clients/components/manage-contacts-dialog'
 import type { ClientFilters } from '@/features/clients/services/clients.service'
 import type { Client } from '@/shared/types/database.types'
 import { PageHeader } from '@/shared/components/page-header'
@@ -44,6 +45,7 @@ export function ClientsPage() {
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Client | null>(null)
   const [toDelete, setToDelete] = React.useState<Client | null>(null)
+  const [managingContacts, setManagingContacts] = React.useState<Client | null>(null)
   const { data: matterCount } = useClientMatterCount(toDelete?.id)
   const hasMatters = Boolean(matterCount)
 
@@ -79,10 +81,8 @@ export function ClientsPage() {
                   Email: c.email ?? '',
                   Phone: c.phone ?? '',
                   Company: c.company_name ?? '',
-                  'Contact name': c.contact_name ?? '',
-                  'Contact title': c.contact_title ?? '',
-                  'Contact email': c.contact_email ?? '',
-                  'Contact phone': c.contact_phone ?? '',
+                  'Registration number': c.registration_number ?? '',
+                  Contacts: c.contacts[0]?.count ?? 0,
                   City: c.city ?? '',
                   Country: c.country ?? '',
                   Added: c.created_at.slice(0, 10),
@@ -164,31 +164,28 @@ export function ClientsPage() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    {(() => {
-                      const displayEmail = c.contact_email || c.email
-                      const displayPhone = c.contact_phone || c.phone
-                      return (
-                        <div className="space-y-0.5 text-sm">
-                          {c.contact_name && (
-                            <span className="flex items-center gap-1.5 font-medium">
-                              <User className="h-3 w-3 text-muted-foreground" /> {c.contact_name}
-                              {c.contact_title && <span className="font-normal text-muted-foreground">· {c.contact_title}</span>}
-                            </span>
-                          )}
-                          {displayEmail && (
-                            <span className="flex items-center gap-1.5 text-muted-foreground">
-                              <Mail className="h-3 w-3" /> {displayEmail}
-                            </span>
-                          )}
-                          {displayPhone && (
-                            <span className="flex items-center gap-1.5 text-muted-foreground">
-                              <Phone className="h-3 w-3" /> {displayPhone}
-                            </span>
-                          )}
-                          {!c.contact_name && !displayEmail && !displayPhone && <span className="text-muted-foreground">—</span>}
-                        </div>
-                      )
-                    })()}
+                    <div className="space-y-0.5 text-sm">
+                      {c.email && (
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <Mail className="h-3 w-3" /> {c.email}
+                        </span>
+                      )}
+                      {c.phone && (
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <Phone className="h-3 w-3" /> {c.phone}
+                        </span>
+                      )}
+                      {!c.email && !c.phone && <span className="text-muted-foreground">—</span>}
+                      {canUpdate && (
+                        <button
+                          type="button"
+                          onClick={() => setManagingContacts(c)}
+                          className="flex items-center gap-1.5 text-primary hover:underline"
+                        >
+                          <Contact className="h-3 w-3" /> {c.contacts[0]?.count ?? 0} contact{(c.contacts[0]?.count ?? 0) === 1 ? '' : 's'}
+                        </button>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {[c.city, c.country].filter(Boolean).join(', ') || '—'}
@@ -210,6 +207,11 @@ export function ClientsPage() {
                           {canUpdate && (
                             <DropdownMenuItem onClick={() => openEdit(c)}>
                               <Pencil /> Edit
+                            </DropdownMenuItem>
+                          )}
+                          {canUpdate && (
+                            <DropdownMenuItem onClick={() => setManagingContacts(c)}>
+                              <Contact /> Manage contacts
                             </DropdownMenuItem>
                           )}
                           {canDelete && (
@@ -247,7 +249,18 @@ export function ClientsPage() {
         )}
       </Card>
 
-      <ClientFormDialog client={editing} open={formOpen} onOpenChange={setFormOpen} />
+      <ClientFormDialog
+        client={editing}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        onViewExisting={(displayName) => setSearch(displayName)}
+      />
+
+      <ManageContactsDialog
+        client={managingContacts}
+        open={Boolean(managingContacts)}
+        onOpenChange={(o) => !o && setManagingContacts(null)}
+      />
 
       <ConfirmDialog
         open={Boolean(toDelete)}

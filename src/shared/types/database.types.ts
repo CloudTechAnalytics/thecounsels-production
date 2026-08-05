@@ -352,10 +352,7 @@ export interface Database {
           status: ClientStatus
           notes: string | null
           created_by: string | null
-          contact_name: string | null
-          contact_title: string | null
-          contact_email: string | null
-          contact_phone: string | null
+          registration_number: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -374,10 +371,7 @@ export interface Database {
           status?: ClientStatus
           notes?: string | null
           created_by?: string | null
-          contact_name?: string | null
-          contact_title?: string | null
-          contact_email?: string | null
-          contact_phone?: string | null
+          registration_number?: string | null
         }
         Update: Partial<Database['public']['Tables']['clients']['Insert']>
         Relationships: [
@@ -386,6 +380,40 @@ export interface Database {
             columns: ['organization_id']
             isOneToOne: false
             referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      client_contacts: {
+        Row: {
+          id: string
+          organization_id: string
+          client_id: string
+          name: string
+          title: string | null
+          email: string | null
+          phone: string | null
+          is_primary: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          client_id: string
+          name: string
+          title?: string | null
+          email?: string | null
+          phone?: string | null
+          is_primary?: boolean
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['client_contacts']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'client_contacts_client_id_fkey'
+            columns: ['client_id']
+            isOneToOne: false
+            referencedRelation: 'clients'
             referencedColumns: ['id']
           },
         ]
@@ -1219,6 +1247,23 @@ export interface Database {
         Returns: Database['public']['Tables']['notifications']['Row']
       }
       mark_all_notifications_read: { Args: { p_org: string }; Returns: undefined }
+      find_similar_clients: {
+        Args: {
+          p_org: string
+          p_name: string
+          p_email?: string | null
+          p_phone?: string | null
+          p_registration_number?: string | null
+          p_exclude_id?: string | null
+        }
+        Returns: {
+          id: string
+          display_name: string
+          type: ClientType
+          match_type: string
+          score: number
+        }[]
+      }
     }
     Enums: {
       org_status: OrgStatus
@@ -1244,6 +1289,7 @@ export type Plan = Database['public']['Tables']['plans']['Row']
 export type Subscription = Database['public']['Tables']['subscriptions']['Row']
 export type PlatformSettings = Database['public']['Tables']['platform_settings']['Row']
 export type Client = Database['public']['Tables']['clients']['Row']
+export type ClientContact = Database['public']['Tables']['client_contacts']['Row']
 export type ClientInsert = Database['public']['Tables']['clients']['Insert']
 export type Matter = Database['public']['Tables']['matters']['Row']
 export type MatterNote = Database['public']['Tables']['matter_notes']['Row']

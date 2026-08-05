@@ -48,7 +48,7 @@ export function MatterDetailPage() {
   const navigate = useNavigate()
   const { activeOrgId } = useAuth()
   const { has } = usePermissions()
-  const { data: matter, isLoading } = useMatter(id)
+  const { data: matter, isLoading, isError } = useMatter(id)
   const del = useDeleteMatter(activeOrgId)
   const [tab, setTab] = React.useState<TabKey>('overview')
   const [editOpen, setEditOpen] = React.useState(false)
@@ -62,7 +62,7 @@ export function MatterDetailPage() {
       </div>
     )
   }
-  if (!matter) {
+  if (!matter || isError) {
     return (
       <div className="py-16 text-center">
         <p className="font-display text-lg font-semibold">Matter not found</p>

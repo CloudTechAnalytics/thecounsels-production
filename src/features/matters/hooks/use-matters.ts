@@ -16,6 +16,11 @@ export function useMatter(id: string | undefined) {
     queryKey: ['matter', id],
     enabled: Boolean(id),
     queryFn: () => mattersService.get(id!),
+    // Access can be revoked (e.g. unassigned from the matter) after this was
+    // already cached from an earlier visit — don't keep retrying a denial,
+    // and don't let react-query's "keep showing the last good data while a
+    // refetch fails in the background" default mask that the fetch failed.
+    retry: false,
   })
 }
 

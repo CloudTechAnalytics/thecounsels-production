@@ -27,7 +27,7 @@ export type HearingType = 'mention' | 'hearing' | 'trial' | 'ruling' | 'motion' 
 export type HearingStatus = 'scheduled' | 'adjourned' | 'held' | 'cancelled'
 export type TaskStatus = 'todo' | 'in_progress' | 'done'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
-export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'void'
+export type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'void'
 export type TimeEntryStatus = 'draft' | 'submitted' | 'approved' | 'invoiced' | 'paid'
 export type TicketStatus = 'open' | 'in_progress' | 'waiting' | 'resolved' | 'closed'
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
@@ -991,6 +991,9 @@ export interface Database {
           tax: number
           total: number
           amount_paid: number
+          discount: number
+          tax_rate: number
+          void_reason: string | null
           notes: string | null
           created_by: string | null
         } & Timestamps
@@ -1007,6 +1010,9 @@ export interface Database {
           tax?: number
           total?: number
           amount_paid?: number
+          discount?: number
+          tax_rate?: number
+          void_reason?: string | null
           notes?: string | null
           created_by?: string | null
         }
@@ -1064,6 +1070,7 @@ export interface Database {
           amount: number
           method: string | null
           reference: string | null
+          notes: string | null
           paid_at: string
           created_by: string | null
           created_at: string
@@ -1075,6 +1082,7 @@ export interface Database {
           amount: number
           method?: string | null
           reference?: string | null
+          notes?: string | null
           paid_at?: string
           created_by?: string | null
           created_at?: string
@@ -1196,6 +1204,7 @@ export interface Database {
       is_org_member: { Args: { org: string }; Returns: boolean }
       is_org_admin: { Args: { org: string }; Returns: boolean }
       has_permission: { Args: { org: string; perm: string }; Returns: boolean }
+      has_financial_access: { Args: { p_org: string; p_perm: string }; Returns: boolean }
       create_organization: {
         Args: {
           p_name: string
@@ -1234,6 +1243,7 @@ export interface Database {
         }
         Returns: Database['public']['Tables']['invoices']['Row']
       }
+      delete_draft_invoice: { Args: { p_invoice: string }; Returns: undefined }
       soft_delete_organization: { Args: { p_org: string }; Returns: undefined }
       restore_organization: { Args: { p_org: string }; Returns: undefined }
       hard_delete_organization: { Args: { p_org: string }; Returns: undefined }

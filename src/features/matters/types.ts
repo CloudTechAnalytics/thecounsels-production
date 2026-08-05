@@ -32,6 +32,11 @@ export interface MatterSummary {
   invoicesCount: number
   invoicesTotal: number
   invoicesOutstanding: number
+  professionalFees: number
+  expensesTotal: number
+  amountPaid: number
+  lastInvoiceDate: string | null
+  lastPaymentDate: string | null
 }
 
 export const PRACTICE_AREAS = [

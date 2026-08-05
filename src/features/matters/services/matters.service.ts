@@ -172,18 +172,38 @@ export const mattersService = {
 
   // Summary widget --------------------------------------------------------
   async getSummary(matterId: string): Promise<MatterSummary> {
-    const [docs, notes, hearings, tasks, invoices] = await Promise.all([
+    const [docs, notes, hearings, tasks, invoices, time, expenses] = await Promise.all([
       supabase.from('documents').select('id', { count: 'exact', head: true }).eq('matter_id', matterId),
       supabase.from('matter_notes').select('id', { count: 'exact', head: true }).eq('matter_id', matterId),
       supabase.from('hearings').select('hearing_at, status').eq('matter_id', matterId),
       supabase.from('tasks').select('status').eq('matter_id', matterId),
-      supabase.from('invoices').select('total, amount_paid, status').eq('matter_id', matterId),
+      supabase.from('invoices').select('id, total, amount_paid, status, issue_date').eq('matter_id', matterId),
+      supabase.from('time_entries').select('minutes, rate').eq('matter_id', matterId).eq('billable', true),
+      supabase.from('expenses').select('amount').eq('matter_id', matterId).eq('billable', true),
     ])
-    for (const r of [docs, notes, hearings, tasks, invoices]) if (r.error) throw r.error
+    for (const r of [docs, notes, hearings, tasks, invoices, time, expenses]) if (r.error) throw r.error
 
     const hearingRows = hearings.data ?? []
     const taskRows = tasks.data ?? []
     const invoiceRows = (invoices.data ?? []).filter((i) => i.status !== 'void')
+    const timeRows = time.data ?? []
+    const expenseRows = expenses.data ?? []
+
+    let lastPaymentDate: string | null = null
+    const invoiceIds = invoiceRows.map((i) => i.id)
+    if (invoiceIds.length > 0) {
+      const { data: lastPayment, error: payErr } = await supabase
+        .from('payments')
+        .select('paid_at')
+        .in('invoice_id', invoiceIds)
+        .order('paid_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (payErr) throw payErr
+      lastPaymentDate = lastPayment?.paid_at ?? null
+    }
+
+    const invoiceDates = invoiceRows.map((i) => i.issue_date).sort()
 
     return {
       documents: docs.count ?? 0,
@@ -195,6 +215,11 @@ export const mattersService = {
       invoicesCount: invoiceRows.length,
       invoicesTotal: invoiceRows.reduce((s, i) => s + Number(i.total), 0),
       invoicesOutstanding: invoiceRows.reduce((s, i) => s + Number(i.total) - Number(i.amount_paid), 0),
+      professionalFees: timeRows.reduce((s, t) => s + Math.round((t.minutes / 60) * Number(t.rate) * 100) / 100, 0),
+      expensesTotal: expenseRows.reduce((s, e) => s + Number(e.amount), 0),
+      amountPaid: invoiceRows.reduce((s, i) => s + Number(i.amount_paid), 0),
+      lastInvoiceDate: invoiceDates.length > 0 ? invoiceDates[invoiceDates.length - 1] : null,
+      lastPaymentDate,
     }
   },
 }

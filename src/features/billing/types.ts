@@ -1,5 +1,16 @@
 import type { BadgeProps } from '@/shared/components/ui/badge'
-import type { Client, Expense, Invoice, InvoiceItem, Matter, Payment, Profile, TimeEntry, TimeEntryStatus } from '@/shared/types/database.types'
+import type {
+  Client,
+  Expense,
+  Invoice,
+  InvoiceItem,
+  InvoiceStatus,
+  Matter,
+  Payment,
+  Profile,
+  TimeEntry,
+  TimeEntryStatus,
+} from '@/shared/types/database.types'
 
 export interface TimeEntryRow extends TimeEntry {
   matter: Pick<Matter, 'id' | 'title' | 'matter_number'> | null
@@ -15,9 +26,12 @@ export interface InvoiceRow extends Invoice {
   client: Pick<Client, 'id' | 'display_name'> | null
   matter: Pick<Matter, 'id' | 'matter_number'> | null
 }
+export interface PaymentRow extends Payment {
+  created_by_profile: Pick<Profile, 'id' | 'full_name'> | null
+}
 export interface InvoiceDetail extends InvoiceRow {
   items: InvoiceItem[]
-  payments: Payment[]
+  payments: PaymentRow[]
 }
 
 export interface BillingStats {
@@ -27,6 +41,9 @@ export interface BillingStats {
   outstanding: number
   billableHoursMTD: number
   revenueMTD: number
+  paymentsReceivedMTD: number
+  unpaidInvoicesCount: number
+  overdueCount: number
 }
 
 /** A single member's own numbers — shown to users without `reports.financial`. */
@@ -37,12 +54,23 @@ export interface PersonalStats {
   openTasks: number
 }
 
-export const INVOICE_STATUS_META: Record<string, { label: string; variant: BadgeProps['variant'] }> = {
+export const INVOICE_STATUS_META: Record<InvoiceStatus, { label: string; variant: BadgeProps['variant'] }> = {
   draft: { label: 'Draft', variant: 'muted' },
   sent: { label: 'Sent', variant: 'warning' },
+  partial: { label: 'Partially Paid', variant: 'warning' },
   paid: { label: 'Paid', variant: 'success' },
-  void: { label: 'Void', variant: 'muted' },
+  void: { label: 'Voided', variant: 'muted' },
 }
+
+/** Overdue is a computed badge, not a stored status — sent/partial past due_date. */
+export function isInvoiceOverdue(invoice: Pick<Invoice, 'status' | 'due_date'>): boolean {
+  if (invoice.status !== 'sent' && invoice.status !== 'partial') return false
+  if (!invoice.due_date) return false
+  return new Date(invoice.due_date) < new Date(new Date().toDateString())
+}
+
+export const INVOICE_EDITABLE_STATUS: InvoiceStatus = 'draft'
+export const PAYABLE_INVOICE_STATUSES: InvoiceStatus[] = ['sent', 'partial']
 
 export const EXPENSE_CATEGORIES = ['Filing fees', 'Travel', 'Courier', 'Printing', 'Expert fees', 'Other'] as const
 

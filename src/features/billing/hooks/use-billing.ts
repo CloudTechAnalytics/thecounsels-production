@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { billingService, TIME_ENTRIES_PAGE_SIZE, type TimeEntryFilters } from '@/features/billing/services/billing.service'
-import type { ExpenseFormValues, GenerateInvoiceFormValues, PaymentFormValues, TimeEntryFormValues } from '@/features/billing/schemas'
+import type {
+  ExpenseFormValues,
+  GenerateInvoiceFormValues,
+  InvoiceItemFormValues,
+  PaymentFormValues,
+  TimeEntryFormValues,
+  UpdateInvoiceDraftFormValues,
+} from '@/features/billing/schemas'
 import type { InvoiceStatus } from '@/shared/types/database.types'
 
 export function useBillingStats(orgId: string | null) {
@@ -36,6 +43,17 @@ function useInvalidate(orgId: string | null) {
   return () => {
     qc.invalidateQueries({ queryKey: ['billing', orgId] })
     qc.invalidateQueries({ queryKey: ['reports'] })
+  }
+}
+
+/** Shared invalidation for anything that mutates a single invoice in place (line items, draft edits, status). */
+function useInvalidateInvoice(orgId: string | null) {
+  const qc = useQueryClient()
+  const invalidate = useInvalidate(orgId)
+  return (invoiceId: string) => {
+    invalidate()
+    qc.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+    qc.invalidateQueries({ queryKey: ['matter-summary'] })
   }
 }
 
@@ -89,7 +107,7 @@ export function useDeleteTimeEntry(orgId: string | null) {
 }
 export function useDeleteExpense(orgId: string | null) {
   const invalidate = useInvalidate(orgId)
-  return useMutation({ mutationFn: (id: string) => billingService.deleteExpense(id), onSuccess: invalidate })
+  return useMutation({ mutationFn: (id: string) => billingService.deleteExpense(id, orgId!), onSuccess: invalidate })
 }
 export function useGenerateInvoice(orgId: string | null) {
   const qc = useQueryClient()
@@ -103,27 +121,57 @@ export function useGenerateInvoice(orgId: string | null) {
   })
 }
 export function useSetInvoiceStatus(orgId: string | null) {
-  const qc = useQueryClient()
+  const invalidateInvoice = useInvalidateInvoice(orgId)
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: InvoiceStatus }) => billingService.setInvoiceStatus(id, status, orgId!),
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['billing', orgId] })
-      qc.invalidateQueries({ queryKey: ['invoice', vars.id] })
-      qc.invalidateQueries({ queryKey: ['matter-summary'] })
-      qc.invalidateQueries({ queryKey: ['reports'] })
-    },
+    mutationFn: ({ id, status, voidReason }: { id: string; status: InvoiceStatus; voidReason?: string }) =>
+      billingService.setInvoiceStatus(id, status, orgId!, voidReason),
+    onSuccess: (_d, vars) => invalidateInvoice(vars.id),
+  })
+}
+export function useDeleteDraftInvoice(orgId: string | null) {
+  const invalidate = useInvalidate(orgId)
+  return useMutation({
+    mutationFn: (id: string) => billingService.deleteDraftInvoice(id, orgId!),
+    onSuccess: invalidate,
+  })
+}
+export function useAddInvoiceItem(orgId: string | null) {
+  const invalidateInvoice = useInvalidateInvoice(orgId)
+  return useMutation({
+    mutationFn: ({ invoiceId, values }: { invoiceId: string; values: InvoiceItemFormValues }) =>
+      billingService.addInvoiceItem(orgId!, invoiceId, values),
+    onSuccess: (_d, vars) => invalidateInvoice(vars.invoiceId),
+  })
+}
+export function useUpdateInvoiceItem(orgId: string | null) {
+  const invalidateInvoice = useInvalidateInvoice(orgId)
+  return useMutation({
+    mutationFn: ({ itemId, invoiceId, values }: { itemId: string; invoiceId: string; values: InvoiceItemFormValues }) =>
+      billingService.updateInvoiceItem(itemId, invoiceId, orgId!, values),
+    onSuccess: (_d, vars) => invalidateInvoice(vars.invoiceId),
+  })
+}
+export function useRemoveInvoiceItem(orgId: string | null) {
+  const invalidateInvoice = useInvalidateInvoice(orgId)
+  return useMutation({
+    mutationFn: ({ itemId, invoiceId, description }: { itemId: string; invoiceId: string; description: string }) =>
+      billingService.removeInvoiceItem(itemId, invoiceId, orgId!, description),
+    onSuccess: (_d, vars) => invalidateInvoice(vars.invoiceId),
+  })
+}
+export function useUpdateInvoiceDraft(orgId: string | null) {
+  const invalidateInvoice = useInvalidateInvoice(orgId)
+  return useMutation({
+    mutationFn: ({ id, values }: { id: string; values: UpdateInvoiceDraftFormValues }) =>
+      billingService.updateInvoiceDraft(id, orgId!, values),
+    onSuccess: (_d, vars) => invalidateInvoice(vars.id),
   })
 }
 export function useAddPayment(orgId: string | null, userId: string | null) {
-  const qc = useQueryClient()
+  const invalidateInvoice = useInvalidateInvoice(orgId)
   return useMutation({
     mutationFn: ({ invoiceId, values }: { invoiceId: string; values: PaymentFormValues }) =>
       billingService.addPayment(orgId!, invoiceId, values, userId),
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['billing', orgId] })
-      qc.invalidateQueries({ queryKey: ['invoice', vars.invoiceId] })
-      qc.invalidateQueries({ queryKey: ['matter-summary'] })
-      qc.invalidateQueries({ queryKey: ['reports'] })
-    },
+    onSuccess: (_d, vars) => invalidateInvoice(vars.invoiceId),
   })
 }

@@ -22,6 +22,10 @@ interface ConfirmDialogProps {
   destructive?: boolean
   loading?: boolean
   onConfirm: () => void | Promise<void>
+  /** Extra content rendered between the description and the footer (e.g. a required reason field). */
+  children?: React.ReactNode
+  /** Externally controlled disable, combined with the confirmPhrase lock if both are set. */
+  disableConfirm?: boolean
 }
 
 /** Reusable confirmation modal with optional type-to-confirm safety for destructive actions. */
@@ -35,13 +39,15 @@ export function ConfirmDialog({
   destructive,
   loading,
   onConfirm,
+  children,
+  disableConfirm,
 }: ConfirmDialogProps) {
   const [typed, setTyped] = React.useState('')
   React.useEffect(() => {
     if (!open) setTyped('')
   }, [open])
 
-  const locked = confirmPhrase ? typed.trim() !== confirmPhrase : false
+  const locked = (confirmPhrase ? typed.trim() !== confirmPhrase : false) || Boolean(disableConfirm)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,6 +68,8 @@ export function ConfirmDialog({
             <Input value={typed} onChange={(e) => setTyped(e.target.value)} autoFocus placeholder={confirmPhrase} />
           </div>
         )}
+
+        {children}
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>

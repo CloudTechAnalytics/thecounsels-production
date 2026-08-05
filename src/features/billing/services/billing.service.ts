@@ -1,12 +1,20 @@
 import { supabase } from '@/shared/lib/supabase'
 import type { InvoiceStatus, TimeEntryStatus } from '@/shared/types/database.types'
 import { timeAmount, type BillingStats, type ExpenseRow, type InvoiceDetail, type InvoiceRow, type PersonalStats, type TimeEntryRow } from '@/features/billing/types'
-import type { ExpenseFormValues, GenerateInvoiceFormValues, PaymentFormValues, TimeEntryFormValues } from '@/features/billing/schemas'
+import type {
+  ExpenseFormValues,
+  GenerateInvoiceFormValues,
+  InvoiceItemFormValues,
+  PaymentFormValues,
+  TimeEntryFormValues,
+  UpdateInvoiceDraftFormValues,
+} from '@/features/billing/schemas'
 
 const TIME_SELECT =
   '*, matter:matters(id, title, matter_number), user:profiles!time_entries_user_id_fkey(id, full_name), created_by_profile:profiles!time_entries_created_by_fkey(id, full_name), updated_by_profile:profiles!time_entries_updated_by_fkey(id, full_name)'
 const EXP_SELECT = '*, matter:matters(id, title, matter_number), user:profiles!expenses_user_id_fkey(id, full_name)'
 const INV_SELECT = '*, client:clients(id, display_name), matter:matters(id, matter_number)'
+const PAYMENT_SELECT = '*, created_by_profile:profiles!payments_created_by_fkey(id, full_name)'
 
 export interface TimeEntryFilters {
   search?: string
@@ -151,21 +159,39 @@ export const billingService = {
     return (data ?? []) as unknown as ExpenseRow[]
   },
   async addExpense(organizationId: string, v: ExpenseFormValues, userId: string | null): Promise<void> {
-    const { error } = await supabase.from('expenses').insert({
-      organization_id: organizationId,
-      matter_id: v.matterId || null,
-      user_id: userId,
-      expense_date: v.expenseDate,
-      amount: v.amount,
-      description: v.description.trim(),
-      category: v.category || null,
-      billable: v.billable,
-    })
+    const { data, error } = await supabase
+      .from('expenses')
+      .insert({
+        organization_id: organizationId,
+        matter_id: v.matterId || null,
+        user_id: userId,
+        expense_date: v.expenseDate,
+        amount: v.amount,
+        description: v.description.trim(),
+        category: v.category || null,
+        billable: v.billable,
+      })
+      .select('id')
+      .single()
     if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'expense.created',
+      p_entity_type: 'expense',
+      p_entity_id: data.id,
+      p_summary: `Logged expense: ${v.description.trim()}`,
+    })
   },
-  async deleteExpense(id: string): Promise<void> {
+  async deleteExpense(id: string, organizationId: string): Promise<void> {
     const { error } = await supabase.from('expenses').delete().eq('id', id)
     if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'expense.deleted',
+      p_entity_type: 'expense',
+      p_entity_id: id,
+      p_summary: 'Deleted an expense',
+    })
   },
 
   // Invoices ------------------------------------------------------------------
@@ -182,12 +208,12 @@ export const billingService = {
     const [{ data: inv, error: e1 }, { data: items, error: e2 }, { data: payments, error: e3 }] = await Promise.all([
       supabase.from('invoices').select(INV_SELECT).eq('id', id).single(),
       supabase.from('invoice_items').select('*').eq('invoice_id', id).order('created_at', { ascending: true }),
-      supabase.from('payments').select('*').eq('invoice_id', id).order('paid_at', { ascending: false }),
+      supabase.from('payments').select(PAYMENT_SELECT).eq('invoice_id', id).order('paid_at', { ascending: false }),
     ])
     if (e1) throw e1
     if (e2) throw e2
     if (e3) throw e3
-    return { ...(inv as unknown as InvoiceRow), items: items ?? [], payments: payments ?? [] }
+    return { ...(inv as unknown as InvoiceRow), items: items ?? [], payments: (payments ?? []) as unknown as InvoiceDetail['payments'] }
   },
   async generateInvoice(organizationId: string, v: GenerateInvoiceFormValues): Promise<string> {
     const { data, error } = await supabase.rpc('generate_invoice', {
@@ -200,30 +226,124 @@ export const billingService = {
     if (error) throw error
     return (data as { id: string }).id
   },
-  async setInvoiceStatus(id: string, status: InvoiceStatus, organizationId: string): Promise<void> {
-    const { error } = await supabase.from('invoices').update({ status }).eq('id', id)
+  async setInvoiceStatus(id: string, status: InvoiceStatus, organizationId: string, voidReason?: string): Promise<void> {
+    const { error } = await supabase
+      .from('invoices')
+      .update(status === 'void' ? { status, void_reason: voidReason ?? null } : { status })
+      .eq('id', id)
     if (error) throw error
     await supabase.rpc('log_audit', {
       p_org: organizationId,
       p_action: `invoice.${status}`,
       p_entity_type: 'invoice',
       p_entity_id: id,
-      p_summary: `Invoice marked ${status}`,
+      p_summary: status === 'void' ? `Voided invoice — reason: ${voidReason ?? ''}` : `Invoice marked ${status}`,
+    })
+  },
+  async deleteDraftInvoice(id: string, organizationId: string): Promise<void> {
+    const { error } = await supabase.rpc('delete_draft_invoice', { p_invoice: id })
+    if (error) throw error
+    // delete_draft_invoice() already logs its own audit entry server-side.
+    void organizationId
+  },
+
+  // Draft line items ------------------------------------------------------------
+  async addInvoiceItem(organizationId: string, invoiceId: string, v: InvoiceItemFormValues): Promise<void> {
+    const { error } = await supabase.from('invoice_items').insert({
+      organization_id: organizationId,
+      invoice_id: invoiceId,
+      kind: 'manual',
+      description: v.description.trim(),
+      quantity: v.quantity,
+      unit: v.unit || null,
+      rate: v.rate,
+      amount: Math.round(v.quantity * v.rate * 100) / 100,
+    })
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'invoice.item_added',
+      p_entity_type: 'invoice',
+      p_entity_id: invoiceId,
+      p_summary: `Added line item: ${v.description.trim()}`,
+    })
+  },
+  async updateInvoiceItem(itemId: string, invoiceId: string, organizationId: string, v: InvoiceItemFormValues): Promise<void> {
+    const { error } = await supabase
+      .from('invoice_items')
+      .update({
+        description: v.description.trim(),
+        quantity: v.quantity,
+        unit: v.unit || null,
+        rate: v.rate,
+        amount: Math.round(v.quantity * v.rate * 100) / 100,
+      })
+      .eq('id', itemId)
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'invoice.item_updated',
+      p_entity_type: 'invoice',
+      p_entity_id: invoiceId,
+      p_summary: `Updated line item: ${v.description.trim()}`,
+    })
+  },
+  async removeInvoiceItem(itemId: string, invoiceId: string, organizationId: string, description: string): Promise<void> {
+    const { error } = await supabase.from('invoice_items').delete().eq('id', itemId)
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'invoice.item_removed',
+      p_entity_type: 'invoice',
+      p_entity_id: invoiceId,
+      p_summary: `Removed line item: ${description}`,
+    })
+  },
+  async updateInvoiceDraft(id: string, organizationId: string, v: UpdateInvoiceDraftFormValues): Promise<void> {
+    const { error } = await supabase
+      .from('invoices')
+      .update({
+        due_date: v.dueDate || null,
+        discount: v.discount,
+        tax_rate: v.taxRate,
+        notes: v.notes || null,
+      })
+      .eq('id', id)
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'invoice.updated',
+      p_entity_type: 'invoice',
+      p_entity_id: id,
+      p_summary: 'Updated invoice details',
     })
   },
 
   // Payments ------------------------------------------------------------------
   async addPayment(organizationId: string, invoiceId: string, v: PaymentFormValues, userId: string | null): Promise<void> {
-    const { error } = await supabase.from('payments').insert({
-      organization_id: organizationId,
-      invoice_id: invoiceId,
-      amount: v.amount,
-      method: v.method || null,
-      reference: v.reference || null,
-      paid_at: v.paidAt,
-      created_by: userId,
-    })
+    const { data, error } = await supabase
+      .from('payments')
+      .insert({
+        organization_id: organizationId,
+        invoice_id: invoiceId,
+        amount: v.amount,
+        method: v.method || null,
+        reference: v.reference || null,
+        notes: v.notes || null,
+        paid_at: v.paidAt,
+        created_by: userId,
+      })
+      .select('id')
+      .single()
     if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'payment.recorded',
+      p_entity_type: 'invoice',
+      p_entity_id: invoiceId,
+      p_summary: `Recorded a payment of ${v.amount}`,
+      p_metadata: { payment_id: data.id, method: v.method ?? null, reference: v.reference ?? null },
+    })
   },
 
   // Dashboard -----------------------------------------------------------------
@@ -233,15 +353,18 @@ export const billingService = {
     monthStart.setHours(0, 0, 0, 0)
     const monthStartStr = monthStart.toISOString().slice(0, 10)
 
-    const [time, exp, inv] = await Promise.all([
+    const [time, exp, inv, pay] = await Promise.all([
       supabase.from('time_entries').select('minutes, rate, billable, invoiced, work_date').eq('organization_id', organizationId),
       supabase.from('expenses').select('amount, billable, invoiced').eq('organization_id', organizationId),
-      supabase.from('invoices').select('total, amount_paid, status, issue_date').eq('organization_id', organizationId),
+      supabase.from('invoices').select('total, amount_paid, status, issue_date, due_date').eq('organization_id', organizationId),
+      supabase.from('payments').select('amount, paid_at').eq('organization_id', organizationId).gte('paid_at', monthStartStr),
     ])
 
     const timeRows = time.data ?? []
     const expRows = exp.data ?? []
     const invRows = inv.data ?? []
+    const payRows = pay.data ?? []
+    const todayStr = new Date().toISOString().slice(0, 10)
 
     const unbilledTime = timeRows.filter((t) => t.billable && !t.invoiced).reduce((s, t) => s + timeAmount(t.minutes, Number(t.rate)), 0)
     const unbilledExp = expRows.filter((e) => e.billable && !e.invoiced).reduce((s, e) => s + Number(e.amount), 0)
@@ -250,6 +373,8 @@ export const billingService = {
     const collected = nonVoid.reduce((s, i) => s + Number(i.amount_paid), 0)
     const billableMinutesMTD = timeRows.filter((t) => t.billable && t.work_date >= monthStartStr).reduce((s, t) => s + t.minutes, 0)
     const revenueMTD = invRows.filter((i) => i.status !== 'void' && i.issue_date >= monthStartStr).reduce((s, i) => s + Number(i.total), 0)
+    const paymentsReceivedMTD = payRows.reduce((s, p) => s + Number(p.amount), 0)
+    const unpaid = invRows.filter((i) => i.status === 'sent' || i.status === 'partial')
 
     return {
       unbilledValue: unbilledTime + unbilledExp,
@@ -258,6 +383,9 @@ export const billingService = {
       outstanding: invoiced - collected,
       billableHoursMTD: Math.round((billableMinutesMTD / 60) * 10) / 10,
       revenueMTD,
+      paymentsReceivedMTD,
+      unpaidInvoicesCount: unpaid.length,
+      overdueCount: unpaid.filter((i) => i.due_date && i.due_date < todayStr).length,
     }
   },
 

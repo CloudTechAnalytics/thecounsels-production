@@ -45,6 +45,28 @@ export const paymentSchema = z.object({
   amount: z.coerce.number().positive('Enter an amount'),
   method: z.string().optional(),
   reference: z.string().optional(),
+  notes: z.string().optional(),
   paidAt: z.string().min(1, 'Pick a date'),
 })
 export type PaymentFormValues = z.infer<typeof paymentSchema>
+
+export const invoiceItemSchema = z.object({
+  description: z.string().min(2, 'Describe the line item'),
+  quantity: z.coerce.number().positive('Enter a quantity'),
+  unit: z.string().optional(),
+  rate: z.coerce.number().min(0, 'Enter a rate'),
+})
+export type InvoiceItemFormValues = z.infer<typeof invoiceItemSchema>
+
+export const updateInvoiceDraftSchema = z.object({
+  dueDate: z.string().optional(),
+  discount: z.coerce.number().min(0, 'Enter a discount amount'),
+  taxRate: z.coerce.number().min(0).max(100),
+  notes: z.string().optional(),
+})
+export type UpdateInvoiceDraftFormValues = z.infer<typeof updateInvoiceDraftSchema>
+
+export const voidInvoiceSchema = z.object({
+  reason: z.string().min(3, 'A reason is required to void an invoice'),
+})
+export type VoidInvoiceFormValues = z.infer<typeof voidInvoiceSchema>

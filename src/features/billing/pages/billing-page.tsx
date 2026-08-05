@@ -73,6 +73,9 @@ export function BillingPage() {
           <StatTile label="Invoiced" value={s ? formatMoneyCompact(s.invoiced) : '—'} icon={FileText} />
           <StatTile label="Collected" value={s ? formatMoneyCompact(s.collected) : '—'} icon={CircleDollarSign} />
           <StatTile label="Outstanding" value={s ? formatMoneyCompact(s.outstanding) : '—'} icon={AlertTriangle} />
+          <StatTile label="Payments received (MTD)" value={s ? formatMoneyCompact(s.paymentsReceivedMTD) : '—'} icon={CircleDollarSign} />
+          <StatTile label="Unpaid invoices" value={s ? String(s.unpaidInvoicesCount) : '—'} icon={FileText} />
+          <StatTile label="Overdue invoices" value={s ? String(s.overdueCount) : '—'} icon={AlertTriangle} />
         </div>
       ) : (
         <div className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">

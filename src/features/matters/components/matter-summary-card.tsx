@@ -1,4 +1,5 @@
-import { FileText, Gavel, CheckSquare, StickyNote, Receipt, type LucideIcon } from 'lucide-react'
+import { format } from 'date-fns'
+import { FileText, Gavel, CheckSquare, StickyNote, Receipt, Banknote, Wallet, CalendarClock, type LucideIcon } from 'lucide-react'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useMatterSummary } from '@/features/matters/hooks/use-matter-summary'
 import type { MatterRow } from '@/features/matters/types'
@@ -72,12 +73,32 @@ export function MatterSummaryCard({ matter, onNavigateTab }: { matter: MatterRow
             />
             <SummaryRow icon={StickyNote} label="Notes" value={String(data?.notes ?? 0)} onClick={() => onNavigateTab('notes')} />
             {has('billing.view') && (
-              <SummaryRow
-                icon={Receipt}
-                label="Invoiced"
-                value={formatMoneyCompact(data?.invoicesTotal ?? 0)}
-                hint={data?.invoicesOutstanding ? `${formatMoneyCompact(data.invoicesOutstanding)} outstanding` : undefined}
-              />
+              <>
+                <SummaryRow icon={Banknote} label="Professional fees" value={formatMoneyCompact(data?.professionalFees ?? 0)} />
+                <SummaryRow icon={Receipt} label="Expenses" value={formatMoneyCompact(data?.expensesTotal ?? 0)} />
+                <SummaryRow
+                  icon={Receipt}
+                  label="Invoices issued"
+                  value={String(data?.invoicesCount ?? 0)}
+                  hint={data?.invoicesTotal ? `${formatMoneyCompact(data.invoicesTotal)} total` : undefined}
+                />
+                <SummaryRow icon={Wallet} label="Amount paid" value={formatMoneyCompact(data?.amountPaid ?? 0)} />
+                <SummaryRow
+                  icon={Wallet}
+                  label="Outstanding balance"
+                  value={formatMoneyCompact(data?.invoicesOutstanding ?? 0)}
+                />
+                <SummaryRow
+                  icon={CalendarClock}
+                  label="Last invoice"
+                  value={data?.lastInvoiceDate ? format(new Date(data.lastInvoiceDate), 'PP') : '—'}
+                />
+                <SummaryRow
+                  icon={CalendarClock}
+                  label="Last payment"
+                  value={data?.lastPaymentDate ? format(new Date(data.lastPaymentDate), 'PP') : '—'}
+                />
+              </>
             )}
           </div>
         )}

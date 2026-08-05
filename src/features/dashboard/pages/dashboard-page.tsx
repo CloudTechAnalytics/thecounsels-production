@@ -106,6 +106,24 @@ export function DashboardPage() {
             loading={billingLoading}
           />
         )}
+        {canFinancials && (
+          <StatTile
+            label="Payments received (MTD)"
+            value={formatMoneyCompact(billing?.paymentsReceivedMTD ?? 0)}
+            hint={`${billing?.unpaidInvoicesCount ?? 0} unpaid invoices`}
+            icon={Banknote}
+            loading={billingLoading}
+          />
+        )}
+        {canFinancials && (
+          <StatTile
+            label="Overdue invoices"
+            value={String(billing?.overdueCount ?? 0)}
+            hint="Past due date, not fully paid"
+            icon={AlertCircle}
+            loading={billingLoading}
+          />
+        )}
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">

@@ -1,8 +1,8 @@
 import * as React from 'react'
-import { Search, Plus, Users, Building2, User, MoreHorizontal, Pencil, Trash2, Mail, Phone } from 'lucide-react'
+import { Search, Plus, Users, Building2, User, MoreHorizontal, Pencil, Trash2, Mail, Phone, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useClients, useDeleteClient } from '@/features/clients/hooks/use-clients'
+import { useClients, useDeleteClient, useClientMatterCount } from '@/features/clients/hooks/use-clients'
 import { ClientFormDialog } from '@/features/clients/components/client-form-dialog'
 import type { ClientFilters } from '@/features/clients/services/clients.service'
 import type { Client } from '@/shared/types/database.types'
@@ -44,6 +44,8 @@ export function ClientsPage() {
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Client | null>(null)
   const [toDelete, setToDelete] = React.useState<Client | null>(null)
+  const { data: matterCount } = useClientMatterCount(toDelete?.id)
+  const hasMatters = Boolean(matterCount)
 
   const canCreate = has('clients.create')
   const canUpdate = has('clients.update')
@@ -254,12 +256,27 @@ export function ClientsPage() {
         destructive
         confirmLabel="Delete"
         loading={del.isPending}
-        description={<>This permanently removes <strong>{toDelete?.display_name}</strong>.</>}
+        confirmPhrase={hasMatters ? toDelete?.display_name : undefined}
+        description={
+          hasMatters ? (
+            <span className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+              <span>
+                <strong>{toDelete?.display_name}</strong> has <strong>{matterCount}</strong> matter{matterCount === 1 ? '' : 's'} attached.
+                Deleting this client permanently deletes {matterCount === 1 ? 'that matter' : 'all of them'} too — including its
+                documents, hearings, tasks, notes and timeline. Time entries, expenses and invoices are kept but detached.
+                This cannot be undone.
+              </span>
+            </span>
+          ) : (
+            <>This permanently removes <strong>{toDelete?.display_name}</strong>.</>
+          )
+        }
         onConfirm={async () => {
           if (!toDelete) return
           try {
-            await del.mutateAsync({ id: toDelete.id, name: toDelete.display_name })
-            toast.success('Client deleted')
+            await del.mutateAsync({ id: toDelete.id, name: toDelete.display_name, matterCount: matterCount ?? 0 })
+            toast.success(hasMatters ? `Client and ${matterCount} matter${matterCount === 1 ? '' : 's'} deleted` : 'Client deleted')
             setToDelete(null)
           } catch (err) {
             toast.error('Could not delete', { description: err instanceof Error ? err.message : undefined })

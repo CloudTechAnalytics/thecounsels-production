@@ -79,7 +79,18 @@ export const clientsService = {
     return data
   },
 
-  async remove(id: string, organizationId: string, name: string): Promise<void> {
+  /** Matters attached to this client — used to warn before a delete that
+   * now cascades (migration 0037). */
+  async countMatters(clientId: string): Promise<number> {
+    const { count, error } = await supabase
+      .from('matters')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_id', clientId)
+    if (error) throw error
+    return count ?? 0
+  },
+
+  async remove(id: string, organizationId: string, name: string, matterCount = 0): Promise<void> {
     const { error } = await supabase.from('clients').delete().eq('id', id)
     if (error) throw error
     await supabase.rpc('log_audit', {
@@ -87,7 +98,10 @@ export const clientsService = {
       p_action: 'client.deleted',
       p_entity_type: 'client',
       p_entity_id: id,
-      p_summary: `Deleted client ${name}`,
+      p_summary:
+        matterCount > 0
+          ? `Deleted client ${name} (cascaded ${matterCount} matter${matterCount === 1 ? '' : 's'})`
+          : `Deleted client ${name}`,
     })
   },
 }

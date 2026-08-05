@@ -14,6 +14,15 @@ export function useClients(organizationId: string | null, filters: ClientFilters
   })
 }
 
+/** Matters attached to a client — used to warn before a delete that cascades. */
+export function useClientMatterCount(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['clients', 'matter-count', clientId],
+    enabled: Boolean(clientId),
+    queryFn: () => clientsService.countMatters(clientId!),
+  })
+}
+
 function useInvalidate(organizationId: string | null) {
   const qc = useQueryClient()
   return () => {
@@ -41,8 +50,15 @@ export function useUpdateClient(organizationId: string | null) {
 
 export function useDeleteClient(organizationId: string | null) {
   const invalidate = useInvalidate(organizationId)
+  const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) => clientsService.remove(id, organizationId!, name),
-    onSuccess: invalidate,
+    mutationFn: ({ id, name, matterCount }: { id: string; name: string; matterCount?: number }) =>
+      clientsService.remove(id, organizationId!, name, matterCount),
+    onSuccess: () => {
+      invalidate()
+      // A cascaded delete can remove matters — refresh every surface that lists them.
+      qc.invalidateQueries({ queryKey: ['matters'] })
+      qc.invalidateQueries({ queryKey: ['matter'] })
+    },
   })
 }

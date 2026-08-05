@@ -28,7 +28,10 @@ export function NotesPanel({ matterId }: { matterId: string }) {
     try {
       await add.mutateAsync(body.trim())
       setBody('')
+      toast.success('Note added')
     } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Add note failed:', err)
       toast.error('Could not add note', { description: err instanceof Error ? err.message : undefined })
     }
   }

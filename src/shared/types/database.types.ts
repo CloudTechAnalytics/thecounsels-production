@@ -509,6 +509,8 @@ export interface Database {
           author_id: string | null
           body: string
           created_at: string
+          updated_at: string | null
+          edited_by: string | null
         }
         Insert: {
           id?: string
@@ -517,12 +519,21 @@ export interface Database {
           author_id?: string | null
           body: string
           created_at?: string
+          updated_at?: string | null
+          edited_by?: string | null
         }
         Update: Partial<Database['public']['Tables']['matter_notes']['Insert']>
         Relationships: [
           {
             foreignKeyName: 'matter_notes_author_id_fkey'
             columns: ['author_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'matter_notes_edited_by_fkey'
+            columns: ['edited_by']
             isOneToOne: false
             referencedRelation: 'profiles'
             referencedColumns: ['id']

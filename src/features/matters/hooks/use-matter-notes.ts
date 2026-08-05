@@ -20,6 +20,17 @@ export function useAddNote(organizationId: string | null, matterId: string, auth
   })
 }
 
+export function useUpdateNote(matterId: string, editedBy: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: string }) => mattersService.updateNote(id, body, editedBy),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matter-notes', matterId] })
+      qc.invalidateQueries({ queryKey: ['matter-events', matterId] })
+    },
+  })
+}
+
 export function useDeleteNote(matterId: string) {
   const qc = useQueryClient()
   return useMutation({

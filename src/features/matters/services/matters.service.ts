@@ -103,7 +103,9 @@ export const mattersService = {
   async listNotes(matterId: string): Promise<MatterNoteRow[]> {
     const { data, error } = await supabase
       .from('matter_notes')
-      .select('*, author:profiles(id, full_name, avatar_url)')
+      .select(
+        '*, author:profiles!matter_notes_author_id_fkey(id, full_name, avatar_url), edited_by_profile:profiles!matter_notes_edited_by_fkey(id, full_name)',
+      )
       .eq('matter_id', matterId)
       .order('created_at', { ascending: false })
     if (error) throw error
@@ -114,6 +116,11 @@ export const mattersService = {
     const { error } = await supabase
       .from('matter_notes')
       .insert({ organization_id: organizationId, matter_id: matterId, author_id: authorId, body })
+    if (error) throw error
+  },
+
+  async updateNote(id: string, body: string, editedBy: string | null): Promise<void> {
+    const { error } = await supabase.from('matter_notes').update({ body, edited_by: editedBy }).eq('id', id)
     if (error) throw error
   },
 

@@ -19,6 +19,7 @@ export const MATTER_LIFECYCLE: MatterStatus[] = ['open', 'pending', 'in_court', 
 
 export interface MatterNoteRow extends MatterNote {
   author: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
+  edited_by_profile: Pick<Profile, 'id' | 'full_name'> | null
 }
 
 export interface MatterSummary {

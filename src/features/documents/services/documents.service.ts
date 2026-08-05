@@ -10,6 +10,7 @@ export const DOCUMENT_CATEGORIES = [
   'Engagement Letter',
   'Client Documents',
   'Court Filing',
+  'Court Orders & Judgments',
   'Invoice',
   'Correspondence',
   'Internal Documents',
@@ -51,6 +52,19 @@ export const documentsService = {
     const { data, error } = await q
     if (error) throw error
     return (data ?? []) as unknown as DocumentWithMatter[]
+  },
+
+  /** Every distinct category actually in use, so custom categories someone
+   * typed once show up as suggestions/filters afterward instead of vanishing. */
+  async listCategories(organizationId: string): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('documents')
+      .select('category')
+      .eq('organization_id', organizationId)
+      .not('category', 'is', null)
+    if (error) throw error
+    const values = (data ?? []).map((r) => r.category).filter((c): c is string => Boolean(c?.trim()))
+    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b))
   },
 
   async upload(params: {

@@ -2,8 +2,9 @@ import * as React from 'react'
 import { UploadCloud, Loader2, FileText, X } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useMatters } from '@/features/matters/hooks/use-matters'
-import { useUploadDocuments } from '@/features/documents/hooks/use-documents'
+import { useUploadDocuments, useDocumentCategories } from '@/features/documents/hooks/use-documents'
 import { DOCUMENT_CATEGORIES } from '@/features/documents/services/documents.service'
+import { CategoryInput } from '@/features/documents/components/category-input'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
@@ -35,17 +36,23 @@ interface QueuedFile {
 export function DocumentUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { activeOrgId, profile } = useAuth()
   const { data: matters } = useMatters(activeOrgId, {})
+  const { data: usedCategories } = useDocumentCategories(activeOrgId)
   const upload = useUploadDocuments(activeOrgId, profile?.id ?? null)
   const inputRef = React.useRef<HTMLInputElement>(null)
 
   const [files, setFiles] = React.useState<QueuedFile[]>([])
-  const [category, setCategory] = React.useState<string>(NONE)
+  const [category, setCategory] = React.useState('')
   const [matterId, setMatterId] = React.useState<string>(NONE)
+
+  const categorySuggestions = React.useMemo(() => {
+    const extra = (usedCategories ?? []).filter((c) => !(DOCUMENT_CATEGORIES as readonly string[]).includes(c))
+    return [...DOCUMENT_CATEGORIES, ...extra]
+  }, [usedCategories])
 
   React.useEffect(() => {
     if (open) {
       setFiles([])
-      setCategory(NONE)
+      setCategory('')
       setMatterId(NONE)
     }
   }, [open])
@@ -65,7 +72,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: { open: boolean; on
         await upload.mutateAsync({
           file,
           displayName,
-          category: category === NONE ? null : category,
+          category: category.trim() || null,
           matterId: matterId === NONE ? null : matterId,
         })
         ok++
@@ -139,15 +146,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: { open: boolean; on
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Category</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger><SelectValue placeholder="Uncategorised" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>Uncategorised</SelectItem>
-                  {DOCUMENT_CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CategoryInput value={category} onChange={setCategory} suggestions={categorySuggestions} />
             </div>
             <div className="space-y-1.5">
               <Label>Matter (optional)</Label>

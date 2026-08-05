@@ -5,7 +5,7 @@ import { Search, UploadCloud, FileText, FolderOpen } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useMatters } from '@/features/matters/hooks/use-matters'
-import { useDocuments, useDeleteOrgDocument } from '@/features/documents/hooks/use-documents'
+import { useDocuments, useDeleteOrgDocument, useDocumentCategories } from '@/features/documents/hooks/use-documents'
 import { DocumentUploadDialog } from '@/features/documents/components/document-upload-dialog'
 import { DocumentActionsMenu } from '@/features/documents/components/document-actions-menu'
 import { DocumentRenameDialog } from '@/features/documents/components/document-rename-dialog'
@@ -32,6 +32,11 @@ export function DocumentsPage() {
   const [matterId, setMatterId] = React.useState<DocumentFilters['matterId']>('all')
   const { data, isLoading } = useDocuments(activeOrgId, { search, category, matterId })
   const { data: matters } = useMatters(activeOrgId, {})
+  const { data: usedCategories } = useDocumentCategories(activeOrgId)
+  const categoryOptions = React.useMemo(() => {
+    const extra = (usedCategories ?? []).filter((c) => !(DOCUMENT_CATEGORIES as readonly string[]).includes(c))
+    return [...DOCUMENT_CATEGORIES, ...extra]
+  }, [usedCategories])
   const del = useDeleteOrgDocument(activeOrgId)
 
   const [uploadOpen, setUploadOpen] = React.useState(false)
@@ -78,7 +83,7 @@ export function DocumentsPage() {
           <SelectTrigger className="w-full lg:w-44"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All categories</SelectItem>
-            {DOCUMENT_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            {categoryOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={matterId} onValueChange={(v) => setMatterId(v)}>

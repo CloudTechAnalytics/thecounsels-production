@@ -1,16 +1,14 @@
 import * as React from 'react'
 import { useAuth } from '@/features/auth/context/auth-provider'
-import { useUpdateDocument } from '@/features/documents/hooks/use-documents'
+import { useUpdateDocument, useDocumentCategories } from '@/features/documents/hooks/use-documents'
 import { DOCUMENT_CATEGORIES } from '@/features/documents/services/documents.service'
+import { CategoryInput } from '@/features/documents/components/category-input'
 import type { DocumentRow } from '@/shared/types/database.types'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { toast } from '@/shared/components/ui/sonner'
-
-const NONE = '__none__'
 
 export function DocumentRenameDialog({
   doc,
@@ -23,13 +21,19 @@ export function DocumentRenameDialog({
 }) {
   const { activeOrgId } = useAuth()
   const update = useUpdateDocument(activeOrgId)
+  const { data: usedCategories } = useDocumentCategories(activeOrgId)
   const [displayName, setDisplayName] = React.useState('')
-  const [category, setCategory] = React.useState<string>(NONE)
+  const [category, setCategory] = React.useState('')
+
+  const categorySuggestions = React.useMemo(() => {
+    const extra = (usedCategories ?? []).filter((c) => !(DOCUMENT_CATEGORIES as readonly string[]).includes(c))
+    return [...DOCUMENT_CATEGORIES, ...extra]
+  }, [usedCategories])
 
   React.useEffect(() => {
     if (open && doc) {
       setDisplayName(doc.display_name)
-      setCategory(doc.category ?? NONE)
+      setCategory(doc.category ?? '')
     }
   }, [open, doc])
 
@@ -38,7 +42,7 @@ export function DocumentRenameDialog({
     try {
       await update.mutateAsync({
         doc,
-        patch: { display_name: displayName.trim(), category: category === NONE ? null : category },
+        patch: { display_name: displayName.trim(), category: category.trim() || null },
       })
       toast.success('Document updated')
       onOpenChange(false)
@@ -62,15 +66,7 @@ export function DocumentRenameDialog({
           </div>
           <div className="space-y-1.5">
             <Label>Category</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger><SelectValue placeholder="Uncategorised" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>Uncategorised</SelectItem>
-                {DOCUMENT_CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CategoryInput value={category} onChange={setCategory} suggestions={categorySuggestions} />
           </div>
         </div>
 

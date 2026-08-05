@@ -10,6 +10,16 @@ export function useDocuments(organizationId: string | null, filters: DocumentFil
   })
 }
 
+/** Custom categories the firm has actually typed in, so they resurface as
+ * suggestions/filters instead of being a one-off. */
+export function useDocumentCategories(organizationId: string | null) {
+  return useQuery({
+    queryKey: ['org-documents', organizationId, 'categories'],
+    enabled: Boolean(organizationId),
+    queryFn: () => documentsService.listCategories(organizationId!),
+  })
+}
+
 function useInvalidate(organizationId: string | null) {
   const qc = useQueryClient()
   return (matterId?: string | null) => {

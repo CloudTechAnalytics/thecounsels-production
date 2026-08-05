@@ -1,12 +1,14 @@
 import { useNavigate } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
-import { Bell, CheckCheck } from 'lucide-react'
+import { Bell, Check, CheckCheck, X } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import {
+  useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotificationPreferences,
   useNotificationsRealtime,
   useRecentNotifications,
+  useSetNotificationArchived,
   useUnreadNotificationCount,
 } from '@/features/notifications/hooks/use-notifications'
 import { NOTIFICATION_PRIORITY_META, resolveNotificationHref } from '@/features/notifications/types'
@@ -26,6 +28,8 @@ export function NotificationBell() {
   const { data: recent, isLoading } = useRecentNotifications(activeOrgId)
   const { data: prefs } = useNotificationPreferences(userId)
   const markRead = useMarkNotificationRead(activeOrgId)
+  const markAllRead = useMarkAllNotificationsRead(activeOrgId)
+  const archive = useSetNotificationArchived(activeOrgId)
 
   useNotificationsRealtime(activeOrgId, userId, (row: NotificationRow) => {
     if (prefs?.browser_enabled) {
@@ -55,8 +59,20 @@ export function NotificationBell() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-96 p-0">
         <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
-          <p className="text-sm font-semibold">Notifications</p>
-          {Boolean(unreadCount) && <Badge variant="default">{unreadCount} unread</Badge>}
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold">Notifications</p>
+            {Boolean(unreadCount) && <Badge variant="default">{unreadCount} unread</Badge>}
+          </div>
+          {Boolean(unreadCount) && (
+            <button
+              type="button"
+              disabled={markAllRead.isPending}
+              onClick={() => markAllRead.mutate()}
+              className="flex items-center gap-1 text-xs font-medium text-primary hover:underline disabled:opacity-50"
+            >
+              <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+            </button>
+          )}
         </div>
 
         <div className="max-h-96 overflow-y-auto">
@@ -67,14 +83,11 @@ export function NotificationBell() {
               {recent.map((n) => {
                 const meta = NOTIFICATION_PRIORITY_META[n.priority]
                 return (
-                  <li key={n.id}>
+                  <li key={n.id} className={cn('group flex items-start gap-1 px-3 py-2.5', !n.is_read && 'bg-primary/5')}>
                     <button
                       type="button"
                       onClick={() => openNotification(n)}
-                      className={cn(
-                        'flex w-full items-start gap-3 px-3 py-2.5 text-left hover:bg-accent',
-                        !n.is_read && 'bg-primary/5',
-                      )}
+                      className="flex min-w-0 flex-1 items-start gap-3 text-left"
                     >
                       <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', !n.is_read ? 'bg-primary' : 'bg-transparent')} />
                       <div className="min-w-0 flex-1">
@@ -85,6 +98,28 @@ export function NotificationBell() {
                         </div>
                       </div>
                     </button>
+                    <div className="flex shrink-0 items-center gap-0.5 pt-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                      {!n.is_read && (
+                        <button
+                          type="button"
+                          aria-label="Mark as read"
+                          title="Mark as read"
+                          onClick={() => markRead.mutate(n.id)}
+                          className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        aria-label="Clear notification"
+                        title="Clear"
+                        onClick={() => archive.mutate({ id: n.id, archived: true })}
+                        className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </li>
                 )
               })}

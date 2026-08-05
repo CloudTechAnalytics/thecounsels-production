@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Plus, Star, Trash2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
+import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useAddContact, useClientContacts, useRemoveContact, useSetPrimaryContact } from '@/features/clients/hooks/use-clients'
 import { contactSchema, type ContactFormValues } from '@/features/clients/schemas'
 import type { Client } from '@/shared/types/database.types'
@@ -26,6 +27,8 @@ export function ManageContactsDialog({
   onOpenChange: (o: boolean) => void
 }) {
   const { activeOrgId } = useAuth()
+  const { has } = usePermissions()
+  const canManage = has('clients.manage_contacts')
   const clientId = client?.id
   const { data: contacts, isLoading } = useClientContacts(clientId)
   const addContact = useAddContact(activeOrgId, clientId)
@@ -71,29 +74,31 @@ export function ManageContactsDialog({
                   </p>
                   <p className="truncate text-xs text-muted-foreground">{[c.email, c.phone].filter(Boolean).join(' · ') || '—'}</p>
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  {!c.is_primary && (
+                {canManage && (
+                  <div className="flex shrink-0 items-center gap-1">
+                    {!c.is_primary && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Make primary"
+                        title="Make primary"
+                        disabled={setPrimary.isPending}
+                        onClick={() => setPrimary.mutate(c.id)}
+                      >
+                        <Star className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
-                      aria-label="Make primary"
-                      title="Make primary"
-                      disabled={setPrimary.isPending}
-                      onClick={() => setPrimary.mutate(c.id)}
+                      aria-label="Remove contact"
+                      disabled={removeContact.isPending}
+                      onClick={() => removeContact.mutate(c.id)}
                     >
-                      <Star className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Remove contact"
-                    disabled={removeContact.isPending}
-                    onClick={() => removeContact.mutate(c.id)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
-                </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -101,6 +106,7 @@ export function ManageContactsDialog({
           <p className="py-4 text-center text-sm text-muted-foreground">No contacts yet.</p>
         )}
 
+        {canManage && (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 border-t border-border pt-4" noValidate>
             <p className="text-sm font-medium">Add a contact</p>
@@ -158,6 +164,7 @@ export function ManageContactsDialog({
             </div>
           </form>
         </Form>
+        )}
       </DialogContent>
     </Dialog>
   )

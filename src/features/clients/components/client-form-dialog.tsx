@@ -52,6 +52,7 @@ export function ClientFormDialog({
   open,
   onOpenChange,
   onViewExisting,
+  readOnly = false,
 }: {
   client?: Client | null
   open: boolean
@@ -60,6 +61,9 @@ export function ClientFormDialog({
    * closes itself; the caller decides what "viewing" means (e.g. filter the
    * list to it). No Client Detail page exists yet to navigate to directly. */
   onViewExisting?: (displayName: string) => void
+  /** For clients.view holders without clients.update — shows every field,
+   * nothing editable. Always used with an existing `client`. */
+  readOnly?: boolean
 }) {
   const { activeOrgId, profile } = useAuth()
   const { has } = usePermissions()
@@ -87,6 +91,7 @@ export function ClientFormDialog({
   }
 
   const onSubmit = async (values: ClientFormValues) => {
+    if (readOnly) return
     try {
       if (client) {
         await update.mutateAsync({ id: client.id, values })
@@ -117,8 +122,10 @@ export function ClientFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{client ? 'Edit client' : 'New client'}</DialogTitle>
-          <DialogDescription>Individuals and corporate clients for your firm.</DialogDescription>
+          <DialogTitle>{readOnly ? 'Client details' : client ? 'Edit client' : 'New client'}</DialogTitle>
+          <DialogDescription>
+            {readOnly ? 'You have view-only access to client records.' : 'Individuals and corporate clients for your firm.'}
+          </DialogDescription>
         </DialogHeader>
 
         {dupMatches && (
@@ -180,7 +187,8 @@ export function ClientFormDialog({
         )}
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+          <fieldset disabled={readOnly} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
@@ -188,7 +196,7 @@ export function ClientFormDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Client type</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select value={field.value} onValueChange={field.onChange} disabled={readOnly}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
@@ -208,7 +216,7 @@ export function ClientFormDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select value={field.value} onValueChange={field.onChange} disabled={readOnly}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
@@ -445,14 +453,23 @@ export function ClientFormDialog({
                 </FormItem>
               )}
             />
+          </fieldset>
 
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" loading={create.isPending || update.isPending || checkDuplicates.isPending}>
-                {client ? 'Save changes' : 'Add client'}
-              </Button>
+            <DialogFooter className="mt-4">
+              {readOnly ? (
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Close
+                </Button>
+              ) : (
+                <>
+                  <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" loading={create.isPending || update.isPending || checkDuplicates.isPending}>
+                    {client ? 'Save changes' : 'Add client'}
+                  </Button>
+                </>
+              )}
             </DialogFooter>
           </form>
         </Form>

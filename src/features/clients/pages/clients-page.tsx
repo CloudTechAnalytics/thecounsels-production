@@ -143,7 +143,7 @@ export function ClientsPage() {
                 <TableHead>Contact</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Status</TableHead>
-                {(canUpdate || canDelete) && <TableHead className="text-right">Actions</TableHead>}
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -176,15 +176,13 @@ export function ClientsPage() {
                         </span>
                       )}
                       {!c.email && !c.phone && <span className="text-muted-foreground">—</span>}
-                      {canUpdate && (
-                        <button
-                          type="button"
-                          onClick={() => setManagingContacts(c)}
-                          className="flex items-center gap-1.5 text-primary hover:underline"
-                        >
-                          <Contact className="h-3 w-3" /> {c.contacts[0]?.count ?? 0} contact{(c.contacts[0]?.count ?? 0) === 1 ? '' : 's'}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setManagingContacts(c)}
+                        className="flex items-center gap-1.5 text-primary hover:underline"
+                      >
+                        <Contact className="h-3 w-3" /> {c.contacts[0]?.count ?? 0} contact{(c.contacts[0]?.count ?? 0) === 1 ? '' : 's'}
+                      </button>
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
@@ -195,34 +193,25 @@ export function ClientsPage() {
                       {c.status}
                     </Badge>
                   </TableCell>
-                  {(canUpdate || canDelete) && (
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" aria-label="Actions">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {canUpdate && (
-                            <DropdownMenuItem onClick={() => openEdit(c)}>
-                              <Pencil /> Edit
-                            </DropdownMenuItem>
-                          )}
-                          {canUpdate && (
-                            <DropdownMenuItem onClick={() => setManagingContacts(c)}>
-                              <Contact /> Manage contacts
-                            </DropdownMenuItem>
-                          )}
-                          {canDelete && (
-                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setToDelete(c)}>
-                              <Trash2 /> Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  )}
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label="Actions">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEdit(c)}>
+                          <Pencil /> {canUpdate ? 'Edit' : 'View details'}
+                        </DropdownMenuItem>
+                        {canDelete && (
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setToDelete(c)}>
+                            <Trash2 /> Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -254,6 +243,7 @@ export function ClientsPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         onViewExisting={(displayName) => setSearch(displayName)}
+        readOnly={Boolean(editing) && !canUpdate}
       />
 
       <ManageContactsDialog

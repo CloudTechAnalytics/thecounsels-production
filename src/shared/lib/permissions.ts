@@ -28,6 +28,7 @@ export const PERMISSION_KEYS = [
   'clients.update',
   'clients.delete',
   'clients.create_duplicate',
+  'clients.manage_contacts',
   'matters.view',
   'matters.view_all',
   'matters.create',

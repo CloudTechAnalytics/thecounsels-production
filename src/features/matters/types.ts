@@ -37,6 +37,9 @@ export interface MatterSummary {
   amountPaid: number
   lastInvoiceDate: string | null
   lastPaymentDate: string | null
+  unbilledTime: number
+  unbilledExpenses: number
+  totalUnbilledWork: number
 }
 
 export const PRACTICE_AREAS = [

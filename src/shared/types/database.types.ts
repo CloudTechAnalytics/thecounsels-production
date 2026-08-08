@@ -954,6 +954,8 @@ export interface Database {
           billable: boolean
           invoiced: boolean
           invoice_id: string | null
+          created_by: string | null
+          updated_by: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -967,6 +969,8 @@ export interface Database {
           billable?: boolean
           invoiced?: boolean
           invoice_id?: string | null
+          created_by?: string | null
+          updated_by?: string | null
         }
         Update: Partial<Database['public']['Tables']['expenses']['Insert']>
         Relationships: [
@@ -975,6 +979,40 @@ export interface Database {
             columns: ['matter_id']
             isOneToOne: false
             referencedRelation: 'matters'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      expense_receipts: {
+        Row: {
+          id: string
+          organization_id: string
+          expense_id: string
+          storage_path: string
+          file_name: string
+          mime_type: string | null
+          size_bytes: number | null
+          uploaded_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          expense_id: string
+          storage_path: string
+          file_name: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['expense_receipts']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'expense_receipts_expense_id_fkey'
+            columns: ['expense_id']
+            isOneToOne: false
+            referencedRelation: 'expenses'
             referencedColumns: ['id']
           },
         ]
@@ -1323,6 +1361,7 @@ export type Task = Database['public']['Tables']['tasks']['Row']
 export type StaffProfile = Database['public']['Tables']['staff_profiles']['Row']
 export type TimeEntry = Database['public']['Tables']['time_entries']['Row']
 export type Expense = Database['public']['Tables']['expenses']['Row']
+export type ExpenseReceipt = Database['public']['Tables']['expense_receipts']['Row']
 export type Invoice = Database['public']['Tables']['invoices']['Row']
 export type InvoiceItem = Database['public']['Tables']['invoice_items']['Row']
 export type Payment = Database['public']['Tables']['payments']['Row']

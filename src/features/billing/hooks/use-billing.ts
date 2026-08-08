@@ -28,8 +28,12 @@ export function useTimeEntries(orgId: string | null, filters: TimeEntryFilters, 
     placeholderData: keepPreviousData,
   })
 }
-export function useUnbilledExpenses(orgId: string | null) {
-  return useQuery({ queryKey: ['billing', orgId, 'expenses'], enabled: Boolean(orgId), queryFn: () => billingService.listUnbilledExpenses(orgId!) })
+export function useExpenses(orgId: string | null, status: 'unbilled' | 'billed' | 'all' = 'unbilled') {
+  return useQuery({
+    queryKey: ['billing', orgId, 'expenses', status],
+    enabled: Boolean(orgId),
+    queryFn: () => billingService.listExpenses(orgId!, status),
+  })
 }
 export function useInvoices(orgId: string | null) {
   return useQuery({ queryKey: ['billing', orgId, 'invoices'], enabled: Boolean(orgId), queryFn: () => billingService.listInvoices(orgId!) })
@@ -91,8 +95,59 @@ export function useReopenTimeEntry(orgId: string | null) {
   })
 }
 export function useAddExpense(orgId: string | null, userId: string | null) {
+  const qc = useQueryClient()
   const invalidate = useInvalidate(orgId)
-  return useMutation({ mutationFn: (v: ExpenseFormValues) => billingService.addExpense(orgId!, v, userId), onSuccess: invalidate })
+  return useMutation({
+    mutationFn: (v: ExpenseFormValues) => billingService.addExpense(orgId!, v, userId),
+    onSuccess: () => {
+      invalidate()
+      qc.invalidateQueries({ queryKey: ['matter-summary'] })
+    },
+  })
+}
+export function useUpdateExpense(orgId: string | null) {
+  const qc = useQueryClient()
+  const invalidate = useInvalidate(orgId)
+  return useMutation({
+    mutationFn: ({ id, values, invoiced }: { id: string; values: ExpenseFormValues; invoiced: boolean }) =>
+      billingService.updateExpense(id, orgId!, values, invoiced),
+    onSuccess: () => {
+      invalidate()
+      qc.invalidateQueries({ queryKey: ['matter-summary'] })
+    },
+  })
+}
+export function useUploadReceipt(orgId: string | null, userId: string | null) {
+  const invalidate = useInvalidate(orgId)
+  return useMutation({
+    mutationFn: ({ expenseId, matterId, file }: { expenseId: string; matterId?: string | null; file: File }) =>
+      billingService.uploadReceipt({ organizationId: orgId!, expenseId, matterId, file, uploadedBy: userId }),
+    onSuccess: invalidate,
+  })
+}
+export function useReplaceReceipt(orgId: string | null, userId: string | null) {
+  const invalidate = useInvalidate(orgId)
+  return useMutation({
+    mutationFn: ({
+      expenseId,
+      matterId,
+      file,
+      oldReceipt,
+    }: {
+      expenseId: string
+      matterId?: string | null
+      file: File
+      oldReceipt: { id: string; storage_path: string }
+    }) => billingService.replaceReceipt({ organizationId: orgId!, expenseId, matterId, file, uploadedBy: userId }, oldReceipt),
+    onSuccess: invalidate,
+  })
+}
+export function useRemoveReceipt(orgId: string | null) {
+  const invalidate = useInvalidate(orgId)
+  return useMutation({
+    mutationFn: (receipt: { id: string; storage_path: string }) => billingService.removeReceipt(receipt),
+    onSuccess: invalidate,
+  })
 }
 export function useDeleteTimeEntry(orgId: string | null) {
   const qc = useQueryClient()
@@ -106,8 +161,15 @@ export function useDeleteTimeEntry(orgId: string | null) {
   })
 }
 export function useDeleteExpense(orgId: string | null) {
+  const qc = useQueryClient()
   const invalidate = useInvalidate(orgId)
-  return useMutation({ mutationFn: (id: string) => billingService.deleteExpense(id, orgId!), onSuccess: invalidate })
+  return useMutation({
+    mutationFn: (id: string) => billingService.deleteExpense(id, orgId!),
+    onSuccess: () => {
+      invalidate()
+      qc.invalidateQueries({ queryKey: ['matter-summary'] })
+    },
+  })
 }
 export function useGenerateInvoice(orgId: string | null) {
   const qc = useQueryClient()

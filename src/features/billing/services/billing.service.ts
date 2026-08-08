@@ -12,7 +12,9 @@ import type {
 
 const TIME_SELECT =
   '*, matter:matters(id, title, matter_number), user:profiles!time_entries_user_id_fkey(id, full_name), created_by_profile:profiles!time_entries_created_by_fkey(id, full_name), updated_by_profile:profiles!time_entries_updated_by_fkey(id, full_name)'
-const EXP_SELECT = '*, matter:matters(id, title, matter_number), user:profiles!expenses_user_id_fkey(id, full_name)'
+const EXP_SELECT =
+  '*, matter:matters(id, title, matter_number), user:profiles!expenses_user_id_fkey(id, full_name), created_by_profile:profiles!expenses_created_by_fkey(id, full_name), updated_by_profile:profiles!expenses_updated_by_fkey(id, full_name), receipts:expense_receipts(*), invoice:invoices(id, invoice_number)'
+const RECEIPTS_BUCKET = 'receipts'
 const INV_SELECT = '*, client:clients(id, display_name), matter:matters(id, matter_number)'
 const PAYMENT_SELECT = '*, created_by_profile:profiles!payments_created_by_fkey(id, full_name)'
 
@@ -148,13 +150,12 @@ export const billingService = {
   },
 
   // Expenses ------------------------------------------------------------------
-  async listUnbilledExpenses(organizationId: string): Promise<ExpenseRow[]> {
-    const { data, error } = await supabase
-      .from('expenses')
-      .select(EXP_SELECT)
-      .eq('organization_id', organizationId)
-      .eq('invoiced', false)
-      .order('expense_date', { ascending: false })
+  /** status defaults to 'unbilled' — the Unbilled Expenses list's existing behavior, preserved. */
+  async listExpenses(organizationId: string, status: 'unbilled' | 'billed' | 'all' = 'unbilled'): Promise<ExpenseRow[]> {
+    let q = supabase.from('expenses').select(EXP_SELECT).eq('organization_id', organizationId)
+    if (status === 'unbilled') q = q.eq('invoiced', false)
+    else if (status === 'billed') q = q.eq('invoiced', true)
+    const { data, error } = await q.order('expense_date', { ascending: false })
     if (error) throw error
     return (data ?? []) as unknown as ExpenseRow[]
   },
@@ -182,6 +183,29 @@ export const billingService = {
       p_summary: `Logged expense: ${v.description.trim()}`,
     })
   },
+  /** Blocked server-side (RLS) when the expense is invoiced; this client check is just faster/friendlier feedback. */
+  async updateExpense(id: string, organizationId: string, v: ExpenseFormValues, invoiced: boolean): Promise<void> {
+    if (invoiced) throw new Error('This expense has been invoiced and can no longer be edited.')
+    const { error } = await supabase
+      .from('expenses')
+      .update({
+        matter_id: v.matterId || null,
+        expense_date: v.expenseDate,
+        amount: v.amount,
+        description: v.description.trim(),
+        category: v.category || null,
+        billable: v.billable,
+      })
+      .eq('id', id)
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'expense.updated',
+      p_entity_type: 'expense',
+      p_entity_id: id,
+      p_summary: `Updated expense: ${v.description.trim()}`,
+    })
+  },
   async deleteExpense(id: string, organizationId: string): Promise<void> {
     const { error } = await supabase.from('expenses').delete().eq('id', id)
     if (error) throw error
@@ -192,6 +216,58 @@ export const billingService = {
       p_entity_id: id,
       p_summary: 'Deleted an expense',
     })
+  },
+
+  // Receipts --------------------------------------------------------------------
+  async uploadReceipt(params: {
+    organizationId: string
+    expenseId: string
+    matterId?: string | null
+    file: File
+    uploadedBy: string | null
+  }): Promise<void> {
+    const { organizationId, expenseId, matterId, file, uploadedBy } = params
+    const folder = matterId || 'general'
+    const safeName = file.name.replace(/[^\w.\-]+/g, '_').slice(-120)
+    const path = `${organizationId}/${folder}/${crypto.randomUUID()}-${safeName}`
+
+    const { error: upErr } = await supabase.storage
+      .from(RECEIPTS_BUCKET)
+      .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false })
+    if (upErr) throw upErr
+
+    const { error } = await supabase.from('expense_receipts').insert({
+      organization_id: organizationId,
+      expense_id: expenseId,
+      storage_path: path,
+      file_name: file.name,
+      mime_type: file.type || null,
+      size_bytes: file.size,
+      uploaded_by: uploadedBy,
+    })
+    if (error) {
+      await supabase.storage.from(RECEIPTS_BUCKET).remove([path])
+      throw error
+    }
+  },
+  /** Replace = remove the old file then upload the new one under the same expense. */
+  async replaceReceipt(
+    params: { organizationId: string; expenseId: string; matterId?: string | null; file: File; uploadedBy: string | null },
+    oldReceipt: { id: string; storage_path: string },
+  ): Promise<void> {
+    await billingService.uploadReceipt(params)
+    await supabase.storage.from(RECEIPTS_BUCKET).remove([oldReceipt.storage_path])
+    await supabase.from('expense_receipts').delete().eq('id', oldReceipt.id)
+  },
+  async removeReceipt(receipt: { id: string; storage_path: string }): Promise<void> {
+    await supabase.storage.from(RECEIPTS_BUCKET).remove([receipt.storage_path])
+    const { error } = await supabase.from('expense_receipts').delete().eq('id', receipt.id)
+    if (error) throw error
+  },
+  async receiptSignedUrl(path: string, expiresIn = 3600): Promise<string> {
+    const { data, error } = await supabase.storage.from(RECEIPTS_BUCKET).createSignedUrl(path, expiresIn)
+    if (error) throw error
+    return data.signedUrl
   },
 
   // Invoices ------------------------------------------------------------------

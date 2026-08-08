@@ -14,6 +14,8 @@ import {
   ListChecks,
   CheckCheck,
   Receipt,
+  Wallet,
+  FileCheck2,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
@@ -40,6 +42,11 @@ const EVENT_ICON: Record<string, LucideIcon> = {
   hearing_deleted: CalendarOff,
   task_added: ListChecks,
   task_completed: CheckCheck,
+  expense_created: Wallet,
+  expense_updated: PencilLine,
+  expense_deleted: FileX,
+  expense_invoiced: FileCheck2,
+  receipt_uploaded: FileUp,
   invoice_created: Receipt,
   update: PencilLine,
 }

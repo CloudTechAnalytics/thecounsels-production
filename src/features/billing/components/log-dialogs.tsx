@@ -1,12 +1,28 @@
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { FileText } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useMatters } from '@/features/matters/hooks/use-matters'
 import { useStaffProfiles } from '@/features/staff/hooks/use-staff'
-import { useAddTimeEntry, useUpdateTimeEntry, useAddExpense } from '@/features/billing/hooks/use-billing'
+import {
+  useAddTimeEntry,
+  useUpdateTimeEntry,
+  useAddExpense,
+  useUpdateExpense,
+  useUploadReceipt,
+  useReplaceReceipt,
+  useRemoveReceipt,
+} from '@/features/billing/hooks/use-billing'
+import { billingService } from '@/features/billing/services/billing.service'
 import { timeEntrySchema, type TimeEntryFormValues } from '@/features/billing/schemas'
-import { EXPENSE_CATEGORIES, TIME_ENTRY_STATUS_META, LOCKED_TIME_ENTRY_STATUSES, type TimeEntryRow } from '@/features/billing/types'
+import {
+  EXPENSE_CATEGORIES,
+  TIME_ENTRY_STATUS_META,
+  LOCKED_TIME_ENTRY_STATUSES,
+  type ExpenseRow,
+  type TimeEntryRow,
+} from '@/features/billing/types'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
@@ -21,6 +37,10 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { toast } from '@/shared/components/ui/sonner'
+
+const RECEIPT_ACCEPT = '.pdf,.jpg,.jpeg,.png'
+const RECEIPT_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
+const MAX_RECEIPT_BYTES = 10 * 1024 * 1024
 
 const NONE = '__none__'
 const today = () => new Date().toISOString().slice(0, 10)
@@ -223,9 +243,26 @@ export function TimeEntryDialog({
   )
 }
 
-export function ExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+export function ExpenseDialog({
+  expense,
+  open,
+  onOpenChange,
+}: {
+  expense?: ExpenseRow | null
+  open: boolean
+  onOpenChange: (o: boolean) => void
+}) {
   const { activeOrgId, profile } = useAuth()
   const add = useAddExpense(activeOrgId, profile?.id ?? null)
+  const update = useUpdateExpense(activeOrgId)
+  const uploadReceipt = useUploadReceipt(activeOrgId, profile?.id ?? null)
+  const replaceReceipt = useReplaceReceipt(activeOrgId, profile?.id ?? null)
+  const removeReceipt = useRemoveReceipt(activeOrgId)
+  const fileRef = React.useRef<HTMLInputElement>(null)
+
+  const invoiced = expense?.invoiced ?? false
+  const loggedByName = expense?.created_by_profile?.full_name ?? expense?.user?.full_name ?? null
+  const receipt = expense?.receipts?.[0] ?? null
 
   const [matterId, setMatterId] = React.useState('')
   const [expenseDate, setExpenseDate] = React.useState(today())
@@ -235,10 +272,18 @@ export function ExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const [billable, setBillable] = React.useState(true)
 
   React.useEffect(() => {
-    if (open) { setMatterId(''); setExpenseDate(today()); setAmount(''); setCategory(''); setDescription(''); setBillable(true) }
-  }, [open])
+    if (open) {
+      setMatterId(expense?.matter_id ?? '')
+      setExpenseDate(expense?.expense_date ?? today())
+      setAmount(expense ? String(expense.amount) : '')
+      setCategory(expense?.category ?? '')
+      setDescription(expense?.description ?? '')
+      setBillable(expense?.billable ?? true)
+    }
+  }, [open, expense])
 
   const submit = async () => {
+    if (invoiced) return
     if (!Number(amount) || !description.trim()) {
       toast.error('Enter an amount and a description')
       return
@@ -249,19 +294,73 @@ export function ExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       })
       return
     }
+    const values = {
+      matterId: matterId === NONE ? '' : matterId,
+      expenseDate,
+      amount: Number(amount),
+      category: category === NONE ? '' : category,
+      description,
+      billable,
+    }
     try {
-      await add.mutateAsync({
-        matterId: matterId === NONE ? '' : matterId,
-        expenseDate,
-        amount: Number(amount),
-        category: category === NONE ? '' : category,
-        description,
-        billable,
-      })
-      toast.success('Expense logged')
+      if (expense) await update.mutateAsync({ id: expense.id, values, invoiced })
+      else await add.mutateAsync(values)
+      toast.success(expense ? 'Expense updated' : 'Expense logged')
       onOpenChange(false)
     } catch (err) {
-      toast.error('Could not log expense', { description: err instanceof Error ? err.message : undefined })
+      toast.error(expense ? 'Could not update expense' : 'Could not log expense', {
+        description: err instanceof Error ? err.message : undefined,
+      })
+    }
+  }
+
+  const openReceipt = async (mode: 'view' | 'download') => {
+    if (!receipt) return
+    try {
+      const url = await billingService.receiptSignedUrl(receipt.storage_path)
+      if (mode === 'view') {
+        window.open(url, '_blank', 'noopener')
+      } else {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = receipt.file_name
+        a.click()
+      }
+    } catch (err) {
+      toast.error('Could not open receipt', { description: err instanceof Error ? err.message : undefined })
+    }
+  }
+
+  const onFileSelected = async (file?: File) => {
+    if (!file || !expense) return
+    if (!RECEIPT_MIME_TYPES.includes(file.type)) {
+      toast.error('Receipts must be a PDF, JPG or PNG')
+      return
+    }
+    if (file.size > MAX_RECEIPT_BYTES) {
+      toast.error('Receipt is too large', { description: 'Maximum size is 10MB.' })
+      return
+    }
+    try {
+      if (receipt) {
+        await replaceReceipt.mutateAsync({ expenseId: expense.id, matterId: expense.matter_id, file, oldReceipt: receipt })
+        toast.success('Receipt replaced')
+      } else {
+        await uploadReceipt.mutateAsync({ expenseId: expense.id, matterId: expense.matter_id, file })
+        toast.success('Receipt uploaded')
+      }
+    } catch (err) {
+      toast.error('Could not save receipt', { description: err instanceof Error ? err.message : undefined })
+    }
+  }
+
+  const onRemoveReceipt = async () => {
+    if (!receipt) return
+    try {
+      await removeReceipt.mutateAsync(receipt)
+      toast.success('Receipt removed')
+    } catch (err) {
+      toast.error('Could not remove receipt', { description: err instanceof Error ? err.message : undefined })
     }
   }
 
@@ -269,10 +368,18 @@ export function ExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Log expense</DialogTitle>
+          <DialogTitle>{expense ? 'Edit expense' : 'Log expense'}</DialogTitle>
           <DialogDescription>Record a disbursement against a matter.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+
+        {invoiced && (
+          <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+            This expense has been invoiced and can no longer be edited.
+            {expense?.invoice?.invoice_number && <> Included in Invoice {expense.invoice.invoice_number}.</>}
+          </p>
+        )}
+
+        <fieldset disabled={invoiced} className="space-y-4 disabled:opacity-60">
           <div className="space-y-1.5">
             <Label>Matter</Label>
             <MatterSelect value={matterId} onChange={setMatterId} />
@@ -296,10 +403,70 @@ export function ExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenCha
           </div>
           <div className="space-y-1.5"><Label>Description</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Court filing fee" /></div>
           <BillableCheck checked={billable} onChange={setBillable} />
+        </fieldset>
+
+        {loggedByName && (
+          <p className="text-xs text-muted-foreground">
+            Logged by <span className="font-medium text-foreground">{loggedByName}</span>
+          </p>
+        )}
+
+        <div className="space-y-2 border-t border-border pt-4">
+          <Label>Receipt</Label>
+          {!expense ? (
+            <p className="text-xs text-muted-foreground">You can attach a receipt once the expense is saved.</p>
+          ) : receipt ? (
+            <div className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2">
+              <span className="flex min-w-0 items-center gap-2 text-sm">
+                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="truncate">{receipt.file_name}</span>
+              </span>
+              <div className="flex shrink-0 gap-1">
+                <Button type="button" variant="ghost" size="sm" onClick={() => openReceipt('view')}>View</Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => openReceipt('download')}>Download</Button>
+                {!invoiced && (
+                  <>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => fileRef.current?.click()} loading={replaceReceipt.isPending}>
+                      Replace
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={onRemoveReceipt} loading={removeReceipt.isPending}>
+                      Remove
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          ) : !invoiced ? (
+            <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} loading={uploadReceipt.isPending}>
+              Upload receipt
+            </Button>
+          ) : (
+            <p className="text-xs text-muted-foreground">No receipt was attached.</p>
+          )}
+          {expense && (
+            <>
+              <input
+                ref={fileRef}
+                type="file"
+                accept={RECEIPT_ACCEPT}
+                className="hidden"
+                onChange={(e) => {
+                  void onFileSelected(e.target.files?.[0])
+                  e.target.value = ''
+                }}
+              />
+              <p className="text-xs text-muted-foreground">PDF, JPG or PNG, up to 10MB.</p>
+            </>
+          )}
         </div>
+
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={submit} loading={add.isPending}>Log expense</Button>
+          {!invoiced && (
+            <Button onClick={submit} loading={add.isPending || update.isPending}>
+              {expense ? 'Save changes' : 'Log expense'}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

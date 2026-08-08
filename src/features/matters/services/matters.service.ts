@@ -191,8 +191,8 @@ export const mattersService = {
       supabase.from('hearings').select('hearing_at, status').eq('matter_id', matterId),
       supabase.from('tasks').select('status').eq('matter_id', matterId),
       supabase.from('invoices').select('id, total, amount_paid, status, issue_date').eq('matter_id', matterId),
-      supabase.from('time_entries').select('minutes, rate').eq('matter_id', matterId).eq('billable', true),
-      supabase.from('expenses').select('amount').eq('matter_id', matterId).eq('billable', true),
+      supabase.from('time_entries').select('minutes, rate, invoiced').eq('matter_id', matterId).eq('billable', true),
+      supabase.from('expenses').select('amount, invoiced').eq('matter_id', matterId).eq('billable', true),
     ])
     for (const r of [docs, notes, hearings, tasks, invoices, time, expenses]) if (r.error) throw r.error
 
@@ -218,6 +218,16 @@ export const mattersService = {
 
     const invoiceDates = invoiceRows.map((i) => i.issue_date).sort()
 
+    // Unbilled Time + Unbilled Expenses = Total Unbilled Work — same shape as
+    // billing.service.ts's org/personal getStats()/getPersonalStats(), scoped
+    // to this one matter and kept fresh automatically: every mutation that
+    // touches these rows (log/edit/delete time or expenses, generate/void an
+    // invoice) invalidates the ['matter-summary'] query.
+    const unbilledTime = timeRows
+      .filter((t) => !t.invoiced)
+      .reduce((s, t) => s + Math.round((t.minutes / 60) * Number(t.rate) * 100) / 100, 0)
+    const unbilledExpenses = expenseRows.filter((e) => !e.invoiced).reduce((s, e) => s + Number(e.amount), 0)
+
     return {
       documents: docs.count ?? 0,
       notes: notes.count ?? 0,
@@ -233,6 +243,9 @@ export const mattersService = {
       amountPaid: invoiceRows.reduce((s, i) => s + Number(i.amount_paid), 0),
       lastInvoiceDate: invoiceDates.length > 0 ? invoiceDates[invoiceDates.length - 1] : null,
       lastPaymentDate,
+      unbilledTime,
+      unbilledExpenses,
+      totalUnbilledWork: unbilledTime + unbilledExpenses,
     }
   },
 }

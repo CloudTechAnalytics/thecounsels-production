@@ -2,6 +2,7 @@ import type { BadgeProps } from '@/shared/components/ui/badge'
 import type {
   Client,
   Expense,
+  ExpenseReceipt,
   Invoice,
   InvoiceItem,
   InvoiceStatus,
@@ -21,6 +22,10 @@ export interface TimeEntryRow extends TimeEntry {
 export interface ExpenseRow extends Expense {
   matter: Pick<Matter, 'id' | 'title' | 'matter_number'> | null
   user: Pick<Profile, 'id' | 'full_name'> | null
+  created_by_profile: Pick<Profile, 'id' | 'full_name'> | null
+  updated_by_profile: Pick<Profile, 'id' | 'full_name'> | null
+  receipts: ExpenseReceipt[]
+  invoice: Pick<Invoice, 'id' | 'invoice_number'> | null
 }
 export interface InvoiceRow extends Invoice {
   client: Pick<Client, 'id' | 'display_name'> | null

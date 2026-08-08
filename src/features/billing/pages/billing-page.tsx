@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import {
   Banknote,
@@ -9,6 +10,7 @@ import {
   AlertTriangle,
   Plus,
   Trash2,
+  Pencil,
   Receipt,
   Search,
   MoreHorizontal,
@@ -20,7 +22,7 @@ import { useClients } from '@/features/clients/hooks/use-clients'
 import {
   useBillingStats,
   usePersonalStats,
-  useUnbilledExpenses,
+  useExpenses,
   useInvoices,
   useDeleteExpense,
   useDeleteInvoice,
@@ -58,12 +60,8 @@ export function BillingPage() {
   // Firm-wide financials are restricted; everyone else gets their own numbers.
   const stats = useBillingStats(canFinancials ? activeOrgId : null)
   const personal = usePersonalStats(canFinancials ? null : activeOrgId, userId)
-  const expenses = useUnbilledExpenses(activeOrgId)
   const invoices = useInvoices(activeOrgId)
   const [tab, setTab] = React.useState<'time' | 'expenses' | 'invoices'>('time')
-
-  // Without reports.financial you see (and can delete) only your own expenses.
-  const expenseRows = (expenses.data ?? []).filter((e) => canFinancials || e.user?.id === userId)
 
   const [timeOpen, setTimeOpen] = React.useState(false)
   const [expenseOpen, setExpenseOpen] = React.useState(false)
@@ -126,7 +124,7 @@ export function BillingPage() {
 
       <div className="mt-6">
         {tab === 'time' && <TimeEntriesTab />}
-        {tab === 'expenses' && <ExpensesTab rows={expenseRows} loading={expenses.isLoading} />}
+        {tab === 'expenses' && <ExpensesTab />}
         {tab === 'invoices' && canInvoice && <InvoicesTab invoices={invoices} onOpen={setInvoiceId} />}
       </div>
 
@@ -138,10 +136,18 @@ export function BillingPage() {
   )
 }
 
-function ExpensesTab({ rows, loading }: { rows: ExpenseRow[]; loading: boolean }) {
-  const { activeOrgId } = useAuth()
+function ExpensesTab() {
+  const { activeOrgId, userId } = useAuth()
+  const { has } = usePermissions()
+  const canManage = has('expenses.manage')
   const { data: matters } = useMatters(activeOrgId, {})
+
+  const [status, setStatus] = React.useState<'unbilled' | 'billed' | 'all'>('unbilled')
+  const { data, isLoading } = useExpenses(activeOrgId, status)
   const delExp = useDeleteExpense(activeOrgId)
+
+  // Without expenses.manage you see (and can act on) only your own expenses.
+  const rows = (data ?? []).filter((e) => canManage || e.user?.id === userId)
 
   const [search, setSearch] = React.useState('')
   const [matterId, setMatterId] = React.useState('all')
@@ -149,6 +155,10 @@ function ExpensesTab({ rows, loading }: { rows: ExpenseRow[]; loading: boolean }
   const [billable, setBillable] = React.useState<'all' | 'yes' | 'no'>('all')
   const [dateFrom, setDateFrom] = React.useState('')
   const [dateTo, setDateTo] = React.useState('')
+
+  const [dialogOpen, setDialogOpen] = React.useState(false)
+  const [editing, setEditing] = React.useState<ExpenseRow | null>(null)
+  const [toDelete, setToDelete] = React.useState<ExpenseRow | null>(null)
 
   const filtered = rows.filter((e) => {
     if (search.trim() && !e.description.toLowerCase().includes(search.trim().toLowerCase())) return false
@@ -161,9 +171,9 @@ function ExpensesTab({ rows, loading }: { rows: ExpenseRow[]; loading: boolean }
     return true
   })
 
-  const del = async (fn: () => Promise<void>) => {
-    try { await fn() } catch (err) { toast.error('Could not delete', { description: err instanceof Error ? err.message : undefined }) }
-  }
+  const openEdit = (row: ExpenseRow) => { setEditing(row); setDialogOpen(true) }
+  /** Own expense, or expenses.manage — matches the RLS owner clause exactly. */
+  const canAct = (e: ExpenseRow) => canManage || e.user?.id === userId
 
   return (
     <div className="space-y-4">
@@ -173,6 +183,14 @@ function ExpensesTab({ rows, loading }: { rows: ExpenseRow[]; loading: boolean }
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search description…" className="pl-9" />
           </div>
+          <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
+            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unbilled">Unbilled</SelectItem>
+              <SelectItem value="billed">Billed</SelectItem>
+              <SelectItem value="all">All expenses</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={matterId} onValueChange={setMatterId}>
             <SelectTrigger className="w-48"><SelectValue placeholder="All matters" /></SelectTrigger>
             <SelectContent>
@@ -199,10 +217,10 @@ function ExpensesTab({ rows, loading }: { rows: ExpenseRow[]; loading: boolean }
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-36" aria-label="To date" />
         </div>
         <ExportButton
-          filename="unbilled-expenses"
+          filename="expenses"
           disabled={filtered.length === 0}
           sheets={() => [{
-            name: 'Unbilled expenses',
+            name: 'Expenses',
             rows: filtered.map((e) => ({
               Date: e.expense_date,
               Description: e.description,
@@ -210,32 +228,73 @@ function ExpensesTab({ rows, loading }: { rows: ExpenseRow[]; loading: boolean }
               Category: e.category ?? '',
               Amount: Number(e.amount),
               Billable: e.billable ? 'Yes' : 'No',
+              Status: e.invoiced ? 'Billed' : 'Unbilled',
+              Invoice: e.invoice?.invoice_number ?? '',
+              'Logged by': e.created_by_profile?.full_name ?? e.user?.full_name ?? '',
+              'Logged at': e.created_at,
             })),
           }]}
         />
       </div>
 
       <Card className="overflow-hidden">
-        {loading ? (
+        {isLoading ? (
           <div className="space-y-2 p-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
         ) : filtered.length > 0 ? (
           <Table>
             <TableHeader><TableRow>
               <TableHead>Description</TableHead><TableHead>Matter</TableHead><TableHead>Category</TableHead>
-              <TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead><TableHead></TableHead>
+              <TableHead>Date</TableHead><TableHead>Status</TableHead><TableHead>Logged by</TableHead>
+              <TableHead className="text-right">Amount</TableHead><TableHead className="text-right">Actions</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {filtered.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell className="text-sm">{e.description}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {e.matter?.matter_number ?? (e.billable ? <Badge variant="warning">No matter — can't be invoiced</Badge> : '—')}
+                  <TableCell className="text-sm">
+                    {e.matter ? (
+                      <Link to={`/matters/${e.matter.id}`} className="text-primary hover:underline">
+                        {e.matter.matter_number}
+                      </Link>
+                    ) : e.billable ? (
+                      <Badge variant="warning">No matter — can't be invoiced</Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{e.category ?? '—'}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{format(new Date(e.expense_date), 'MMM d')}</TableCell>
+                  <TableCell>
+                    {e.invoiced ? (
+                      e.invoice ? (
+                        <Badge variant="secondary">Billed · {e.invoice.invoice_number}</Badge>
+                      ) : (
+                        <Badge variant="secondary">Billed</Badge>
+                      )
+                    ) : (
+                      <Badge variant="muted">Unbilled</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{e.created_by_profile?.full_name ?? e.user?.full_name ?? '—'}</TableCell>
                   <TableCell className="text-right text-sm font-medium">{formatNaira(Number(e.amount))}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => del(() => delExp.mutateAsync(e.id))}><Trash2 className="h-4 w-4" /></Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label="Actions"><MoreHorizontal className="h-4 w-4" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem disabled={e.invoiced || !canAct(e)} onClick={() => openEdit(e)}>
+                          <Pencil /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          disabled={e.invoiced || !canAct(e)}
+                          onClick={() => setToDelete(e)}
+                        >
+                          <Trash2 /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
@@ -243,10 +302,32 @@ function ExpensesTab({ rows, loading }: { rows: ExpenseRow[]; loading: boolean }
           </Table>
         ) : (
           <p className="px-6 py-10 text-center text-sm text-muted-foreground">
-            {rows.length === 0 ? 'No unbilled expenses.' : 'No expenses match your filters.'}
+            {rows.length === 0 ? 'No expenses match this view.' : 'No expenses match your filters.'}
           </p>
         )}
       </Card>
+
+      <ExpenseDialog expense={editing} open={dialogOpen} onOpenChange={setDialogOpen} />
+
+      <ConfirmDialog
+        open={Boolean(toDelete)}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title="Delete expense"
+        destructive
+        confirmLabel="Delete"
+        loading={delExp.isPending}
+        description="This removes the expense permanently."
+        onConfirm={async () => {
+          if (!toDelete) return
+          try {
+            await delExp.mutateAsync(toDelete.id)
+            toast.success('Expense deleted')
+            setToDelete(null)
+          } catch (err) {
+            toast.error('Could not delete', { description: err instanceof Error ? err.message : undefined })
+          }
+        }}
+      />
     </div>
   )
 }

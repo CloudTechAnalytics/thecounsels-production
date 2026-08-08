@@ -89,6 +89,22 @@ export function MatterSummaryCard({ matter, onNavigateTab }: { matter: MatterRow
                   value={formatMoneyCompact(data?.invoicesOutstanding ?? 0)}
                 />
                 <SummaryRow
+                  icon={Wallet}
+                  label="Unbilled time"
+                  value={formatMoneyCompact(data?.unbilledTime ?? 0)}
+                />
+                <SummaryRow
+                  icon={Wallet}
+                  label="Unbilled expenses"
+                  value={formatMoneyCompact(data?.unbilledExpenses ?? 0)}
+                />
+                <SummaryRow
+                  icon={Wallet}
+                  label="Total unbilled work"
+                  value={formatMoneyCompact(data?.totalUnbilledWork ?? 0)}
+                  hint="Unbilled time + unbilled expenses"
+                />
+                <SummaryRow
                   icon={CalendarClock}
                   label="Last invoice"
                   value={data?.lastInvoiceDate ? format(new Date(data.lastInvoiceDate), 'PP') : '—'}

@@ -144,34 +144,32 @@ function NotificationsList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-1 flex-wrap gap-3">
-          <div className="relative min-w-[200px] flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} placeholder="Search notifications…" className="pl-9" />
-          </div>
-          <Select value={category} onValueChange={(v) => { setCategory(v as typeof category); setPage(1) }}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="All categories" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All categories</SelectItem>
-              {CATEGORY_ORDER.map((c) => <SelectItem key={c} value={c}>{NOTIFICATION_CATEGORY_META[c].label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={priority} onValueChange={(v) => { setPriority(v as typeof priority); setPage(1) }}>
-            <SelectTrigger className="w-36"><SelectValue placeholder="All priorities" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All priorities</SelectItem>
-              {(Object.keys(NOTIFICATION_PRIORITY_META) as NotificationPriority[]).map((p) => (
-                <SelectItem key={p} value={p}>{NOTIFICATION_PRIORITY_META[p].label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm" onClick={() => { setArchived((a) => !a); setPage(1) }}>
-            {archived ? <><ArchiveRestore className="h-4 w-4" /> Showing archived</> : <><Archive className="h-4 w-4" /> Show archived</>}
-          </Button>
+      <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-1">
+        <div className="relative min-w-[160px] flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} placeholder="Search notifications…" className="pl-9" />
         </div>
+        <Select value={category} onValueChange={(v) => { setCategory(v as typeof category); setPage(1) }}>
+          <SelectTrigger className="w-40 shrink-0"><SelectValue placeholder="All categories" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All categories</SelectItem>
+            {CATEGORY_ORDER.map((c) => <SelectItem key={c} value={c}>{NOTIFICATION_CATEGORY_META[c].label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={priority} onValueChange={(v) => { setPriority(v as typeof priority); setPage(1) }}>
+          <SelectTrigger className="w-36 shrink-0"><SelectValue placeholder="All priorities" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All priorities</SelectItem>
+            {(Object.keys(NOTIFICATION_PRIORITY_META) as NotificationPriority[]).map((p) => (
+              <SelectItem key={p} value={p}>{NOTIFICATION_PRIORITY_META[p].label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="sm" className="shrink-0" onClick={() => { setArchived((a) => !a); setPage(1) }}>
+          {archived ? <><ArchiveRestore className="h-4 w-4" /> Showing archived</> : <><Archive className="h-4 w-4" /> Show archived</>}
+        </Button>
         {!archived && (
-          <Button variant="outline" size="sm" disabled={!hasUnread || markAllRead.isPending} onClick={() => markAllRead.mutate()}>
+          <Button variant="outline" size="sm" className="shrink-0" disabled={!hasUnread || markAllRead.isPending} onClick={() => markAllRead.mutate()}>
             <CheckCheck className="h-4 w-4" /> Mark all as read
           </Button>
         )}

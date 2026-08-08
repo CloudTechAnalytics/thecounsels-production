@@ -6,7 +6,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 import { formatNaira } from '@/shared/lib/format'
 
 /** Onboarding Step 3 — plan confirmation. Everything shown is read from registration_settings/plans, never hardcoded. */
-export function PlanStep({ onStart, loading, onBack }: { onStart: () => void; loading: boolean; onBack: () => void }) {
+export function PlanStep({ onStart, loading }: { onStart: () => void; loading: boolean }) {
   const { data: settings, isLoading } = useRegistrationSettings()
   const plan = settings?.trial_plan
 
@@ -48,14 +48,9 @@ export function PlanStep({ onStart, loading, onBack }: { onStart: () => void; lo
         </ul>
       </Card>
 
-      <div className="flex gap-3">
-        <Button type="button" variant="ghost" onClick={onBack} disabled={loading}>
-          Back
-        </Button>
-        <Button type="button" size="lg" className="flex-1" onClick={onStart} loading={loading}>
-          Start your free access
-        </Button>
-      </div>
+      <Button type="button" size="lg" className="w-full" onClick={onStart} loading={loading}>
+        Start your free access
+      </Button>
     </div>
   )
 }

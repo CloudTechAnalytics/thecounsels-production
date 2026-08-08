@@ -4,7 +4,7 @@ import { firmSetupSchema, USER_COUNT_BANDS, type FirmSetupValues } from '@/featu
 import { COUNTRIES } from '@/features/onboarding/countries'
 import { PRACTICE_AREAS } from '@/features/matters/types'
 import { Button } from '@/shared/components/ui/button'
-import { Input } from '@/shared/components/ui/input'
+import { HintInput } from '@/shared/components/hint-input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { cn } from '@/shared/lib/utils'
@@ -64,9 +64,9 @@ export function FirmSetupStep({
           name="firmName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Firm name</FormLabel>
+              <FormLabel>Firm name<span className="text-destructive"> *</span></FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Law Castle Firm" autoFocus {...field} />
+                <HintInput hint="A-Z" placeholder="e.g. Law Castle Firm" autoFocus {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -80,7 +80,7 @@ export function FirmSetupStep({
             <FormItem>
               <FormLabel>Legal name <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Law Castle Legal Practitioners LLP" {...field} />
+                <HintInput hint="A-Z" placeholder="e.g. Law Castle Legal Practitioners LLP" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -93,7 +93,7 @@ export function FirmSetupStep({
             name="country"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Country</FormLabel>
+                <FormLabel>Country<span className="text-destructive"> *</span></FormLabel>
                 <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
@@ -111,7 +111,7 @@ export function FirmSetupStep({
             name="timezone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Timezone</FormLabel>
+                <FormLabel>Timezone<span className="text-destructive"> *</span></FormLabel>
                 <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger><SelectValue placeholder="Select timezone" /></SelectTrigger>
@@ -134,7 +134,7 @@ export function FirmSetupStep({
               <FormItem>
                 <FormLabel>Website <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
                 <FormControl>
-                  <Input placeholder="https://" {...field} />
+                  <HintInput hint="URL" placeholder="https://" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -167,7 +167,7 @@ export function FirmSetupStep({
             <FormItem>
               <FormLabel>Business / industry <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Full-service law firm" {...field} />
+                <HintInput hint="A-Z" placeholder="e.g. Full-service law firm" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

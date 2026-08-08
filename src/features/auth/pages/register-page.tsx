@@ -2,13 +2,13 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, MailCheck } from 'lucide-react'
-import { AuthShell } from '@/features/auth/components/auth-shell'
-import { PasswordStrength } from '@/features/auth/components/password-strength'
+import { Mail, MailCheck } from 'lucide-react'
+import { GetStartedShell } from '@/shared/components/get-started-shell'
+import { HintInput } from '@/shared/components/hint-input'
+import { PasswordChecklist } from '@/features/auth/components/password-checklist'
 import { authService } from '@/features/auth/services/auth.service'
 import { selfRegisterSchema, type SelfRegisterValues } from '@/features/auth/schemas'
 import { Button } from '@/shared/components/ui/button'
-import { Input } from '@/shared/components/ui/input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { toast } from '@/shared/components/ui/sonner'
 
@@ -20,6 +20,7 @@ import { toast } from '@/shared/components/ui/sonner'
  */
 export function RegisterPage() {
   const [sentTo, setSentTo] = React.useState<string | null>(null)
+  const [showPassword, setShowPassword] = React.useState(false)
 
   const form = useForm<SelfRegisterValues>({
     resolver: zodResolver(selfRegisterSchema),
@@ -54,49 +55,27 @@ export function RegisterPage() {
 
   if (sentTo) {
     return (
-      <AuthShell title="Check your email" subtitle="You're almost in.">
+      <GetStartedShell stepLabel="Check your email" stepDescription="You're almost in.">
         <div className="rounded-lg border border-border/70 bg-card p-6 text-center shadow-card">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/12 text-primary">
             <MailCheck className="h-6 w-6" />
           </span>
-          <p className="mt-4 text-sm text-muted-foreground">
-            You've been sent a verification link at
-          </p>
+          <p className="mt-4 text-sm text-muted-foreground">You've been sent a verification link at</p>
           <p className="font-medium">{sentTo}</p>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Verify your email to continue setting up your firm.
-          </p>
+          <p className="mt-3 text-sm text-muted-foreground">Verify your email to continue setting up your firm.</p>
         </div>
-        <Button asChild variant="ghost" className="mt-6 w-full">
-          <Link to="/auth/login">
-            <ArrowLeft className="h-4 w-4" /> Back to sign in
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Wrong email?{' '}
+          <Link to="/auth/login" className="font-medium text-primary hover:underline">
+            Back to sign in
           </Link>
-        </Button>
-      </AuthShell>
+        </p>
+      </GetStartedShell>
     )
   }
 
   return (
-    <AuthShell
-      title="Start your free access"
-      subtitle="Create your account, then set up your firm in a couple of minutes."
-      back={
-        <Link
-          to="/welcome"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to home
-        </Link>
-      }
-      footer={
-        <p>
-          Already have an account?{' '}
-          <Link to="/auth/login" className="font-medium text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
-      }
-    >
+    <GetStartedShell stepLabel="Account Details" stepDescription="Let's get your account set up">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" noValidate>
           <div className="grid grid-cols-2 gap-4">
@@ -105,9 +84,9 @@ export function RegisterPage() {
               name="firstName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>First name</FormLabel>
+                  <FormLabel>First name<span className="text-destructive"> *</span></FormLabel>
                   <FormControl>
-                    <Input autoComplete="given-name" placeholder="Ada" {...field} />
+                    <HintInput hint="A-Z" autoComplete="given-name" placeholder="First name" autoFocus {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -118,9 +97,9 @@ export function RegisterPage() {
               name="lastName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Last name</FormLabel>
+                  <FormLabel>Last name<span className="text-destructive"> *</span></FormLabel>
                   <FormControl>
-                    <Input autoComplete="family-name" placeholder="Lovelace" {...field} />
+                    <HintInput hint="A-Z" autoComplete="family-name" placeholder="Last name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -133,9 +112,9 @@ export function RegisterPage() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Work email</FormLabel>
+                <FormLabel>Work email<span className="text-destructive"> *</span></FormLabel>
                 <FormControl>
-                  <Input type="email" autoComplete="email" placeholder="you@firm.com" {...field} />
+                  <HintInput hintIcon={Mail} type="email" autoComplete="email" placeholder="you@firm.com" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -147,11 +126,16 @@ export function RegisterPage() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <FormLabel>Password<span className="text-destructive"> *</span></FormLabel>
                 <FormControl>
-                  <Input type="password" autoComplete="new-password" placeholder="••••••••••" {...field} />
+                  <HintInput
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    placeholder="Min. 10 characters"
+                    {...field}
+                  />
                 </FormControl>
-                <PasswordStrength value={passwordValue} />
+                <PasswordChecklist value={passwordValue} />
                 <FormMessage />
               </FormItem>
             )}
@@ -162,14 +146,24 @@ export function RegisterPage() {
             name="confirmPassword"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Confirm password</FormLabel>
+                <FormLabel>Confirm password<span className="text-destructive"> *</span></FormLabel>
                 <FormControl>
-                  <Input type="password" autoComplete="new-password" placeholder="••••••••••" {...field} />
+                  <HintInput type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Retype password" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={showPassword}
+              onChange={(e) => setShowPassword(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            Show password
+          </label>
 
           <FormField
             control={form.control}
@@ -196,10 +190,17 @@ export function RegisterPage() {
           />
 
           <Button type="submit" size="lg" className="w-full" loading={form.formState.isSubmitting}>
-            Create account
+            Sign Up
           </Button>
         </form>
       </Form>
-    </AuthShell>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Already have an account?{' '}
+        <Link to="/auth/login" className="font-medium text-primary hover:underline">
+          Sign in
+        </Link>
+      </p>
+    </GetStartedShell>
   )
 }

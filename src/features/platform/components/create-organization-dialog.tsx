@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Building2 } from 'lucide-react'
 import { useCreateOrganizationWithAdmin, usePlans } from '@/features/platform/hooks/use-platform'
-import { createOrgWithAdminSchema, slugify, type CreateOrgWithAdminValues } from '@/features/platform/schemas'
+import { createOrgWithAdminSchema, slugify, ORG_TYPES, type CreateOrgWithAdminValues } from '@/features/platform/schemas'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Separator } from '@/shared/components/ui/separator'
@@ -33,6 +33,7 @@ export function CreateOrganizationDialog() {
       name: '',
       slug: '',
       legalName: '',
+      orgType: 'customer',
       plan: 'trial',
       billingCycle: 'monthly',
       adminName: '',
@@ -41,6 +42,8 @@ export function CreateOrganizationDialog() {
     },
   })
   const selectedPlan = form.watch('plan')
+  const orgType = form.watch('orgType')
+  const isCustomer = orgType === 'customer'
 
   const onNameChange = (value: string) => {
     form.setValue('name', value)
@@ -54,6 +57,7 @@ export function CreateOrganizationDialog() {
         name: values.name,
         slug: values.slug,
         legalName: values.legalName || null,
+        orgType: values.orgType,
         planId: trial ? null : values.plan,
         trial,
         billingCycle: values.billingCycle,
@@ -62,7 +66,10 @@ export function CreateOrganizationDialog() {
         adminPassword: values.adminPassword,
       })
       toast.success('Organization created', {
-        description: `${org.name} is live${trial ? ' on a 14-day trial' : ''} and its admin can sign in now.`,
+        description:
+          values.orgType === 'customer'
+            ? `${org.name} is live${trial ? ' on a 14-day trial' : ''} and its admin can sign in now.`
+            : `${org.name} is live as a ${values.orgType} organization (no billing) and its admin can sign in now.`,
       })
       form.reset()
       slugEdited.current = false
@@ -82,15 +89,15 @@ export function CreateOrganizationDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
-          <Building2 /> Create Organization
+          <Building2 /> Create Organization Manually
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create an organization</DialogTitle>
+          <DialogTitle>Create an organization manually</DialogTitle>
           <DialogDescription>
-            Provision a law firm workspace and its administrator. The admin can sign in immediately and
-            add their own users.
+            For migrations, enterprise onboarding, complimentary accounts, or internal/demo use. Normal
+            customers self-register from the landing page — this doesn't replace that.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -144,61 +151,91 @@ export function CreateOrganizationDialog() {
               />
             </div>
 
-            <Separator />
-            <p className="text-sm font-semibold">Plan</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="plan"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subscription</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose a plan" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="trial">Free trial — 14 days</SelectItem>
-                        {plans
-                          ?.filter((p) => p.is_active)
-                          .map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.name} — {formatNaira(Number(p.price_monthly))}/mo
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="billingCycle"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Billing cycle</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange} disabled={selectedPlan === 'trial'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="yearly">Yearly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      {selectedPlan === 'trial' ? 'Trials are billed after conversion.' : 'Applied on first renewal.'}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="orgType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Organization type</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {ORG_TYPES.map((t) => (
+                        <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {isCustomer
+                      ? 'A normal paying customer — billed per the plan below.'
+                      : 'Not billed, no trial countdown. Skips subscription setup entirely.'}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {isCustomer && (
+              <>
+                <Separator />
+                <p className="text-sm font-semibold">Plan</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="plan"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subscription</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose a plan" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="trial">Free trial — 14 days</SelectItem>
+                            {plans
+                              ?.filter((p) => p.is_active)
+                              .map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.name} — {formatNaira(Number(p.price_monthly))}/mo
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="billingCycle"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Billing cycle</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange} disabled={selectedPlan === 'trial'}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="yearly">Yearly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          {selectedPlan === 'trial' ? 'Trials are billed after conversion.' : 'Applied on first renewal.'}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </>
+            )}
 
             <Separator />
             <div>

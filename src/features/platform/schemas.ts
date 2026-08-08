@@ -6,6 +6,8 @@ const strongPassword = z
   .regex(/[A-Z]/, 'Add an uppercase letter')
   .regex(/[0-9]/, 'Add a number')
 
+export const ORG_TYPES = ['customer', 'demo', 'internal'] as const
+
 export const createOrgWithAdminSchema = z.object({
   name: z.string().min(2, 'Enter the firm name'),
   slug: z
@@ -13,7 +15,8 @@ export const createOrgWithAdminSchema = z.object({
     .min(2, 'Enter a slug')
     .regex(/^[a-z0-9-]+$/, 'Lowercase letters, numbers and hyphens only'),
   legalName: z.string().optional(),
-  // 'trial' = 14-day trial; otherwise a plan id for a paid subscription.
+  orgType: z.enum(ORG_TYPES),
+  // 'trial' = 14-day trial; otherwise a plan id for a paid subscription. Ignored for demo/internal.
   plan: z.string().min(1, 'Choose a plan'),
   billingCycle: z.enum(['monthly', 'yearly']),
   adminName: z.string().min(2, "Enter the admin's full name"),

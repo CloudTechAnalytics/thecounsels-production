@@ -20,6 +20,15 @@ export interface OrgRow extends Organization {
   subscription: SubscriptionWithPlan | null
 }
 
+export interface RegistrationSettings {
+  id: boolean
+  trial_enabled: boolean
+  trial_duration_days: number
+  trial_plan_id: string | null
+  trial_future_price: number | null
+  updated_at: string
+}
+
 export interface SubscriptionRow extends Subscription {
   plan: Plan | null
   organization: Pick<Organization, 'id' | 'name' | 'slug' | 'logo_url' | 'status'> | null

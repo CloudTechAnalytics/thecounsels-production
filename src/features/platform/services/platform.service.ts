@@ -31,6 +31,7 @@ import type {
   OrgRow,
   PlatformStats,
   PlatformUser,
+  RegistrationSettings,
   RevenueAnalytics,
   SubscriptionRow,
   SubscriptionWithPlan,
@@ -182,6 +183,7 @@ export const platformService = {
     adminEmail: string
     adminName: string
     adminPassword: string
+    orgType?: 'customer' | 'demo' | 'internal'
   }): Promise<Organization> {
     // Pre-check the slug (including trashed orgs) so we fail early with a clear
     // message instead of hitting the unique constraint mid-flow.
@@ -220,6 +222,7 @@ export const platformService = {
       p_plan_id: input.planId,
       p_trial: input.trial,
       p_billing_cycle: input.billingCycle,
+      p_org_type: input.orgType ?? 'customer',
     })
     if (error) throw new Error(error.message || 'The database rejected the organization.')
     const organization = org as Organization
@@ -247,6 +250,29 @@ export const platformService = {
       throw new Error(`Organization admin could not be created: ${reason}. No organization was created — please try again.`)
     }
     return organization
+  },
+
+  /** Platform-admin-only, guarded to organization_type='demo' server-side too (see migration 0052). */
+  async resetDemoOrganization(id: string): Promise<void> {
+    const { error } = await supabase.rpc('reset_demo_organization', { p_org: id })
+    if (error) throw error
+  },
+
+  /** The self-service registration trial/plan knobs — §9's "don't hardcode 3 months". */
+  async getRegistrationSettings(): Promise<RegistrationSettings> {
+    const { data, error } = await supabase.from('registration_settings').select('*').eq('id', true).single()
+    if (error) throw error
+    return data as unknown as RegistrationSettings
+  },
+
+  async updateRegistrationSettings(patch: {
+    trial_enabled?: boolean
+    trial_duration_days?: number
+    trial_plan_id?: string | null
+    trial_future_price?: number | null
+  }): Promise<void> {
+    const { error } = await supabase.from('registration_settings').update(patch).eq('id', true)
+    if (error) throw error
   },
 
   async listAllMembers(): Promise<MemberDirectoryRow[]> {

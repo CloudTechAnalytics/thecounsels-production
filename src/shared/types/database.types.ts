@@ -1294,8 +1294,13 @@ export interface Database {
           p_trial?: boolean
           p_billing_cycle?: BillingCycle
           p_owner_user_id?: string | null
+          p_org_type?: string
         }
         Returns: Database['public']['Tables']['organizations']['Row']
+      }
+      reset_demo_organization: {
+        Args: { p_org: string }
+        Returns: undefined
       }
       accept_invitation: {
         Args: { p_token: string }

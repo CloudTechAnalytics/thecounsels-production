@@ -15,6 +15,7 @@ import {
   LifeBuoy,
   Globe,
   Undo2,
+  Eraser,
 } from 'lucide-react'
 import {
   usePlatformOrganizations,
@@ -22,6 +23,7 @@ import {
   useSoftDeleteOrganization,
   useRestoreOrganization,
   useHardDeleteOrganization,
+  useResetDemoOrganization,
 } from '@/features/platform/hooks/use-platform'
 import { CreateOrganizationDialog } from '@/features/platform/components/create-organization-dialog'
 import { EditOrganizationDialog } from '@/features/platform/components/edit-organization-dialog'
@@ -64,11 +66,14 @@ function ActiveRowActions({ org }: { org: OrgRow }) {
   const navigate = useNavigate()
   const setStatus = useSetOrganizationStatus()
   const softDelete = useSoftDeleteOrganization()
+  const resetDemo = useResetDemoOrganization()
   const [confirmDelete, setConfirmDelete] = React.useState(false)
+  const [confirmReset, setConfirmReset] = React.useState(false)
   const [viewOpen, setViewOpen] = React.useState(false)
   const [editOpen, setEditOpen] = React.useState(false)
   const [supportOpen, setSupportOpen] = React.useState(false)
   const suspended = org.status === 'suspended'
+  const isDemo = org.organization_type === 'demo'
   const soon = () => toast.info('Coming soon', { description: 'This action arrives in a later phase.' })
 
   const toggle = async () => {
@@ -98,6 +103,9 @@ function ActiveRowActions({ org }: { org: OrgRow }) {
             <DropdownMenuItem onClick={toggle}><Ban /> Suspend</DropdownMenuItem>
           )}
           <DropdownMenuItem onClick={soon}><ArrowLeftRight /> Transfer ownership</DropdownMenuItem>
+          {isDemo && (
+            <DropdownMenuItem onClick={() => setConfirmReset(true)}><Eraser /> Reset demo data</DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => navigate('/platform/subscriptions')}><CreditCard /> View subscription</DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate('/platform/billing')}><Receipt /> View billing</DropdownMenuItem>
@@ -131,6 +139,31 @@ function ActiveRowActions({ org }: { org: OrgRow }) {
             setConfirmDelete(false)
           } catch (err) {
             toast.error('Delete failed', { description: err instanceof Error ? err.message : undefined })
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmReset}
+        onOpenChange={setConfirmReset}
+        title="Reset demo data"
+        destructive
+        confirmLabel="Reset data"
+        loading={resetDemo.isPending}
+        description={
+          <>
+            Clears every client, matter, document, task, hearing, and billing record in{' '}
+            <strong>{org.name}</strong> so it can be demoed fresh. The organization and its users stay
+            intact.
+          </>
+        }
+        onConfirm={async () => {
+          try {
+            await resetDemo.mutateAsync(org.id)
+            toast.success('Demo data cleared')
+            setConfirmReset(false)
+          } catch (err) {
+            toast.error('Reset failed', { description: err instanceof Error ? err.message : undefined })
           }
         }}
       />
@@ -256,12 +289,22 @@ export function OrganizationsPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{org.subscription?.plan?.name ?? titleCase(org.plan)}</Badge>
+                    {org.organization_type === 'customer' ? (
+                      <Badge variant="outline">{org.subscription?.plan?.name ?? titleCase(org.plan)}</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">No billing</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">
-                      <Badge variant={STATUS_VARIANT[org.status] ?? 'muted'}>{org.status}</Badge>
-                      <TrialBadge org={org} />
+                      {org.organization_type !== 'customer' ? (
+                        <Badge variant="muted" className="capitalize">{org.organization_type}</Badge>
+                      ) : (
+                        <>
+                          <Badge variant={STATUS_VARIANT[org.status] ?? 'muted'}>{org.status}</Badge>
+                          <TrialBadge org={org} />
+                        </>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-sm">{org.member_count}</TableCell>

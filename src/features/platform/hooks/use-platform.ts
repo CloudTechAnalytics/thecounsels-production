@@ -134,6 +134,23 @@ export function useHardDeleteOrganization() {
   const invalidate = useInvalidateAll()
   return useMutation({ mutationFn: (id: string) => platformService.hardDeleteOrganization(id), onSuccess: invalidate })
 }
+export function useResetDemoOrganization() {
+  const invalidate = useInvalidateAll()
+  return useMutation({ mutationFn: (id: string) => platformService.resetDemoOrganization(id), onSuccess: invalidate })
+}
+/** Same query key the onboarding wizard reads (features/onboarding/hooks/use-onboarding.ts)
+ *  so a Platform Admin's save here invalidates what /onboarding shows next. */
+export function useRegistrationSettingsAdmin() {
+  return useQuery({ queryKey: ['registration-settings'], queryFn: () => platformService.getRegistrationSettings() })
+}
+export function useUpdateRegistrationSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (patch: Parameters<typeof platformService.updateRegistrationSettings>[0]) =>
+      platformService.updateRegistrationSettings(patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['registration-settings'] }),
+  })
+}
 export function useUpdateOrganization() {
   const invalidate = useInvalidateAll()
   return useMutation({

@@ -1,6 +1,12 @@
 import * as React from 'react'
-import { Palette, SlidersHorizontal, Flag, Mail, Wrench, Loader2 } from 'lucide-react'
-import { usePlatformSettings, useUpdatePlatformSettings } from '@/features/platform/hooks/use-platform'
+import { Palette, SlidersHorizontal, Flag, Mail, Wrench, Loader2, Rocket } from 'lucide-react'
+import {
+  usePlatformSettings,
+  useUpdatePlatformSettings,
+  useRegistrationSettingsAdmin,
+  useUpdateRegistrationSettings,
+  usePlans,
+} from '@/features/platform/hooks/use-platform'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -8,6 +14,7 @@ import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Skeleton } from '@/shared/components/ui/skeleton'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { cn } from '@/shared/lib/utils'
 import { toast } from '@/shared/components/ui/sonner'
 
@@ -45,6 +52,96 @@ function Section({ icon: Icon, title, children }: { icon: typeof Palette; title:
       <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold"><Icon className="h-4 w-4 text-primary" /> {title}</h2>
       {children}
     </Card>
+  )
+}
+
+/**
+ * The configurable knobs behind /onboarding's plan step and register_organization()
+ * (migration 0051) — changing these here takes effect for the next self-service
+ * signup immediately, no redeploy, satisfying §9's "don't hardcode 3 months".
+ * Self-contained (own load/save) since it reads a different table than the rest
+ * of this page's single big platform_settings form.
+ */
+function RegistrationSettingsSection() {
+  const { data, isLoading } = useRegistrationSettingsAdmin()
+  const { data: plans } = usePlans()
+  const update = useUpdateRegistrationSettings()
+  const [form, setForm] = React.useState({ trial_enabled: true, trial_duration_days: 90, trial_plan_id: '', trial_future_price: '' })
+
+  React.useEffect(() => {
+    if (!data) return
+    setForm({
+      trial_enabled: data.trial_enabled,
+      trial_duration_days: data.trial_duration_days,
+      trial_plan_id: data.trial_plan_id ?? '',
+      trial_future_price: data.trial_future_price != null ? String(data.trial_future_price) : '',
+    })
+  }, [data])
+
+  const save = async () => {
+    try {
+      await update.mutateAsync({
+        trial_enabled: form.trial_enabled,
+        trial_duration_days: Number(form.trial_duration_days) || 90,
+        trial_plan_id: form.trial_plan_id || null,
+        trial_future_price: form.trial_future_price ? Number(form.trial_future_price) : null,
+      })
+      toast.success('Registration settings saved')
+    } catch (err) {
+      toast.error('Could not save', { description: err instanceof Error ? err.message : undefined })
+    }
+  }
+
+  if (isLoading) return <Section icon={Rocket} title="Self-service registration"><Skeleton className="h-24 w-full" /></Section>
+
+  return (
+    <Section icon={Rocket} title="Self-service registration">
+      <div className="space-y-3">
+        <Toggle
+          checked={form.trial_enabled}
+          onChange={(b) => setForm((f) => ({ ...f, trial_enabled: b }))}
+          label="Trial enabled"
+          hint="Whether new self-registered firms get a free trial at all"
+        />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label>Trial length (days)</Label>
+            <Input
+              type="number"
+              value={form.trial_duration_days}
+              onChange={(e) => setForm((f) => ({ ...f, trial_duration_days: Number(e.target.value) }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Trial plan</Label>
+            <Select value={form.trial_plan_id} onValueChange={(v) => setForm((f) => ({ ...f, trial_plan_id: v }))}>
+              <SelectTrigger><SelectValue placeholder="Choose a plan" /></SelectTrigger>
+              <SelectContent>
+                {plans?.filter((p) => p.is_active).map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Future price (₦/month)</Label>
+            <Input
+              type="number"
+              value={form.trial_future_price}
+              onChange={(e) => setForm((f) => ({ ...f, trial_future_price: e.target.value }))}
+              placeholder="15000"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Shown on the onboarding plan step exactly as configured here — e.g. "{form.trial_duration_days} days free, then
+          ₦{form.trial_future_price || '—'}/month". No code change needed to adjust it later.
+        </p>
+        <div className="flex justify-end">
+          <Button onClick={save} loading={update.isPending}>Save registration settings</Button>
+        </div>
+      </div>
+    </Section>
   )
 }
 
@@ -134,6 +231,8 @@ export function PlatformSettingsPage() {
             </div>
           </div>
         </Section>
+
+        <RegistrationSettingsSection />
 
         <Section icon={Flag} title="Feature flags">
           <div className="grid gap-3 sm:grid-cols-2">

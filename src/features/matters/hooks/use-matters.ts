@@ -59,6 +59,18 @@ export function useUpdateMatter(organizationId: string | null) {
   })
 }
 
+export function useReopenMatter(organizationId: string | null) {
+  const invalidate = useInvalidate(organizationId)
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) => mattersService.reopen(id, reason),
+    onSuccess: (_d, vars) => {
+      invalidate()
+      qc.invalidateQueries({ queryKey: ['matter-events', vars.id] })
+    },
+  })
+}
+
 export function useDeleteMatter(organizationId: string | null) {
   const invalidate = useInvalidate(organizationId)
   return useMutation({

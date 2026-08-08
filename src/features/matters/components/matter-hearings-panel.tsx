@@ -12,7 +12,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { toast } from '@/shared/components/ui/sonner'
 
-export function MatterHearingsPanel({ matterId }: { matterId: string }) {
+export function MatterHearingsPanel({ matterId, readOnly = false }: { matterId: string; readOnly?: boolean }) {
   const { activeOrgId } = useAuth()
   const { has } = usePermissions()
   const { data, isLoading } = useHearings(activeOrgId, { matterId })
@@ -22,9 +22,9 @@ export function MatterHearingsPanel({ matterId }: { matterId: string }) {
   const [editing, setEditing] = React.useState<HearingRow | null>(null)
   const [toDelete, setToDelete] = React.useState<HearingRow | null>(null)
 
-  const canCreate = has('hearings.create')
-  const canEdit = has('hearings.update')
-  const canDelete = has('hearings.delete')
+  const canCreate = has('hearings.create') && !readOnly
+  const canEdit = has('hearings.update') && !readOnly
+  const canDelete = has('hearings.delete') && !readOnly
 
   const openNew = () => { setEditing(null); setFormOpen(true) }
   const openEdit = (h: HearingRow) => { setEditing(h); setFormOpen(true) }

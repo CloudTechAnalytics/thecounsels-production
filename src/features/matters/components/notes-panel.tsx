@@ -11,10 +11,10 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 import { initialsOf } from '@/shared/lib/format'
 import { toast } from '@/shared/components/ui/sonner'
 
-export function NotesPanel({ matterId }: { matterId: string }) {
+export function NotesPanel({ matterId, readOnly = false }: { matterId: string; readOnly?: boolean }) {
   const { activeOrgId, profile } = useAuth()
   const { has } = usePermissions()
-  const canEditAny = has('matters.update')
+  const canEditAny = has('matters.update') && !readOnly
   const { data, isLoading } = useMatterNotes(matterId)
   const add = useAddNote(activeOrgId, matterId, profile?.id ?? null)
   const update = useUpdateNote(matterId, profile?.id ?? null)
@@ -56,19 +56,21 @@ export function NotesPanel({ matterId }: { matterId: string }) {
 
   return (
     <div className="space-y-4">
-      <Card className="space-y-3 p-4">
-        <Textarea
-          rows={3}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Add a note about this matter…"
-        />
-        <div className="flex justify-end">
-          <Button onClick={submit} loading={add.isPending} disabled={!body.trim()}>
-            Add note
-          </Button>
-        </div>
-      </Card>
+      {!readOnly && (
+        <Card className="space-y-3 p-4">
+          <Textarea
+            rows={3}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="Add a note about this matter…"
+          />
+          <div className="flex justify-end">
+            <Button onClick={submit} loading={add.isPending} disabled={!body.trim()}>
+              Add note
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">
@@ -79,7 +81,7 @@ export function NotesPanel({ matterId }: { matterId: string }) {
       ) : data && data.length > 0 ? (
         <div className="space-y-3">
           {data.map((note) => {
-            const canEditThis = canEditAny || note.author_id === profile?.id
+            const canEditThis = !readOnly && (canEditAny || note.author_id === profile?.id)
             const isEditing = editingId === note.id
             return (
               <Card key={note.id} className="p-4">

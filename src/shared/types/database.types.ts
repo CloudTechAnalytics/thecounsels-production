@@ -1316,6 +1316,10 @@ export interface Database {
         Returns: Database['public']['Tables']['notifications']['Row']
       }
       mark_all_notifications_read: { Args: { p_org: string }; Returns: undefined }
+      reopen_matter: {
+        Args: { p_matter: string; p_reason?: string | null }
+        Returns: Database['public']['Tables']['matters']['Row']
+      }
       find_similar_clients: {
         Args: {
           p_org: string

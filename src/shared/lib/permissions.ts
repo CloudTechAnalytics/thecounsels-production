@@ -35,6 +35,7 @@ export const PERMISSION_KEYS = [
   'matters.update',
   'matters.delete',
   'matters.assign',
+  'matters.reopen',
   'documents.view',
   'documents.upload',
   'documents.update',

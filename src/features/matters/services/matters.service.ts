@@ -88,6 +88,13 @@ export const mattersService = {
     return row
   },
 
+  async reopen(id: string, reason: string | undefined): Promise<void> {
+    // Returns the bare matters row (no client/lead_lawyer joins) — callers
+    // rely on query invalidation to refetch the full MatterRow shape.
+    const { error } = await supabase.rpc('reopen_matter', { p_matter: id, p_reason: reason || null })
+    if (error) throw error
+  },
+
   async remove(id: string, organizationId: string, label: string): Promise<void> {
     const { error } = await supabase.from('matters').delete().eq('id', id)
     if (error) throw error

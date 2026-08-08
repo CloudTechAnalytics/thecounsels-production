@@ -16,6 +16,8 @@ import {
   Receipt,
   Wallet,
   FileCheck2,
+  Lock,
+  LockOpen,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
@@ -48,6 +50,8 @@ const EVENT_ICON: Record<string, LucideIcon> = {
   expense_invoiced: FileCheck2,
   receipt_uploaded: FileUp,
   invoice_created: Receipt,
+  matter_closed: Lock,
+  matter_reopened: LockOpen,
   update: PencilLine,
 }
 

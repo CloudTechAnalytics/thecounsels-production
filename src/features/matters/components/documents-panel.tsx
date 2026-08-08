@@ -17,7 +17,7 @@ import { toast } from '@/shared/components/ui/sonner'
 
 const ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,image/*'
 
-export function DocumentsPanel({ matterId }: { matterId: string }) {
+export function DocumentsPanel({ matterId, readOnly = false }: { matterId: string; readOnly?: boolean }) {
   const { activeOrgId, profile } = useAuth()
   const { has } = usePermissions()
   const { data, isLoading } = useDocuments(activeOrgId, { matterId })
@@ -30,9 +30,9 @@ export function DocumentsPanel({ matterId }: { matterId: string }) {
   const [renaming, setRenaming] = React.useState<DocumentWithMatter | null>(null)
   const [toDelete, setToDelete] = React.useState<DocumentWithMatter | null>(null)
 
-  const canUpload = has('documents.upload')
-  const canRename = has('documents.update')
-  const canDelete = has('documents.delete')
+  const canUpload = has('documents.upload') && !readOnly
+  const canRename = has('documents.update') && !readOnly
+  const canDelete = has('documents.delete') && !readOnly
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return

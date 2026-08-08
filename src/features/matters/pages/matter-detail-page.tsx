@@ -1,10 +1,10 @@
 import * as React from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { ArrowLeft, Pencil, Trash2, FileText, StickyNote, LayoutGrid, Activity, Gavel, CheckSquare } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, LockOpen, FileText, StickyNote, LayoutGrid, Activity, Gavel, CheckSquare } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useMatter, useDeleteMatter } from '@/features/matters/hooks/use-matters'
+import { useMatter, useDeleteMatter, useReopenMatter } from '@/features/matters/hooks/use-matters'
 import { MatterFormDialog } from '@/features/matters/components/matter-form-dialog'
 import { DocumentsPanel } from '@/features/matters/components/documents-panel'
 import { NotesPanel } from '@/features/matters/components/notes-panel'
@@ -20,6 +20,8 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { Label } from '@/shared/components/ui/label'
+import { Textarea } from '@/shared/components/ui/textarea'
 import { cn } from '@/shared/lib/utils'
 import { initialsOf } from '@/shared/lib/format'
 import { toast } from '@/shared/components/ui/sonner'
@@ -50,9 +52,12 @@ export function MatterDetailPage() {
   const { has } = usePermissions()
   const { data: matter, isLoading, isError } = useMatter(id)
   const del = useDeleteMatter(activeOrgId)
+  const reopen = useReopenMatter(activeOrgId)
   const [tab, setTab] = React.useState<TabKey>('overview')
   const [editOpen, setEditOpen] = React.useState(false)
   const [confirmDelete, setConfirmDelete] = React.useState(false)
+  const [reopenOpen, setReopenOpen] = React.useState(false)
+  const [reopenReason, setReopenReason] = React.useState('')
 
   if (isLoading) {
     return (
@@ -74,6 +79,7 @@ export function MatterDetailPage() {
   }
 
   const status = MATTER_STATUS_META[matter.status]
+  const isClosed = ['closed', 'won', 'lost'].includes(matter.status)
 
   return (
     <div>
@@ -92,9 +98,14 @@ export function MatterDetailPage() {
           {matter.client && <p className="text-sm text-muted-foreground">for {matter.client.display_name}</p>}
         </div>
         <div className="flex gap-2">
-          {has('matters.update') && (
+          {has('matters.update') && !isClosed && (
             <Button variant="outline" onClick={() => setEditOpen(true)}>
               <Pencil className="h-4 w-4" /> Edit
+            </Button>
+          )}
+          {isClosed && has('matters.reopen') && (
+            <Button variant="outline" onClick={() => setReopenOpen(true)}>
+              <LockOpen className="h-4 w-4" /> Reopen matter
             </Button>
           )}
           {has('matters.delete') && (
@@ -104,6 +115,12 @@ export function MatterDetailPage() {
           )}
         </div>
       </div>
+      {isClosed && (
+        <p className="mt-3 text-sm text-muted-foreground">
+          This matter is closed and read-only. Historical data remains fully visible, but no new notes, tasks,
+          documents, hearings, or billing entries can be added while it stays closed.
+        </p>
+      )}
 
       {/* Tabs */}
       <div className="mt-6 flex gap-1 border-b border-border">
@@ -164,13 +181,37 @@ export function MatterDetailPage() {
           </div>
         )}
         {tab === 'timeline' && <MatterTimeline matter={matter} />}
-        {tab === 'hearings' && <MatterHearingsPanel matterId={matter.id} />}
-        {tab === 'tasks' && <MatterTasksPanel matterId={matter.id} />}
-        {tab === 'documents' && <DocumentsPanel matterId={matter.id} />}
-        {tab === 'notes' && <NotesPanel matterId={matter.id} />}
+        {tab === 'hearings' && <MatterHearingsPanel matterId={matter.id} readOnly={isClosed} />}
+        {tab === 'tasks' && <MatterTasksPanel matterId={matter.id} readOnly={isClosed} />}
+        {tab === 'documents' && <DocumentsPanel matterId={matter.id} readOnly={isClosed} />}
+        {tab === 'notes' && <NotesPanel matterId={matter.id} readOnly={isClosed} />}
       </div>
 
       <MatterFormDialog matter={matter} open={editOpen} onOpenChange={setEditOpen} />
+
+      <ConfirmDialog
+        open={reopenOpen}
+        onOpenChange={(o) => { setReopenOpen(o); if (!o) setReopenReason('') }}
+        title={`Reopen matter ${matter.matter_number ?? ''}`}
+        confirmLabel="Reopen matter"
+        loading={reopen.isPending}
+        description="This restores normal permissions for everyone with access to this matter, and is recorded in the Activity Timeline."
+        onConfirm={async () => {
+          try {
+            await reopen.mutateAsync({ id: matter.id, reason: reopenReason.trim() || undefined })
+            toast.success('Matter reopened')
+            setReopenOpen(false)
+            setReopenReason('')
+          } catch (err) {
+            toast.error('Could not reopen matter', { description: err instanceof Error ? err.message : undefined })
+          }
+        }}
+      >
+        <div className="space-y-1.5">
+          <Label className="text-xs">Reason (optional)</Label>
+          <Textarea rows={2} value={reopenReason} onChange={(e) => setReopenReason(e.target.value)} autoFocus placeholder="e.g. Client disputed the closure" />
+        </div>
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={confirmDelete}

@@ -12,7 +12,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { toast } from '@/shared/components/ui/sonner'
 
-export function MatterTasksPanel({ matterId }: { matterId: string }) {
+export function MatterTasksPanel({ matterId, readOnly = false }: { matterId: string; readOnly?: boolean }) {
   const { activeOrgId, profile } = useAuth()
   const { has } = usePermissions()
   const { data, isLoading } = useTasks(activeOrgId, { matterId, status: 'all', assigneeId: 'all' }, profile?.id ?? null)
@@ -22,9 +22,9 @@ export function MatterTasksPanel({ matterId }: { matterId: string }) {
   const [editing, setEditing] = React.useState<TaskRow | null>(null)
   const [toDelete, setToDelete] = React.useState<TaskRow | null>(null)
 
-  const canCreate = has('tasks.create')
-  const canEdit = has('tasks.update')
-  const canDelete = has('tasks.delete')
+  const canCreate = has('tasks.create') && !readOnly
+  const canEdit = has('tasks.update') && !readOnly
+  const canDelete = has('tasks.delete') && !readOnly
 
   const openNew = () => { setEditing(null); setFormOpen(true) }
   const openEdit = (t: TaskRow) => { setEditing(t); setFormOpen(true) }

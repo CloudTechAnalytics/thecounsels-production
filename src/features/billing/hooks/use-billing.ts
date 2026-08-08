@@ -41,6 +41,12 @@ export function useInvoices(orgId: string | null) {
 export function useInvoice(id: string | undefined) {
   return useQuery({ queryKey: ['invoice', id], enabled: Boolean(id), queryFn: () => billingService.getInvoice(id!) })
 }
+export function usePayments(orgId: string | null) {
+  return useQuery({ queryKey: ['billing', orgId, 'payments'], enabled: Boolean(orgId), queryFn: () => billingService.listPayments(orgId!) })
+}
+export function usePayment(id: string | undefined) {
+  return useQuery({ queryKey: ['payment', id], enabled: Boolean(id), queryFn: () => billingService.getPayment(id!) })
+}
 
 function useInvalidate(orgId: string | null) {
   const qc = useQueryClient()
@@ -235,5 +241,29 @@ export function useAddPayment(orgId: string | null, userId: string | null) {
     mutationFn: ({ invoiceId, values }: { invoiceId: string; values: PaymentFormValues }) =>
       billingService.addPayment(orgId!, invoiceId, values, userId),
     onSuccess: (_d, vars) => invalidateInvoice(vars.invoiceId),
+  })
+}
+export function useUpdatePayment(orgId: string | null) {
+  const qc = useQueryClient()
+  const invalidateInvoice = useInvalidateInvoice(orgId)
+  return useMutation({
+    mutationFn: (vars: { id: string; invoiceId: string; values: PaymentFormValues }) =>
+      billingService.updatePayment(vars.id, orgId!, vars.values),
+    onSuccess: (_d, vars) => {
+      invalidateInvoice(vars.invoiceId)
+      qc.invalidateQueries({ queryKey: ['payment', vars.id] })
+    },
+  })
+}
+export function useVoidPayment(orgId: string | null) {
+  const qc = useQueryClient()
+  const invalidateInvoice = useInvalidateInvoice(orgId)
+  return useMutation({
+    mutationFn: (vars: { id: string; invoiceId: string; paymentNumber: string }) =>
+      billingService.voidPayment(vars.id, orgId!, vars.paymentNumber),
+    onSuccess: (_d, vars) => {
+      invalidateInvoice(vars.invoiceId)
+      qc.invalidateQueries({ queryKey: ['payment', vars.id] })
+    },
   })
 }

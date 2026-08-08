@@ -33,6 +33,9 @@ export interface InvoiceRow extends Invoice {
 }
 export interface PaymentRow extends Payment {
   created_by_profile: Pick<Profile, 'id' | 'full_name'> | null
+  client: Pick<Client, 'id' | 'display_name'> | null
+  matter: Pick<Matter, 'id' | 'title' | 'matter_number'> | null
+  invoice: Pick<Invoice, 'id' | 'invoice_number' | 'total' | 'amount_paid'> | null
 }
 export interface InvoiceDetail extends InvoiceRow {
   items: InvoiceItem[]

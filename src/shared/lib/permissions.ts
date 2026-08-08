@@ -53,6 +53,7 @@ export const PERMISSION_KEYS = [
   'billing.view',
   'invoices.manage',
   'payments.manage',
+  'payments.void',
   'expenses.manage',
   'trust.manage',
   'reports.view',

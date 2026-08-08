@@ -29,6 +29,7 @@ import {
 } from '@/features/billing/hooks/use-billing'
 import { TimeEntryDialog, ExpenseDialog } from '@/features/billing/components/log-dialogs'
 import { TimeEntriesTab } from '@/features/billing/components/time-entries-tab'
+import { PaymentsTab } from '@/features/billing/components/payments-tab'
 import { GenerateInvoiceDialog, InvoiceDetailDialog } from '@/features/billing/components/invoice-dialogs'
 import { EXPENSE_CATEGORIES, INVOICE_STATUS_META, isInvoiceOverdue, type ExpenseRow, type InvoiceRow } from '@/features/billing/types'
 import { StatTile } from '@/features/dashboard/components/stat-tile'
@@ -61,7 +62,7 @@ export function BillingPage() {
   const stats = useBillingStats(canFinancials ? activeOrgId : null)
   const personal = usePersonalStats(canFinancials ? null : activeOrgId, userId)
   const invoices = useInvoices(activeOrgId)
-  const [tab, setTab] = React.useState<'time' | 'expenses' | 'invoices'>('time')
+  const [tab, setTab] = React.useState<'time' | 'expenses' | 'invoices' | 'payments'>('time')
 
   const [timeOpen, setTimeOpen] = React.useState(false)
   const [expenseOpen, setExpenseOpen] = React.useState(false)
@@ -71,7 +72,7 @@ export function BillingPage() {
   const s = stats.data
   const p = personal.data
 
-  const tabs = (canInvoice ? (['time', 'expenses', 'invoices'] as const) : (['time', 'expenses'] as const))
+  const tabs = (canInvoice ? (['time', 'expenses', 'invoices', 'payments'] as const) : (['time', 'expenses'] as const))
 
   return (
     <div>
@@ -126,6 +127,7 @@ export function BillingPage() {
         {tab === 'time' && <TimeEntriesTab />}
         {tab === 'expenses' && <ExpensesTab />}
         {tab === 'invoices' && canInvoice && <InvoicesTab invoices={invoices} onOpen={setInvoiceId} />}
+        {tab === 'payments' && canInvoice && <PaymentsTab onViewInvoice={setInvoiceId} />}
       </div>
 
       <TimeEntryDialog open={timeOpen} onOpenChange={setTimeOpen} />

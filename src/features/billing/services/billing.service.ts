@@ -1,6 +1,15 @@
 import { supabase } from '@/shared/lib/supabase'
 import type { InvoiceStatus, TimeEntryStatus } from '@/shared/types/database.types'
-import { timeAmount, type BillingStats, type ExpenseRow, type InvoiceDetail, type InvoiceRow, type PersonalStats, type TimeEntryRow } from '@/features/billing/types'
+import {
+  timeAmount,
+  type BillingStats,
+  type ExpenseRow,
+  type InvoiceDetail,
+  type InvoiceRow,
+  type PaymentRow,
+  type PersonalStats,
+  type TimeEntryRow,
+} from '@/features/billing/types'
 import type {
   ExpenseFormValues,
   GenerateInvoiceFormValues,
@@ -16,7 +25,8 @@ const EXP_SELECT =
   '*, matter:matters(id, title, matter_number), user:profiles!expenses_user_id_fkey(id, full_name), created_by_profile:profiles!expenses_created_by_fkey(id, full_name), updated_by_profile:profiles!expenses_updated_by_fkey(id, full_name), receipts:expense_receipts(*), invoice:invoices(id, invoice_number)'
 const RECEIPTS_BUCKET = 'receipts'
 const INV_SELECT = '*, client:clients(id, display_name), matter:matters(id, matter_number)'
-const PAYMENT_SELECT = '*, created_by_profile:profiles!payments_created_by_fkey(id, full_name)'
+const PAYMENT_SELECT =
+  '*, created_by_profile:profiles!payments_created_by_fkey(id, full_name), client:clients(id, display_name), matter:matters(id, title, matter_number), invoice:invoices(id, invoice_number, total, amount_paid)'
 
 export interface TimeEntryFilters {
   search?: string
@@ -410,7 +420,7 @@ export const billingService = {
         paid_at: v.paidAt,
         created_by: userId,
       })
-      .select('id')
+      .select('id, payment_number, receipt_number')
       .single()
     if (error) throw error
     await supabase.rpc('log_audit', {
@@ -418,8 +428,56 @@ export const billingService = {
       p_action: 'payment.recorded',
       p_entity_type: 'invoice',
       p_entity_id: invoiceId,
-      p_summary: `Recorded a payment of ${v.amount}`,
+      p_summary: `Recorded payment ${data.payment_number} (Receipt ${data.receipt_number}) of ${v.amount}`,
       p_metadata: { payment_id: data.id, method: v.method ?? null, reference: v.reference ?? null },
+    })
+  },
+  async listPayments(organizationId: string): Promise<PaymentRow[]> {
+    const { data, error } = await supabase
+      .from('payments')
+      .select(PAYMENT_SELECT)
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return (data ?? []) as unknown as PaymentRow[]
+  },
+  async getPayment(id: string): Promise<PaymentRow> {
+    const { data, error } = await supabase.from('payments').select(PAYMENT_SELECT).eq('id', id).single()
+    if (error) throw error
+    return data as unknown as PaymentRow
+  },
+  /** Managing Partner only (payments.void) — RLS enforces this too; this is the faster/friendlier client-side check. */
+  async updatePayment(id: string, organizationId: string, v: PaymentFormValues): Promise<void> {
+    const { data, error } = await supabase
+      .from('payments')
+      .update({
+        amount: v.amount,
+        method: v.method || null,
+        reference: v.reference || null,
+        notes: v.notes || null,
+        paid_at: v.paidAt,
+      })
+      .eq('id', id)
+      .select('payment_number')
+      .single()
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'payment.updated',
+      p_entity_type: 'invoice',
+      p_entity_id: id,
+      p_summary: `Edited payment ${data.payment_number}`,
+    })
+  },
+  async voidPayment(id: string, organizationId: string, paymentNumber: string): Promise<void> {
+    const { error } = await supabase.from('payments').delete().eq('id', id)
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'payment.deleted',
+      p_entity_type: 'invoice',
+      p_entity_id: id,
+      p_summary: `Deleted payment ${paymentNumber}`,
     })
   },
 

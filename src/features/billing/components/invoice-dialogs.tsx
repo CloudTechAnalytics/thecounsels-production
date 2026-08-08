@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { Printer, Loader2, Plus, Pencil, Trash2, X, Check } from 'lucide-react'
+import { Printer, Loader2, Plus, Pencil, Receipt as ReceiptIcon, Trash2, X, Check } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useClients } from '@/features/clients/hooks/use-clients'
 import { useMatters } from '@/features/matters/hooks/use-matters'
@@ -18,6 +18,7 @@ import {
 } from '@/features/billing/hooks/use-billing'
 import { INVOICE_STATUS_META, isInvoiceOverdue } from '@/features/billing/types'
 import { printInvoice } from '@/features/billing/lib/print-invoice'
+import { PaymentDetailDialog } from '@/features/billing/components/payment-detail-dialog'
 import { supabase } from '@/shared/lib/supabase'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
@@ -268,6 +269,7 @@ export function InvoiceDetailDialog({
   const [voidOpen, setVoidOpen] = React.useState(false)
   const [voidReason, setVoidReason] = React.useState('')
   const [deleteOpen, setDeleteOpen] = React.useState(false)
+  const [openPaymentId, setOpenPaymentId] = React.useState<string | null>(null)
   const [dueDate, setDueDate] = React.useState('')
   const [discount, setDiscount] = React.useState('0')
   const [taxRate, setTaxRate] = React.useState('0')
@@ -302,6 +304,11 @@ export function InvoiceDetailDialog({
   const openPaymentConfirm = () => {
     if (!Number(payAmount)) {
       toast.error('Enter a payment amount')
+      return
+    }
+    // The DB guard rejects this too — this is just faster, friendlier feedback.
+    if (Number(payAmount) > balance) {
+      toast.error('Payment exceeds the outstanding balance', { description: `Balance due is ${formatNaira(balance)}.` })
       return
     }
     setConfirmPayOpen(true)
@@ -452,18 +459,27 @@ export function InvoiceDetailDialog({
                 <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Payment history</p>
                 <div className="space-y-2">
                   {inv.payments.map((p) => (
-                    <div key={p.id} className="rounded-md border border-border/60 p-2 text-sm">
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setOpenPaymentId(p.id)}
+                      className="w-full rounded-md border border-border/60 p-2 text-left text-sm hover:border-primary/40"
+                    >
                       <div className="flex justify-between">
-                        <span>{format(new Date(p.paid_at), 'PP')}{p.method ? ` · ${p.method}` : ''}</span>
+                        <span className="flex items-center gap-1.5">
+                          <ReceiptIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                          {format(new Date(p.paid_at), 'PP')}{p.method ? ` · ${p.method}` : ''}
+                        </span>
                         <span className="font-medium">{formatNaira(Number(p.amount))}</span>
                       </div>
                       <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                        <span>{p.payment_number}</span>
                         {p.reference && <span>Ref: {p.reference}</span>}
                         {p.created_by_profile?.full_name && <span>Recorded by {p.created_by_profile.full_name}</span>}
                         <span>{format(new Date(p.created_at), 'PPp')}</span>
                       </div>
                       {p.notes && <p className="mt-0.5 text-xs text-muted-foreground">{p.notes}</p>}
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -569,6 +585,13 @@ export function InvoiceDetailDialog({
               confirmLabel="Delete invoice"
               loading={deleteInvoice.isPending}
               onConfirm={confirmDelete}
+            />
+
+            <PaymentDetailDialog
+              paymentId={openPaymentId}
+              open={Boolean(openPaymentId)}
+              onOpenChange={(o) => !o && setOpenPaymentId(null)}
+              onViewInvoice={() => setOpenPaymentId(null)}
             />
           </>
         )}

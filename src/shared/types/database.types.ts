@@ -1107,6 +1107,10 @@ export interface Database {
           id: string
           organization_id: string
           invoice_id: string
+          client_id: string | null
+          matter_id: string | null
+          payment_number: string | null
+          receipt_number: string | null
           amount: number
           method: string | null
           reference: string | null
@@ -1119,6 +1123,10 @@ export interface Database {
           id?: string
           organization_id: string
           invoice_id: string
+          client_id?: string | null
+          matter_id?: string | null
+          payment_number?: string | null
+          receipt_number?: string | null
           amount: number
           method?: string | null
           reference?: string | null

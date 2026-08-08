@@ -34,14 +34,20 @@ additional_redirect_urls = ["http://localhost:5173", "http://localhost:5173/auth
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
-# NO public signup. Accounts are provisioned: the Platform Owner is created once
-# in the Supabase dashboard (first user is auto-promoted), then every account is
-# created in-app by an admin via the admin-create-user Edge Function.
-enable_signup = false
+# Public self-service signup is enabled: a visitor creates their own account at
+# /auth/register, verifies their email, then completes /onboarding, which calls
+# the register_organization() RPC to provision their firm — no admin involved.
+# The Platform Owner is still bootstrapped separately (first user is auto-
+# promoted by handle_new_user()); every OTHER admin-provisioned account still
+# goes through the admin-create-user Edge Function exactly as before, unchanged.
+# NOTE: on hosted Supabase this flag must also be turned on in the Dashboard
+# under Authentication → Sign In / Providers → "Allow new users to sign up" —
+# editing this file alone has no effect on an already-deployed project.
+enable_signup = true
 
 [auth.email]
-enable_signup = false
-enable_confirmations = false
+enable_signup = true
+enable_confirmations = true
 secure_password_change = true
 
 [realtime]

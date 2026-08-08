@@ -12,6 +12,8 @@ import {
 } from '@/features/auth/components/route-guards'
 import { LandingPage } from '@/features/landing/pages/landing-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
+import { RegisterPage } from '@/features/auth/pages/register-page'
+import { AuthCallbackPage } from '@/features/auth/pages/auth-callback-page'
 import { ForgotPasswordPage } from '@/features/auth/pages/forgot-password-page'
 import { ResetPasswordPage } from '@/features/auth/pages/reset-password-page'
 import { ChangePasswordPage } from '@/features/auth/pages/change-password-page'
@@ -81,6 +83,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/auth/login" replace /> },
       { path: 'login', element: <RedirectIfAuthenticated><LoginPage /></RedirectIfAuthenticated> },
+      { path: 'register', element: <RedirectIfAuthenticated><RegisterPage /></RedirectIfAuthenticated> },
+      { path: 'callback', element: <AuthCallbackPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
       { path: 'reset-password', element: <ResetPasswordPage /> },
       { path: 'accept-invite', element: <AcceptInvitePage /> },

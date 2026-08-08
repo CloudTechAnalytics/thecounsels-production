@@ -16,10 +16,13 @@ export const authService = {
   },
 
   /**
-   * Register a new account. Access is still gated by organization membership,
-   * so a fresh account can sign in but only sees its pending invitations until
-   * one is accepted. Returns whether a session was established immediately
-   * (email confirmation disabled) or an email must be confirmed first.
+   * Register a new account (public self-service entry point, /auth/register).
+   * Access is still gated by organization membership — a fresh, verified
+   * account has no memberships until it either completes /onboarding
+   * (creating its own firm) or accepts an invitation. Returns whether a
+   * session was established immediately (email confirmation disabled) or an
+   * email must be confirmed first — confirmation is on by default (see
+   * supabase/config.toml), so this is normally `true`.
    */
   async signUp(
     email: string,
@@ -29,7 +32,10 @@ export const authService = {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: {
+        data: { full_name: fullName },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     })
     if (error) throw error
     return { needsConfirmation: !data.session }

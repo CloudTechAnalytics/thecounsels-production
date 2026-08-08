@@ -134,7 +134,10 @@ export function LoginPage() {
       </Form>
 
       <p className="mt-6 text-center text-xs text-muted-foreground">
-        Access is provisioned by your firm administrator. There is no public sign-up.
+        Don't have an account?{' '}
+        <Link to="/auth/register" className="font-medium text-primary hover:underline">
+          Start free
+        </Link>
       </p>
     </AuthShell>
   )

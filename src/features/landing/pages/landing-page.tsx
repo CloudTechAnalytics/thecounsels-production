@@ -184,7 +184,7 @@ const PLANS = [
 const FAQS = [
   {
     q: 'Who can create an account?',
-    a: 'Firm accounts are provisioned by our team — there’s no public self-signup. Once your firm is onboarded, your admin invites lawyers and staff from inside the app.',
+    a: 'Anyone — start a free trial in a few minutes from the "Start Free" button above. You create your firm, become its Managing Partner, and invite your team from inside the app. No sales call required.',
   },
   {
     q: 'Is our data secure?',
@@ -335,7 +335,7 @@ export function LandingPage() {
               Log in
             </Button>
             <Button asChild size="sm" className="shadow-gold">
-              <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Book a Demo</a>
+              <Link to="/auth/register">Start Free</Link>
             </Button>
           </div>
         </div>
@@ -388,13 +388,13 @@ export function LandingPage() {
                 <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Book a Demo</a>
               </Button>
               <Button asChild size="lg" className="shadow-gold">
-                <Link to="/auth/login">
-                  Start Your Digital Practice <ArrowRight className="h-4 w-4" />
+                <Link to="/auth/register">
+                  Start Free Trial <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             </motion.div>
             <motion.p variants={fadeUp} className="mt-6 text-xs text-white/35">
-              Firm accounts are provisioned by our team — no self-signup, no stray data.
+              3 months free, no card required. Set up your firm in minutes.
             </motion.p>
           </motion.div>
 
@@ -653,11 +653,14 @@ export function LandingPage() {
           </motion.p>
           <motion.div variants={fadeUp} className="mt-8 flex flex-wrap justify-center gap-4">
             <Button asChild size="lg" className="shadow-gold">
-              <Link to="/auth/login">
-                Sign in <ArrowRight className="h-4 w-4" />
+              <Link to="/auth/register">
+                Start Free <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
+              <Link to="/auth/login">Sign in</Link>
+            </Button>
+            <Button asChild size="lg" variant="ghost" className="text-white hover:bg-white/10 hover:text-white">
               <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Talk to our team</a>
             </Button>
           </motion.div>
@@ -729,6 +732,11 @@ export function LandingPage() {
                   <a href="#contact" className="transition-colors hover:text-primary">
                     Contact
                   </a>
+                </li>
+                <li>
+                  <Link to="/auth/register" className="transition-colors hover:text-primary">
+                    Start free
+                  </Link>
                 </li>
                 <li>
                   <button type="button" onClick={goToLogin} className="transition-colors hover:text-primary">

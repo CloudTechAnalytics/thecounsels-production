@@ -16,6 +16,7 @@ export type Json =
   | Json[]
 
 export type OrgStatus = 'trial' | 'active' | 'suspended' | 'cancelled'
+export type OrganizationType = 'customer' | 'demo' | 'internal'
 export type MembershipStatus = 'invited' | 'active' | 'suspended' | 'disabled'
 export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired'
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'paused' | 'cancelled'
@@ -75,6 +76,7 @@ export interface Database {
           last_login_at: string | null
           deleted_at: string | null
           deleted_by: string | null
+          organization_type: OrganizationType
         } & Timestamps
         Insert: {
           id?: string
@@ -95,6 +97,7 @@ export interface Database {
           last_login_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
+          organization_type?: OrganizationType
         }
         Update: Partial<Database['public']['Tables']['organizations']['Insert']>
         Relationships: []
@@ -315,6 +318,7 @@ export interface Database {
           is_custom: boolean
           is_active: boolean
           sort_order: number
+          trial_duration_days: number | null
         } & Timestamps
         Insert: {
           id?: string
@@ -332,9 +336,37 @@ export interface Database {
           is_custom?: boolean
           is_active?: boolean
           sort_order?: number
+          trial_duration_days?: number | null
         }
         Update: Partial<Database['public']['Tables']['plans']['Insert']>
         Relationships: []
+      }
+      registration_settings: {
+        Row: {
+          id: boolean
+          trial_enabled: boolean
+          trial_duration_days: number
+          trial_plan_id: string | null
+          trial_future_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          id?: boolean
+          trial_enabled?: boolean
+          trial_duration_days?: number
+          trial_plan_id?: string | null
+          trial_future_price?: number | null
+        }
+        Update: Partial<Database['public']['Tables']['registration_settings']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'registration_settings_trial_plan_id_fkey'
+            columns: ['trial_plan_id']
+            isOneToOne: false
+            referencedRelation: 'plans'
+            referencedColumns: ['id']
+          },
+        ]
       }
       clients: {
         Row: {
@@ -1319,6 +1351,20 @@ export interface Database {
       reopen_matter: {
         Args: { p_matter: string; p_reason?: string | null }
         Returns: Database['public']['Tables']['matters']['Row']
+      }
+      register_organization: {
+        Args: {
+          p_name: string
+          p_slug: string
+          p_legal_name?: string | null
+          p_country?: string | null
+          p_timezone?: string | null
+          p_website?: string | null
+          p_industry?: string | null
+          p_user_count?: string | null
+          p_practice_areas?: string[] | null
+        }
+        Returns: Database['public']['Tables']['organizations']['Row']
       }
       find_similar_clients: {
         Args: {

@@ -57,7 +57,7 @@ export function CreateUserDialog({ organizationId }: { organizationId: string })
         organizationId,
         roleKey: role.key,
       })
-      toast.success('User created', { description: `${values.email} can sign in now.` })
+      toast.success('Team member added', { description: `${values.email} can sign in with the temporary password now.` })
       await qc.invalidateQueries({ queryKey: ['administration', 'members', organizationId] })
       form.reset({ fullName: '', email: '', password: '', roleId: values.roleId })
       setOpen(false)
@@ -72,15 +72,15 @@ export function CreateUserDialog({ organizationId }: { organizationId: string })
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
-          <UserPlus /> Add user
+          <UserPlus /> Invite team
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add a user</DialogTitle>
+          <DialogTitle>Invite a team member</DialogTitle>
           <DialogDescription>
-            Create an account for a lawyer or staff member. They'll sign in with this temporary password
-            and be required to set their own before they can access the workspace.
+            Add a lawyer or staff member to your firm — they'll sign in with this temporary password
+            and set their own before they can access the workspace. They only ever join this firm.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -158,7 +158,7 @@ export function CreateUserDialog({ organizationId }: { organizationId: string })
                 Cancel
               </Button>
               <Button type="submit" loading={form.formState.isSubmitting}>
-                Create user
+                Send invitation
               </Button>
             </DialogFooter>
           </form>

@@ -1,0 +1,23 @@
+/** Common countries for the firm-setup step, Nigeria first (primary market). Not exhaustive by design. */
+export const COUNTRIES = [
+  'Nigeria',
+  'Ghana',
+  'Kenya',
+  'South Africa',
+  'United Kingdom',
+  'United States',
+  'Canada',
+  'United Arab Emirates',
+  'Egypt',
+  'Rwanda',
+  'Uganda',
+  'Tanzania',
+  'Cameroon',
+  'Côte d’Ivoire',
+  'Senegal',
+  'Ethiopia',
+  'India',
+  'Ireland',
+  'Australia',
+  'Other',
+] as const

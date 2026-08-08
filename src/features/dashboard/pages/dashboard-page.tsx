@@ -64,8 +64,8 @@ export function DashboardPage() {
         description={orgName ? `Here's what's happening at ${orgName} today.` : undefined}
       />
 
-      {/* KPIs — role-aware, always a single row; scrolls horizontally instead of wrapping */}
-      <div className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">
+      {/* KPIs — role-aware, wraps onto multiple rows like the Platform Console's KPI grid, never scrolls horizontally */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {canFinancials ? (
           <>
             <StatTile label="Active matters" countTo={kpis?.activeMatters ?? 0} value={String(kpis?.activeMatters ?? 0)} hint="Open, pending or in court" icon={Briefcase} loading={kpisLoading} />

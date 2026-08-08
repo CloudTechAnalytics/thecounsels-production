@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { ThemeToggle } from '@/shared/components/theme-toggle'
 import { motion, useReducedMotion, type Variants } from 'framer-motion'
 import {
   Scale,
@@ -326,6 +327,7 @@ export function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-3">
+            <ThemeToggle className="text-white/70 hover:bg-white/10 hover:text-white" />
             <Button
               size="sm"
               variant="outline"

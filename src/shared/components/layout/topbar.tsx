@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avat
 import { Badge } from '@/shared/components/ui/badge'
 import { GlobalSearch } from '@/shared/components/layout/global-search'
 import { NotificationBell } from '@/features/notifications/components/notification-bell'
+import { ThemeToggle } from '@/shared/components/theme-toggle'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +34,7 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
       <GlobalSearch />
 
       <div className="ml-auto flex items-center gap-2">
+        <ThemeToggle />
         <NotificationBell />
 
         <DropdownMenu>

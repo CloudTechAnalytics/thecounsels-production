@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { Scale, ShieldCheck, Sparkles } from 'lucide-react'
 import { APP } from '@/shared/config/env'
+import { ThemeToggle } from '@/shared/components/theme-toggle'
 
 /** Split-screen luxury auth layout: brand panel + form panel. */
 export function AuthShell({
@@ -19,7 +20,9 @@ export function AuthShell({
   back?: ReactNode
 }) {
   return (
-    <div className="grid min-h-full lg:grid-cols-[1.05fr_1fr]">
+    <div className="relative grid min-h-full lg:grid-cols-[1.05fr_1fr]">
+      <ThemeToggle className="absolute right-4 top-4 z-10" />
+
       {/* Brand panel */}
       <div className="relative hidden overflow-hidden bg-sidebar text-sidebar-foreground lg:flex lg:flex-col lg:justify-between lg:p-14">
         <div

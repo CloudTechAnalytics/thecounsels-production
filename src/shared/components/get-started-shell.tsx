@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { ArrowLeft, Scale, Settings } from 'lucide-react'
 import { APP } from '@/shared/config/env'
+import { ThemeToggle } from '@/shared/components/theme-toggle'
 import { cn } from '@/shared/lib/utils'
 
 /**
@@ -36,6 +37,7 @@ export function GetStartedShell({
             <Scale className="h-5 w-5" />
           </span>
           <p className="font-display text-lg font-semibold">{APP.product}</p>
+          <ThemeToggle className="ml-auto" />
         </div>
       </header>
 

@@ -29,6 +29,7 @@ import { DateRangeControl } from '@/features/dashboard/components/date-range-con
 import { FirmActivityCard } from '@/features/dashboard/components/firm-activity-card'
 import { BillableHoursCard } from '@/features/dashboard/components/billable-hours-card'
 import { RecentActivityFeed } from '@/features/dashboard/components/recent-activity-feed'
+import { OnboardingChecklistCard } from '@/features/onboarding/components/onboarding-checklist-card'
 import { MATTER_STATUS_META } from '@/features/matters/types'
 import { formatMoneyCompact, initialsOf } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
@@ -63,6 +64,8 @@ export function DashboardPage() {
         title={`Welcome back, ${firstName}`}
         description={orgName ? `Here's what's happening at ${orgName} today.` : undefined}
       />
+
+      <OnboardingChecklistCard organizationId={activeOrgId} />
 
       {/* KPIs — role-aware, wraps onto multiple rows like the Platform Console's KPI grid, never scrolls horizontally */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">

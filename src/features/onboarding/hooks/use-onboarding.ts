@@ -14,3 +14,11 @@ export function useRegisterOrganization() {
     mutationFn: (values: FirmSetupValues) => onboardingService.registerOrganization(values),
   })
 }
+
+export function useOnboardingChecklist(organizationId: string | null) {
+  return useQuery({
+    queryKey: ['onboarding-checklist', organizationId],
+    enabled: Boolean(organizationId),
+    queryFn: () => onboardingService.getChecklistStatus(organizationId!),
+  })
+}

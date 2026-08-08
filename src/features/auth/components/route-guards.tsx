@@ -49,6 +49,20 @@ export function RequireOrganization() {
   return <Outlet />
 }
 
+/**
+ * The self-service onboarding wizard (/onboarding) — only for an
+ * authenticated user who hasn't finished setting up a firm yet. Someone who
+ * already has an active membership (setup complete, or joined via
+ * invitation) is sent home instead of back through the wizard; a platform
+ * admin never onboards as a firm at all.
+ */
+export function RequireNoOrganization() {
+  const { isPlatformAdmin, memberships } = useAuth()
+  if (isPlatformAdmin) return <Navigate to="/platform" replace />
+  if (memberships.length > 0) return <Navigate to="/" replace />
+  return <Outlet />
+}
+
 /** Guard a route by permission; renders a 403 state when unauthorized. */
 export function RequirePermission({
   permission,

@@ -23,6 +23,33 @@ export const onboardingService = {
     return data as unknown as RegistrationSettingsRow
   },
 
+  /**
+   * Cheap, fully-derived onboarding-checklist state — no dedicated schema,
+   * same "resume for free" philosophy as the rest of this feature. All four
+   * counts are simple head-count queries, same shape as matters.service.ts's
+   * getSummary().
+   */
+  async getChecklistStatus(organizationId: string): Promise<{
+    teamInvited: boolean
+    hasClient: boolean
+    hasMatter: boolean
+    hasTask: boolean
+  }> {
+    const [members, clients, matters, tasks] = await Promise.all([
+      supabase.from('memberships').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('status', 'active'),
+      supabase.from('clients').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
+      supabase.from('matters').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
+      supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
+    ])
+    for (const r of [members, clients, matters, tasks]) if (r.error) throw r.error
+    return {
+      teamInvited: (members.count ?? 0) > 1,
+      hasClient: (clients.count ?? 0) > 0,
+      hasMatter: (matters.count ?? 0) > 0,
+      hasTask: (tasks.count ?? 0) > 0,
+    }
+  },
+
   /** Atomic self-service org + trial + owner-membership creation. See register_organization() (migration 0051). */
   async registerOrganization(values: FirmSetupValues) {
     const { data, error } = await supabase.rpc('register_organization', {

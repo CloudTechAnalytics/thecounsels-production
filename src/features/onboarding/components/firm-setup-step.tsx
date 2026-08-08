@@ -1,6 +1,8 @@
+import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { firmSetupSchema, USER_COUNT_BANDS, type FirmSetupValues } from '@/features/onboarding/schemas'
+import { AtSign } from 'lucide-react'
+import { firmSetupSchema, slugify, USER_COUNT_BANDS, type FirmSetupValues } from '@/features/onboarding/schemas'
 import { COUNTRIES } from '@/features/onboarding/countries'
 import { PRACTICE_AREAS } from '@/features/matters/types'
 import { Button } from '@/shared/components/ui/button'
@@ -8,6 +10,7 @@ import { HintInput } from '@/shared/components/hint-input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { cn } from '@/shared/lib/utils'
+import { APP } from '@/shared/config/env'
 
 const TIMEZONES: string[] = (() => {
   try {
@@ -38,6 +41,7 @@ export function FirmSetupStep({
     resolver: zodResolver(firmSetupSchema),
     defaultValues: {
       firmName: '',
+      shortName: '',
       legalName: '',
       country: 'Nigeria',
       timezone: GUESSED_TIMEZONE,
@@ -47,6 +51,15 @@ export function FirmSetupStep({
       ...defaultValues,
     },
   })
+
+  // Short name auto-follows the firm name until the user edits it directly —
+  // same pattern as Platform Console's manual-creation slug field.
+  const shortNameEdited = React.useRef(Boolean(defaultValues?.shortName))
+  const onFirmNameChange = (value: string) => {
+    form.setValue('firmName', value)
+    if (!shortNameEdited.current) form.setValue('shortName', slugify(value), { shouldValidate: true })
+  }
+  const shortName = form.watch('shortName')
 
   const practiceAreas = form.watch('practiceAreas')
   const toggleArea = (area: string) => {
@@ -66,8 +79,45 @@ export function FirmSetupStep({
             <FormItem>
               <FormLabel>Firm name<span className="text-destructive"> *</span></FormLabel>
               <FormControl>
-                <HintInput hint="A-Z" placeholder="e.g. Law Castle Firm" autoFocus {...field} />
+                <HintInput
+                  hint="A-Z"
+                  placeholder="e.g. Law Castle Firm"
+                  autoFocus
+                  {...field}
+                  onChange={(e) => onFirmNameChange(e.target.value)}
+                />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="shortName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Firm short name<span className="text-destructive"> *</span></FormLabel>
+              <FormControl>
+                <HintInput
+                  hint="A-Z"
+                  placeholder="shortname"
+                  {...field}
+                  onChange={(e) => {
+                    shortNameEdited.current = true
+                    field.onChange(e.target.value.toLowerCase())
+                  }}
+                />
+              </FormControl>
+              {shortName && (
+                <div className="flex items-center gap-2 rounded-lg bg-primary/5 px-3 py-2 text-sm">
+                  <AtSign className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <span className="text-muted-foreground">
+                    <span className="font-medium text-primary">{shortName}</span>@{APP.domain}
+                  </span>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">This will be your organization's handle.</p>
               <FormMessage />
             </FormItem>
           )}

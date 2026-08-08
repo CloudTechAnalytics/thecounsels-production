@@ -31,14 +31,14 @@ export function GetStartedShell({
 }) {
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border/70 px-6 py-5">
-        <div className="mx-auto flex max-w-md items-center gap-2.5">
+      <header className="flex items-center justify-between border-b border-border/70 px-6 py-5">
+        <div className="flex items-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Scale className="h-5 w-5" />
           </span>
           <p className="font-display text-lg font-semibold">{APP.product}</p>
-          <ThemeToggle className="ml-auto" />
         </div>
+        <ThemeToggle />
       </header>
 
       <div className="mx-auto max-w-md px-6 py-12">

@@ -75,7 +75,7 @@ export function RegisterPage() {
   }
 
   return (
-    <GetStartedShell stepLabel="Account Details" stepDescription="Let's get your account set up">
+    <GetStartedShell stepLabel="Administrator Details" stepDescription="Let's get your account set up" step={0} totalSteps={2}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" noValidate>
           <div className="grid grid-cols-2 gap-4">

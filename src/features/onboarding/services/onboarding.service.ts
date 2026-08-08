@@ -54,7 +54,7 @@ export const onboardingService = {
   async registerOrganization(values: FirmSetupValues) {
     const { data, error } = await supabase.rpc('register_organization', {
       p_name: values.firmName.trim(),
-      p_slug: values.firmName.trim(),
+      p_slug: values.shortName.trim(),
       p_legal_name: values.legalName?.trim() || null,
       p_country: values.country || null,
       p_timezone: values.timezone || null,

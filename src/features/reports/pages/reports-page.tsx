@@ -151,45 +151,45 @@ function FiltersBar({ filters, set }: { filters: ReportFilters; set: <K extends 
   const { data: clients } = useClients(activeOrgId, {})
 
   return (
-    <div className="mb-6 flex flex-wrap gap-3">
-      <Input type="date" value={filters.dateFrom ?? ''} onChange={(e) => set('dateFrom', e.target.value || undefined)} className="w-36" aria-label="From date" />
-      <Input type="date" value={filters.dateTo ?? ''} onChange={(e) => set('dateTo', e.target.value || undefined)} className="w-36" aria-label="To date" />
+    <div className="mb-6 flex flex-nowrap items-center gap-2 overflow-x-auto pb-1">
+      <div className="flex shrink-0 items-center gap-1.5">
+        <span className="text-xs text-muted-foreground">From</span>
+        <Input type="date" value={filters.dateFrom ?? ''} onChange={(e) => set('dateFrom', e.target.value || undefined)} className="w-36 shrink-0" aria-label="From date" />
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <span className="text-xs text-muted-foreground">To</span>
+        <Input type="date" value={filters.dateTo ?? ''} onChange={(e) => set('dateTo', e.target.value || undefined)} className="w-36 shrink-0" aria-label="To date" />
+      </div>
       <Select value={filters.lawyerId ?? ALL} onValueChange={(v) => set('lawyerId', v)}>
-        <SelectTrigger className="w-44"><SelectValue placeholder="All lawyers" /></SelectTrigger>
+        <SelectTrigger className="w-40 shrink-0"><SelectValue placeholder="All lawyers" /></SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>All lawyers</SelectItem>
           {members?.map((m) => <SelectItem key={m.user_id} value={m.user_id}>{m.profile?.full_name ?? m.profile?.email}</SelectItem>)}
         </SelectContent>
       </Select>
       <Select value={filters.clientId ?? ALL} onValueChange={(v) => set('clientId', v)}>
-        <SelectTrigger className="w-44"><SelectValue placeholder="All clients" /></SelectTrigger>
+        <SelectTrigger className="w-40 shrink-0"><SelectValue placeholder="All clients" /></SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>All clients</SelectItem>
           {clients?.map((c) => <SelectItem key={c.id} value={c.id}>{c.display_name}</SelectItem>)}
         </SelectContent>
       </Select>
       <Select value={filters.matterId ?? ALL} onValueChange={(v) => set('matterId', v)}>
-        <SelectTrigger className="w-48"><SelectValue placeholder="All matters" /></SelectTrigger>
+        <SelectTrigger className="w-44 shrink-0"><SelectValue placeholder="All matters" /></SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>All matters</SelectItem>
           {matters?.map((m) => <SelectItem key={m.id} value={m.id}>{m.matter_number} — {m.title}</SelectItem>)}
         </SelectContent>
       </Select>
       <Select value={filters.practiceArea ?? ALL} onValueChange={(v) => set('practiceArea', v)}>
-        <SelectTrigger className="w-48"><SelectValue placeholder="All practice areas" /></SelectTrigger>
+        <SelectTrigger className="w-40 shrink-0"><SelectValue placeholder="All practice areas" /></SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>All practice areas</SelectItem>
           {PRACTICE_AREAS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
         </SelectContent>
       </Select>
-      <Input
-        value={filters.court ?? ''}
-        onChange={(e) => set('court', e.target.value || undefined)}
-        placeholder="Court…"
-        className="w-40"
-      />
       <Select value={filters.status ?? ALL} onValueChange={(v) => set('status', v as ReportFilters['status'])}>
-        <SelectTrigger className="w-40"><SelectValue placeholder="All statuses" /></SelectTrigger>
+        <SelectTrigger className="w-36 shrink-0"><SelectValue placeholder="All statuses" /></SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>All statuses</SelectItem>
           {Object.entries(MATTER_STATUS_META).map(([v, meta]) => (

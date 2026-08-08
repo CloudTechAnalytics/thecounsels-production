@@ -29,7 +29,10 @@ export function useFirmInsights(organizationId: string | null, includeFinancial 
     enabled: Boolean(organizationId),
     queryFn: async (): Promise<FirmInsight[]> => {
       const nowIso = new Date().toISOString()
-      const [report, hearingsRes] = await Promise.all([
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+
+      const [report, hearingsRes, docsTodayRes] = await Promise.all([
         reportsService.getReportData(organizationId!),
         supabase
           .from('hearings')
@@ -38,8 +41,14 @@ export function useFirmInsights(organizationId: string | null, includeFinancial 
           .neq('status', 'cancelled')
           .gte('hearing_at', nowIso)
           .order('hearing_at', { ascending: true }),
+        supabase
+          .from('documents')
+          .select('id', { count: 'exact', head: true })
+          .eq('organization_id', organizationId!)
+          .gte('created_at', todayStart.toISOString()),
       ])
       if (hearingsRes.error) throw hearingsRes.error
+      if (docsTodayRes.error) throw docsTodayRes.error
       const hearings = hearingsRes.data ?? []
 
       const insights: FirmInsight[] = []
@@ -153,14 +162,73 @@ export function useFirmInsights(organizationId: string | null, includeFinancial 
         })
       }
 
+      // 8. Invoices awaiting payment — sent/partial, not yet overdue (rule 2 above already covers overdue ones).
+      const awaitingPayment = report.invoices.filter(
+        (i) =>
+          (i.status === 'sent' || i.status === 'partial') &&
+          i.amount_paid < i.total &&
+          !(i.status === 'sent' && i.due_date && i.due_date < todayStr),
+      )
+      if (includeFinancial && awaitingPayment.length > 0) {
+        insights.push({
+          id: 'awaiting-payment',
+          severity: 'suggestion',
+          title: `${awaitingPayment.length} invoice${awaitingPayment.length === 1 ? '' : 's'} awaiting payment`,
+          detail: 'Sent, not yet past due',
+          to: '/billing',
+        })
+      }
+
+      // 9. A matter that's gone quiet — no logged activity (or none since opening) in 15+ days.
+      const activeMatterIds = report.matters.filter((m) => ['open', 'pending', 'in_court'].includes(m.status)).map((m) => m.id)
+      if (activeMatterIds.length > 0) {
+        const { data: events, error: eventsErr } = await supabase
+          .from('matter_events')
+          .select('matter_id, created_at')
+          .in('matter_id', activeMatterIds)
+          .order('created_at', { ascending: false })
+        if (eventsErr) throw eventsErr
+        const lastActivity = new Map<string, string>()
+        for (const e of events ?? []) {
+          if (!lastActivity.has(e.matter_id)) lastActivity.set(e.matter_id, e.created_at)
+        }
+        let stalest: { matter: (typeof report.matters)[number]; days: number } | null = null
+        for (const m of report.matters) {
+          if (!activeMatterIds.includes(m.id)) continue
+          const last = lastActivity.get(m.id) ?? m.opened_on
+          const days = differenceInCalendarDays(now, new Date(last))
+          if (days >= 15 && (!stalest || days > stalest.days)) stalest = { matter: m, days }
+        }
+        if (stalest) {
+          insights.push({
+            id: 'stale-matter',
+            severity: 'warning',
+            title: `Matter ${stalest.matter.matter_number ?? stalest.matter.title} has had no activity for ${stalest.days} days`,
+            detail: stalest.matter.title,
+            to: `/matters/${stalest.matter.id}`,
+          })
+        }
+      }
+
+      // 10. Documents uploaded today — a positive, informational signal.
+      const docsToday = docsTodayRes.count ?? 0
+      if (docsToday > 0) {
+        insights.push({
+          id: 'docs-today',
+          severity: 'positive',
+          title: `${docsToday} document${docsToday === 1 ? '' : 's'} uploaded today`,
+          to: '/documents',
+        })
+      }
+
       insights.sort((a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity))
 
       if (insights.length === 0) {
         insights.push({
           id: 'all-clear',
           severity: 'positive',
-          title: 'All clear',
-          detail: 'No deadline, billing or workload risks detected right now',
+          title: 'All clear.',
+          detail: 'No urgent issues detected.',
           to: '/reports',
         })
       }

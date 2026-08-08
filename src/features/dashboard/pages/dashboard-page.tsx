@@ -1,19 +1,38 @@
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
-import { Banknote, Briefcase, CheckSquare, Clock, Gavel, Sparkles, TrendingUp, ArrowRight, Users, AlertCircle, History } from 'lucide-react'
+import {
+  Banknote,
+  Briefcase,
+  CalendarClock,
+  CheckSquare,
+  Clock,
+  FolderOpen,
+  Gavel,
+  Receipt,
+  Sparkles,
+  Users,
+  AlertCircle,
+  AlertTriangle,
+  Wallet,
+  History,
+} from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useActivityTrend } from '@/features/dashboard/hooks/use-activity-trend'
+import { useDateRange } from '@/features/dashboard/hooks/use-date-range'
 import { useDashboardKpis } from '@/features/dashboard/hooks/use-dashboard-kpis'
+import { useMyDashboardKpis } from '@/features/dashboard/hooks/use-my-dashboard-kpis'
 import { useFirmInsights } from '@/features/dashboard/hooks/use-firm-insights'
 import { useRecentMatters } from '@/features/dashboard/hooks/use-recent-matters'
 import { useBillingStats, usePersonalStats } from '@/features/billing/hooks/use-billing'
 import { StatTile } from '@/features/dashboard/components/stat-tile'
+import { DateRangeControl } from '@/features/dashboard/components/date-range-control'
+import { FirmActivityCard } from '@/features/dashboard/components/firm-activity-card'
+import { BillableHoursCard } from '@/features/dashboard/components/billable-hours-card'
+import { RecentActivityFeed } from '@/features/dashboard/components/recent-activity-feed'
 import { MATTER_STATUS_META } from '@/features/matters/types'
 import { formatMoneyCompact, initialsOf } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
 import { PageHeader } from '@/shared/components/page-header'
-import { Sparkline } from '@/shared/components/sparkline'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Skeleton } from '@/shared/components/ui/skeleton'
@@ -22,8 +41,10 @@ export function DashboardPage() {
   const { profile, activeMembership, activeOrgId, userId } = useAuth()
   const { has } = usePermissions()
   const canFinancials = has('reports.financial')
-  const { data: trend, isLoading } = useActivityTrend(activeOrgId)
+  const dateRange = useDateRange()
+
   const { data: kpis, isLoading: kpisLoading } = useDashboardKpis(activeOrgId)
+  const { data: myKpis, isLoading: myKpisLoading } = useMyDashboardKpis(canFinancials ? null : activeOrgId, userId)
   // Firm revenue is restricted to leadership/finance; others see their own numbers.
   const { data: billing, isLoading: billingLoading } = useBillingStats(canFinancials ? activeOrgId : null)
   const { data: personal, isLoading: personalLoading } = usePersonalStats(canFinancials ? null : activeOrgId, userId)
@@ -32,6 +53,9 @@ export function DashboardPage() {
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'there'
   const orgName = activeMembership?.organization.name
+  const s = billing
+  const p = personal
+  const my = myKpis
 
   return (
     <div>
@@ -40,180 +64,94 @@ export function DashboardPage() {
         description={orgName ? `Here's what's happening at ${orgName} today.` : undefined}
       />
 
-      {/* KPIs — always a single row; scrolls horizontally instead of wrapping */}
+      {/* KPIs — role-aware, always a single row; scrolls horizontally instead of wrapping */}
       <div className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">
         {canFinancials ? (
-          <StatTile
-            label="Revenue (MTD)"
-            value={formatMoneyCompact(billing?.revenueMTD ?? 0)}
-            hint="Invoiced this month"
-            icon={Banknote}
-            loading={billingLoading}
-          />
+          <>
+            <StatTile label="Active matters" countTo={kpis?.activeMatters ?? 0} value={String(kpis?.activeMatters ?? 0)} hint="Open, pending or in court" icon={Briefcase} loading={kpisLoading} />
+            <StatTile label="Open matters" countTo={kpis?.openMatters ?? 0} value={String(kpis?.openMatters ?? 0)} hint="Not yet in court" icon={FolderOpen} loading={kpisLoading} />
+            <StatTile label="Matters in court" countTo={kpis?.mattersInCourt ?? 0} value={String(kpis?.mattersInCourt ?? 0)} hint="Currently litigating" icon={Gavel} loading={kpisLoading} />
+            <StatTile label="Hearings this week" countTo={kpis?.hearingsThisWeek ?? 0} value={String(kpis?.hearingsThisWeek ?? 0)} hint="Next 7 days" icon={CalendarClock} loading={kpisLoading} />
+            <StatTile label="Active clients" countTo={kpis?.activeClients ?? 0} value={String(kpis?.activeClients ?? 0)} hint="Currently active" icon={Users} loading={kpisLoading} />
+            <StatTile label="Billable hours (firm)" value={`${s?.billableHoursMTD ?? 0}h`} hint="This month" icon={Clock} loading={billingLoading} />
+            <StatTile label="Revenue this month" value={formatMoneyCompact(s?.revenueMTD ?? 0)} hint="Invoiced this month" icon={Banknote} loading={billingLoading} />
+            <StatTile label="Outstanding invoices" value={formatMoneyCompact(s?.outstanding ?? 0)} hint="Invoiced, not yet collected" icon={AlertCircle} loading={billingLoading} />
+            <StatTile label="Unbilled work" value={formatMoneyCompact(s?.unbilledValue ?? 0)} hint="Not yet invoiced" icon={Wallet} loading={billingLoading} />
+            <StatTile label="Overdue invoices" countTo={s?.overdueCount ?? 0} value={String(s?.overdueCount ?? 0)} hint="Past due date" icon={AlertTriangle} loading={billingLoading} />
+          </>
         ) : (
-          <StatTile
-            label="My billable hours (MTD)"
-            value={`${personal?.billableHoursMTD ?? 0}h`}
-            hint="Time you logged this month"
-            icon={Clock}
-            loading={personalLoading}
-          />
-        )}
-        <StatTile
-          label="Active matters"
-          value={String(kpis?.activeMatters ?? 0)}
-          hint="Open, pending or in court"
-          icon={Briefcase}
-          loading={kpisLoading}
-        />
-        <StatTile
-          label="Hearings this week"
-          value={String(kpis?.hearingsThisWeek ?? 0)}
-          hint="Next 7 days"
-          icon={Gavel}
-          loading={kpisLoading}
-        />
-        {canFinancials ? (
-          <StatTile
-            label="Billable hours (MTD)"
-            value={`${billing?.billableHoursMTD ?? 0}h`}
-            hint="Billable time this month"
-            icon={Clock}
-            loading={billingLoading}
-          />
-        ) : (
-          <StatTile
-            label="My open tasks"
-            value={String(personal?.openTasks ?? 0)}
-            hint="Assigned to you, not yet done"
-            icon={CheckSquare}
-            loading={personalLoading}
-          />
-        )}
-        <StatTile
-          label="Active clients"
-          value={String(kpis?.activeClients ?? 0)}
-          hint="Currently active"
-          icon={Users}
-          loading={kpisLoading}
-        />
-        {canFinancials && (
-          <StatTile
-            label="Outstanding invoices"
-            value={formatMoneyCompact(billing?.outstanding ?? 0)}
-            hint="Invoiced, not yet collected"
-            icon={AlertCircle}
-            loading={billingLoading}
-          />
-        )}
-        {canFinancials && (
-          <StatTile
-            label="Payments received (MTD)"
-            value={formatMoneyCompact(billing?.paymentsReceivedMTD ?? 0)}
-            hint={`${billing?.unpaidInvoicesCount ?? 0} unpaid invoices`}
-            icon={Banknote}
-            loading={billingLoading}
-          />
-        )}
-        {canFinancials && (
-          <StatTile
-            label="Overdue invoices"
-            value={String(billing?.overdueCount ?? 0)}
-            hint="Past due date, not fully paid"
-            icon={AlertCircle}
-            loading={billingLoading}
-          />
+          <>
+            <StatTile label="My active matters" countTo={my?.myActiveMatters ?? 0} value={String(my?.myActiveMatters ?? 0)} hint="You lead these" icon={Briefcase} loading={myKpisLoading} />
+            <StatTile label="My hearings this week" countTo={my?.myHearingsThisWeek ?? 0} value={String(my?.myHearingsThisWeek ?? 0)} hint="Next 7 days" icon={CalendarClock} loading={myKpisLoading} />
+            <StatTile label="My open tasks" countTo={p?.openTasks ?? 0} value={String(p?.openTasks ?? 0)} hint="Assigned to you, not yet done" icon={CheckSquare} loading={personalLoading} />
+            <StatTile label="My clients" countTo={my?.myClients ?? 0} value={String(my?.myClients ?? 0)} hint="Across matters you lead" icon={Users} loading={myKpisLoading} />
+            <StatTile label="My billable hours" value={`${p?.billableHoursMTD ?? 0}h`} hint="This month" icon={Clock} loading={personalLoading} />
+            <StatTile label="My logged expenses" value={formatMoneyCompact(p?.expensesMTD ?? 0)} hint="This month" icon={Receipt} loading={personalLoading} />
+          </>
         )}
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        {/* Activity trend */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle className="text-lg">Activity trend</CardTitle>
-              <p className="mt-0.5 text-sm text-muted-foreground">Firm momentum over the last 14 days</p>
-            </div>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-24 w-full" />
-            ) : (
-              <>
-                <div className="flex items-end gap-6">
-                  <div>
-                    <p className="font-display text-3xl font-semibold">{trend?.total ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">events · 14 days</p>
-                  </div>
-                  <div className="pb-1">
-                    <p className="font-display text-2xl font-semibold">{trend?.today ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">today</p>
-                  </div>
-                </div>
-                <Sparkline data={(trend?.points ?? []).map((p) => p.value)} className="mt-4" />
-                <div className="mt-4 flex justify-end">
-                  <Link
-                    to="/notifications"
-                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                  >
-                    View live activity <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+      {/* Trend chart + insights */}
+      <div className="mt-6 space-y-4">
+        <DateRangeControl
+          range={dateRange.range}
+          onPresetChange={dateRange.setPreset}
+          onCustomFromChange={dateRange.setCustomFrom}
+          onCustomToChange={dateRange.setCustomTo}
+        />
+        <div className="grid gap-6 lg:grid-cols-3">
+          {canFinancials ? <FirmActivityCard range={dateRange.range} /> : <BillableHoursCard range={dateRange.range} />}
 
-        {/* Insights — rule-based risk & opportunity scan over the firm's live data */}
-        <Card className="relative overflow-hidden">
-          <div
-            className="pointer-events-none absolute inset-0 opacity-60"
-            style={{
-              backgroundImage:
-                'radial-gradient(24rem 24rem at 100% 0%, hsl(var(--primary) / 0.10), transparent 60%)',
-            }}
-          />
-          <CardHeader className="relative flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle className="text-lg">Insights</CardTitle>
-              <p className="mt-0.5 text-sm text-muted-foreground">From your firm's live data</p>
-            </div>
-            <Sparkles className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent className="relative">
-            {insightsLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
+          {/* Insights — rule-based risk & opportunity scan over the firm's live data */}
+          <Card className="relative overflow-hidden">
+            <div
+              className="pointer-events-none absolute inset-0 opacity-60"
+              style={{
+                backgroundImage:
+                  'radial-gradient(24rem 24rem at 100% 0%, hsl(var(--primary) / 0.10), transparent 60%)',
+              }}
+            />
+            <CardHeader className="relative flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle className="text-lg">Insights</CardTitle>
+                <p className="mt-0.5 text-sm text-muted-foreground">From your firm's live data</p>
               </div>
-            ) : (
-              <ul className="space-y-3">
-                {(insights ?? []).map((insight) => (
-                  <li key={insight.id}>
-                    <Link to={insight.to} className="group flex items-start gap-2.5">
-                      <span
-                        className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', {
-                          'bg-destructive': insight.severity === 'alert',
-                          'bg-warning': insight.severity === 'warning',
-                          'bg-primary': insight.severity === 'suggestion',
-                          'bg-success': insight.severity === 'positive',
-                        })}
-                      />
-                      <span className="min-w-0">
-                        <span className="block text-sm font-medium group-hover:underline">{insight.title}</span>
-                        {insight.detail && (
-                          <span className="block truncate text-xs text-muted-foreground">{insight.detail}</span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+              <Sparkles className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent className="relative">
+              {insightsLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {(insights ?? []).map((insight) => (
+                    <li key={insight.id}>
+                      <Link to={insight.to} className="group flex items-start gap-2.5">
+                        <span
+                          className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', {
+                            'bg-destructive': insight.severity === 'alert',
+                            'bg-warning': insight.severity === 'warning',
+                            'bg-primary': insight.severity === 'suggestion',
+                            'bg-success': insight.severity === 'positive',
+                          })}
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-medium group-hover:underline">{insight.title}</span>
+                          {insight.detail && (
+                            <span className="block truncate text-xs text-muted-foreground">{insight.detail}</span>
+                          )}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Recently updated matters */}
@@ -229,7 +167,7 @@ export function DashboardPage() {
           {recentMattersLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+                <Skeleton key={i} className="h-14 w-full" />
               ))}
             </div>
           ) : recentMatters && recentMatters.length > 0 ? (
@@ -246,7 +184,9 @@ export function DashboardPage() {
                         <p className="truncate text-sm font-medium">{m.title}</p>
                         <p className="truncate text-xs text-muted-foreground">
                           {m.matter_number} {m.client ? `· ${m.client.display_name}` : ''}
+                          {m.lead_lawyer?.full_name ? ` · ${m.lead_lawyer.full_name}` : ''}
                         </p>
+                        {m.latestActivity && <p className="mt-0.5 truncate text-xs text-muted-foreground">Latest: {m.latestActivity}</p>}
                       </div>
                       <Badge variant={status.variant}>{status.label}</Badge>
                       <span className="w-28 shrink-0 text-right text-xs text-muted-foreground">
@@ -262,6 +202,8 @@ export function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      <RecentActivityFeed />
     </div>
   )
 }

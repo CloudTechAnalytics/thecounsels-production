@@ -281,6 +281,7 @@ export interface Database {
           metadata: Json
           ip_address: string | null
           created_at: string
+          is_platform_action: boolean
         }
         Insert: {
           id?: string
@@ -292,6 +293,7 @@ export interface Database {
           summary?: string | null
           metadata?: Json
           ip_address?: string | null
+          is_platform_action?: boolean
         }
         Update: Partial<Database['public']['Tables']['audit_logs']['Insert']>
         Relationships: []

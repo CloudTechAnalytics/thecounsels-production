@@ -52,17 +52,39 @@ export const tasksService = {
     if (error) throw error
   },
 
-  async update(id: string, values: TaskFormValues): Promise<void> {
-    const { error } = await supabase.from('tasks').update(toRow(values)).eq('id', id)
+  async update(id: string, organizationId: string, values: TaskFormValues): Promise<void> {
+    const { data, error } = await supabase.from('tasks').update(toRow(values)).eq('id', id).select('title').single()
     if (error) throw error
+    // Logged here (not a DB trigger) so standalone tasks — no matter_id, which
+    // the matter_events trigger requires — still show up in firm activity.
+    if (values.status === 'done') {
+      await supabase.rpc('log_audit', {
+        p_org: organizationId,
+        p_action: 'task.completed',
+        p_entity_type: 'task',
+        p_entity_id: id,
+        p_summary: `Completed task: ${data.title}`,
+      })
+    }
   },
 
-  async setStatus(id: string, status: TaskStatus): Promise<void> {
-    const { error } = await supabase
+  async setStatus(id: string, organizationId: string, status: TaskStatus): Promise<void> {
+    const { data, error } = await supabase
       .from('tasks')
       .update({ status, completed_at: status === 'done' ? new Date().toISOString() : null })
       .eq('id', id)
+      .select('title')
+      .single()
     if (error) throw error
+    if (status === 'done') {
+      await supabase.rpc('log_audit', {
+        p_org: organizationId,
+        p_action: 'task.completed',
+        p_entity_type: 'task',
+        p_entity_id: id,
+        p_summary: `Completed task: ${data.title}`,
+      })
+    }
   },
 
   async remove(id: string): Promise<void> {

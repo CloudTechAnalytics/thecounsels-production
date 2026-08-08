@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
+import { useCountUp } from '@/shared/hooks/use-count-up'
 import { Card } from '@/shared/components/ui/card'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { cn } from '@/shared/lib/utils'
@@ -7,6 +8,7 @@ import { cn } from '@/shared/lib/utils'
 export function StatTile({
   label,
   value,
+  countTo,
   hint,
   icon: Icon,
   trend,
@@ -14,11 +16,15 @@ export function StatTile({
 }: {
   label: string
   value: string
+  /** For plain integer counts only — animates 0 → countTo on mount instead of rendering `value` directly. */
+  countTo?: number
   hint?: string
   icon: LucideIcon
   trend?: { direction: 'up' | 'down'; value: string }
   loading?: boolean
 }) {
+  const animated = useCountUp(countTo ?? 0)
+
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between">
@@ -46,7 +52,9 @@ export function StatTile({
         {loading ? (
           <Skeleton className="mt-1.5 h-8 w-24" />
         ) : (
-          <p className="mt-1 font-display text-2xl font-semibold tracking-tight">{value}</p>
+          <p className="mt-1 animate-in fade-in slide-in-from-bottom-1 font-display text-2xl font-semibold tracking-tight duration-500">
+            {countTo != null ? animated.toLocaleString() : value}
+          </p>
         )}
         {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       </div>

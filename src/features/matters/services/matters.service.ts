@@ -70,19 +70,20 @@ export const mattersService = {
   },
 
   async update(id: string, organizationId: string, values: MatterFormValues): Promise<MatterRow> {
+    const isClosing = ['closed', 'won', 'lost'].includes(values.status)
     const patch = {
       ...toRow(values),
-      closed_on: ['closed', 'won', 'lost'].includes(values.status) ? new Date().toISOString().slice(0, 10) : null,
+      closed_on: isClosing ? new Date().toISOString().slice(0, 10) : null,
     }
     const { data, error } = await supabase.from('matters').update(patch).eq('id', id).select(MATTER_SELECT).single()
     if (error) throw error
     const row = data as unknown as MatterRow
     await supabase.rpc('log_audit', {
       p_org: organizationId,
-      p_action: 'matter.updated',
+      p_action: isClosing ? 'matter.closed' : 'matter.updated',
       p_entity_type: 'matter',
       p_entity_id: id,
-      p_summary: `Updated matter ${row.matter_number ?? ''}`,
+      p_summary: isClosing ? `Closed matter ${row.matter_number ?? ''} — ${row.title}` : `Updated matter ${row.matter_number ?? ''}`,
     })
     return row
   },
@@ -113,10 +114,22 @@ export const mattersService = {
   },
 
   async addNote(organizationId: string, matterId: string, body: string, authorId: string | null): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('matter_notes')
       .insert({ organization_id: organizationId, matter_id: matterId, author_id: authorId, body })
+      .select('id')
+      .single()
     if (error) throw error
+    // Not a DB trigger (unlike document_added etc.) so it can carry a real
+    // summary preview; matter_id in metadata lets the activity feed link back.
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'note.added',
+      p_entity_type: 'matter_note',
+      p_entity_id: data.id,
+      p_summary: `Added a note: ${body.slice(0, 80)}`,
+      p_metadata: { matter_id: matterId },
+    })
   },
 
   async updateNote(id: string, body: string, editedBy: string | null): Promise<void> {

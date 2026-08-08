@@ -36,7 +36,7 @@ export function useCreateTask(organizationId: string | null, createdBy: string |
 export function useUpdateTask(organizationId: string | null) {
   const invalidate = useInvalidate(organizationId)
   return useMutation({
-    mutationFn: ({ id, values }: { id: string; values: TaskFormValues }) => tasksService.update(id, values),
+    mutationFn: ({ id, values }: { id: string; values: TaskFormValues }) => tasksService.update(id, organizationId!, values),
     onSuccess: invalidate,
   })
 }
@@ -44,7 +44,7 @@ export function useUpdateTask(organizationId: string | null) {
 export function useSetTaskStatus(organizationId: string | null) {
   const invalidate = useInvalidate(organizationId)
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: TaskStatus }) => tasksService.setStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: TaskStatus }) => tasksService.setStatus(id, organizationId!, status),
     onSuccess: invalidate,
   })
 }

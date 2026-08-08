@@ -3,11 +3,13 @@ import { supabase } from '@/shared/lib/supabase'
 
 export interface DashboardKpis {
   activeMatters: number
+  openMatters: number
+  mattersInCourt: number
   hearingsThisWeek: number
   activeClients: number
 }
 
-/** Matter and hearing counts for the dashboard KPI tiles. */
+/** Firm-wide matter/hearing/client counts for the dashboard KPI tiles. */
 export function useDashboardKpis(organizationId: string | null) {
   return useQuery({
     queryKey: ['dashboard', 'kpis', organizationId],
@@ -20,11 +22,8 @@ export function useDashboardKpis(organizationId: string | null) {
       weekEnd.setDate(weekStart.getDate() + 7)
 
       const [matters, hearings, clients] = await Promise.all([
-        supabase
-          .from('matters')
-          .select('id', { count: 'exact', head: true })
-          .eq('organization_id', organizationId!)
-          .in('status', ['open', 'pending', 'in_court']),
+        // One query for all three matter-status KPIs — cheaper than three count-head queries.
+        supabase.from('matters').select('status').eq('organization_id', organizationId!),
         supabase
           .from('hearings')
           .select('id', { count: 'exact', head: true })
@@ -42,8 +41,11 @@ export function useDashboardKpis(organizationId: string | null) {
       if (hearings.error) throw hearings.error
       if (clients.error) throw clients.error
 
+      const statuses = (matters.data ?? []).map((m) => m.status)
       return {
-        activeMatters: matters.count ?? 0,
+        activeMatters: statuses.filter((s) => s === 'open' || s === 'pending' || s === 'in_court').length,
+        openMatters: statuses.filter((s) => s === 'open').length,
+        mattersInCourt: statuses.filter((s) => s === 'in_court').length,
         hearingsThisWeek: hearings.count ?? 0,
         activeClients: clients.count ?? 0,
       }

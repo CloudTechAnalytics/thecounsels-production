@@ -44,7 +44,7 @@ export function BillingPage() {
     <div>
       <PageHeader title="Billing" description="Revenue, active plans and upcoming renewals across the platform." />
 
-      <div className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <KpiCard label="Monthly Revenue" value={formatMoneyCompact(stats.data?.mrr ?? 0)} hint="MRR" icon={Banknote} loading={stats.isLoading} />
         <KpiCard label="Annual Revenue" value={formatMoneyCompact(stats.data?.arr ?? 0)} hint="ARR" icon={CircleDollarSign} loading={stats.isLoading} />
         <KpiCard label="Active Plans" value={active.length} hint="Billing now" icon={CreditCard} loading={isLoading} />

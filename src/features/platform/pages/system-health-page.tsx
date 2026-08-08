@@ -88,7 +88,7 @@ export function SystemHealthPage() {
       </div>
 
       <h2 className="mb-4 mt-8 font-display text-lg font-semibold">Platform usage</h2>
-      <div className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <KpiCard label="Organizations" value={stats?.totalOrganizations ?? 0} hint="Active law firms" icon={Building2} loading={statsLoading} />
         <KpiCard label="Users" value={stats?.totalUsers ?? 0} hint="Across all firms" icon={Users} loading={statsLoading} />
         <KpiCard label="Storage used" value={formatStorage(storageUsed)} hint="Documents, avatars & logos" icon={HardDrive} loading={!orgs} />

@@ -115,7 +115,7 @@ export function SubscriptionsPage() {
         description="Assign plans to customer organizations. Revenue is computed from active plans."
       />
 
-      <div className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <KpiCard label="MRR" value={formatMoneyCompact(stats.data?.mrr ?? 0)} hint="Monthly recurring revenue" icon={TrendingUp} loading={stats.isLoading} />
         <KpiCard label="ARR" value={formatMoneyCompact(stats.data?.arr ?? 0)} hint="Annualised" icon={CircleDollarSign} loading={stats.isLoading} />
         <KpiCard label="Customers" value={data?.length ?? 0} hint="Paying + trial tenants" icon={Building2} loading={isLoading} />

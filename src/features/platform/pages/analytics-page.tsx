@@ -41,7 +41,7 @@ export function AnalyticsPage() {
     <div>
       <PageHeader title="Platform Analytics" description="Growth, adoption and activity across all tenants." />
 
-      <div className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <KpiCard label="Organizations" value={stats.data?.totalOrganizations ?? 0} icon={Building2} loading={stats.isLoading} />
         <KpiCard label="New This Month" value={stats.data?.organizationsThisMonth ?? 0} icon={UserPlus} loading={stats.isLoading} />
         <KpiCard label="Total Users" value={stats.data?.totalUsers ?? 0} icon={Users2} loading={stats.isLoading} />

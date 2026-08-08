@@ -42,7 +42,7 @@ export function SupportTicketsPage() {
         actions={<Button onClick={() => setCreateOpen(true)}><Plus /> New ticket</Button>}
       />
 
-      <div className="mb-6 grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <KpiCard label="Open" value={open.length} hint="Awaiting resolution" icon={Inbox} loading={isLoading} />
         <KpiCard label="High priority" value={urgent.length} hint="Urgent or high, still open" icon={AlertTriangle} loading={isLoading} />
         <KpiCard label="Unassigned" value={unassigned.length} hint="No engineer assigned yet" icon={Timer} loading={isLoading} />

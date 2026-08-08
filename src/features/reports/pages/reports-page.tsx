@@ -295,7 +295,7 @@ export function ReportsPage() {
       <FiltersBar filters={filters} set={setFilter} />
 
       {/* KPI summary row — persistent across tabs, org-wide (not per-lawyer attributed), fixes the "shows 0" bugs */}
-      <div className="mb-6 grid grid-flow-col auto-cols-[minmax(140px,1fr)] gap-4 overflow-x-auto pb-1">
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <StatTile label="Active Matters" value={String(kpis?.activeMatters ?? 0)} icon={Briefcase} loading={kpisLoading} />
         <StatTile label="Closed Matters" value={String(kpis?.closedMatters ?? 0)} icon={Briefcase} loading={kpisLoading} />
         <StatTile label="Active Clients" value={String(kpis?.activeClients ?? 0)} icon={Users} loading={kpisLoading} />
@@ -328,7 +328,7 @@ export function ReportsPage() {
         </div>
       ) : tab === 'Financial' ? (
         <div className="space-y-6">
-          <div className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <StatTile label="Invoiced" value={formatMoneyCompact(c.financial.invoiced)} icon={Banknote} />
             <StatTile label="Collected" value={formatMoneyCompact(c.financial.collected)} icon={CircleDollarSign} />
             <StatTile label="Outstanding" value={formatMoneyCompact(c.financial.outstanding)} icon={AlertTriangle} />
@@ -388,7 +388,7 @@ export function ReportsPage() {
         </div>
       ) : tab === 'Matters' ? (
         <div className="space-y-6">
-          <div className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">
+          <div className="grid grid-cols-2 gap-4">
             <StatTile label="Total matters" value={String(c.matters.total)} icon={Briefcase} />
             <StatTile label="Open matters" value={String(c.matters.open)} icon={Briefcase} />
           </div>
@@ -413,7 +413,7 @@ export function ReportsPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <StatTile label="Clients" value={String(c.clients.rows.length)} icon={Users} />
             <StatTile label="Individuals" value={String(c.clients.individuals)} icon={Users} />
             <StatTile label="Corporate" value={String(c.clients.corporate)} icon={Briefcase} />

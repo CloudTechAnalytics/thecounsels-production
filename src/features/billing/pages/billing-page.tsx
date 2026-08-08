@@ -89,7 +89,7 @@ export function BillingPage() {
       />
 
       {canFinancials ? (
-        <div className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <StatTile label="Revenue (MTD)" value={s ? formatMoneyCompact(s.revenueMTD) : '—'} icon={Banknote} />
           <StatTile label="Billable hours (MTD)" value={s ? `${s.billableHoursMTD}h` : '—'} icon={Clock} />
           <StatTile label="Unbilled (WIP)" value={s ? formatMoneyCompact(s.unbilledValue) : '—'} icon={Wallet} />
@@ -101,7 +101,7 @@ export function BillingPage() {
           <StatTile label="Overdue invoices" value={s ? String(s.overdueCount) : '—'} icon={AlertTriangle} />
         </div>
       ) : (
-        <div className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] gap-4 overflow-x-auto pb-1">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <StatTile label="My billable hours (MTD)" value={p ? `${p.billableHoursMTD}h` : '—'} hint="Time you logged this month" icon={Clock} />
           <StatTile label="My unbilled work" value={p ? formatMoneyCompact(p.unbilledValue) : '—'} hint="Your time & expenses awaiting invoicing" icon={Wallet} />
           <StatTile label="My expenses (MTD)" value={p ? formatMoneyCompact(p.expensesMTD) : '—'} hint="Expenses you logged this month" icon={Receipt} />

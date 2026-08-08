@@ -227,7 +227,7 @@ function HeroEmblem() {
       {/* concentric seal rings */}
       <div className="absolute inset-0 rounded-full border border-dashed border-primary/30" />
       <div className="absolute inset-[13%] rounded-full border border-primary/15" />
-      <div className="absolute inset-[26%] rounded-full border border-white/10 bg-white/[0.03]" />
+      <div className="absolute inset-[26%] rounded-full border border-foreground/10 bg-foreground/[0.03]" />
 
       {/* orbiting practice modules (counter-rotated to stay upright) */}
       <motion.div
@@ -250,10 +250,10 @@ function HeroEmblem() {
                 transition={{ duration: spin, repeat: Infinity, ease: 'linear' }}
                 className="flex flex-col items-center gap-1"
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/40 bg-sidebar text-primary shadow-elevated sm:h-12 sm:w-12 sm:rounded-xl">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/40 bg-background text-primary shadow-elevated sm:h-12 sm:w-12 sm:rounded-xl">
                   <o.icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
                 </span>
-                <span className="text-[7px] font-medium uppercase tracking-wider text-white/40 sm:text-[10px]">
+                <span className="text-[7px] font-medium uppercase tracking-wider text-foreground/40 sm:text-[10px]">
                   {o.label}
                 </span>
               </motion.div>
@@ -301,37 +301,37 @@ export function LandingPage() {
         initial={{ y: -24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
-        className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-sidebar/80 backdrop-blur-md"
+        className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md"
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-gold">
               <Scale className="h-5 w-5" />
             </span>
-            <p className="font-display text-lg font-semibold text-white">{APP.product}</p>
+            <p className="font-display text-lg font-semibold text-foreground">{APP.product}</p>
           </div>
 
           <nav className="hidden items-center gap-8 md:flex">
-            <a href="#features" className="text-sm text-white/60 transition-colors hover:text-white">
+            <a href="#features" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               Products
             </a>
-            <a href="#how-it-works" className="text-sm text-white/60 transition-colors hover:text-white">
+            <a href="#how-it-works" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               Solutions
             </a>
-            <a href="#faq" className="text-sm text-white/60 transition-colors hover:text-white">
+            <a href="#faq" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               Resources
             </a>
-            <a href="#contact" className="text-sm text-white/60 transition-colors hover:text-white">
+            <a href="#contact" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               Contacts
             </a>
           </nav>
 
           <div className="flex items-center gap-3">
-            <ThemeToggle className="text-white/70 hover:bg-white/10 hover:text-white" />
+            <ThemeToggle />
             <Button
               size="sm"
               variant="outline"
-              className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              className="border-border bg-transparent text-foreground hover:bg-accent hover:text-foreground"
               onClick={goToLogin}
             >
               Log in
@@ -344,7 +344,7 @@ export function LandingPage() {
       </motion.header>
 
       {/* ── Hero ────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-sidebar pb-24 pt-36 text-white">
+      <section className="relative overflow-hidden bg-background pb-24 pt-36 text-foreground">
         {/* judicial backdrop: crisp watermark scales + gold hairlines */}
         <div aria-hidden className="pointer-events-none absolute inset-0">
           <Scale
@@ -367,7 +367,7 @@ export function LandingPage() {
           <motion.div variants={stagger} initial="hidden" animate="show">
             <motion.p
               variants={fadeUp}
-              className="mb-4 flex items-center gap-2 text-sm font-medium uppercase tracking-[0.18em] text-white/50"
+              className="mb-4 flex items-center gap-2 text-sm font-medium uppercase tracking-[0.18em] text-foreground/50"
             >
               <Sparkles className="h-3.5 w-3.5 text-primary" /> {APP.brand}
             </motion.p>
@@ -381,12 +381,12 @@ export function LandingPage() {
               <br />
               with Confidence.
             </motion.h1>
-            <motion.p variants={fadeUp} className="mt-6 max-w-lg text-lg leading-relaxed text-white/60">
+            <motion.p variants={fadeUp} className="mt-6 max-w-lg text-lg leading-relaxed text-muted-foreground">
               Manage cases, clients, hearings, documents, billing, and legal operations from one
               secure workspace built for modern law firms.
             </motion.p>
             <motion.div variants={fadeUp} className="mt-9 flex flex-wrap items-center gap-4">
-              <Button asChild size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
+              <Button asChild size="lg" variant="outline" className="border-border bg-transparent text-foreground hover:bg-accent hover:text-foreground">
                 <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Book a Demo</a>
               </Button>
               <Button asChild size="lg" className="shadow-gold">
@@ -395,7 +395,7 @@ export function LandingPage() {
                 </Link>
               </Button>
             </motion.div>
-            <motion.p variants={fadeUp} className="mt-6 text-xs text-white/35">
+            <motion.p variants={fadeUp} className="mt-6 text-xs text-foreground/35">
               3 months free, no card required. Set up your firm in minutes.
             </motion.p>
           </motion.div>
@@ -636,7 +636,7 @@ export function LandingPage() {
       </section>
 
       {/* ── CTA band / Contact ──────────────────────────────── */}
-      <section id="contact" className="relative overflow-hidden bg-sidebar text-white">
+      <section id="contact" className="relative overflow-hidden bg-background text-foreground">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-70"
@@ -649,7 +649,7 @@ export function LandingPage() {
           <motion.h2 variants={fadeUp} className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
             Ready to run a modern practice?
           </motion.h2>
-          <motion.p variants={fadeUp} className="mx-auto mt-4 max-w-xl text-white/60">
+          <motion.p variants={fadeUp} className="mx-auto mt-4 max-w-xl text-muted-foreground">
             Join the firms replacing scattered spreadsheets and shared drives with one elegant,
             secure workspace.
           </motion.p>
@@ -659,21 +659,21 @@ export function LandingPage() {
                 Start Free <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
+            <Button asChild size="lg" variant="outline" className="border-border bg-transparent text-foreground hover:bg-accent hover:text-foreground">
               <Link to="/auth/login">Sign in</Link>
             </Button>
-            <Button asChild size="lg" variant="ghost" className="text-white hover:bg-white/10 hover:text-white">
+            <Button asChild size="lg" variant="ghost" className="text-foreground hover:bg-accent hover:text-foreground">
               <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Talk to our team</a>
             </Button>
           </motion.div>
           <motion.div
             variants={fadeUp}
-            className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/50"
+            className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-foreground/50"
           >
             <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors hover:text-primary">
               {CONTACT_EMAIL}
             </a>
-            <span className="hidden text-white/20 sm:inline">•</span>
+            <span className="hidden text-foreground/20 sm:inline">•</span>
             <a href={`tel:${CONTACT_PHONE_TEL}`} className="transition-colors hover:text-primary">
               {CONTACT_PHONE_DISPLAY}
             </a>
@@ -682,7 +682,7 @@ export function LandingPage() {
       </section>
 
       {/* ── Footer ──────────────────────────────────────────── */}
-      <footer className="border-t border-white/10 bg-sidebar py-16 text-white">
+      <footer className="border-t border-border bg-background py-16 text-foreground">
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             <div>
@@ -692,18 +692,18 @@ export function LandingPage() {
                 </span>
                 <div className="leading-tight">
                   <p className="font-display font-semibold">{APP.product}</p>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">{APP.brand}</p>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{APP.brand}</p>
                 </div>
               </div>
-              <p className="mt-4 max-w-[220px] text-sm leading-relaxed text-white/50">
+              <p className="mt-4 max-w-[220px] text-sm leading-relaxed text-muted-foreground">
                 One secure workspace for matters, billing, hearings, documents and reports — built
                 for modern law firms.
               </p>
             </div>
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">Product</p>
-              <ul className="mt-4 space-y-2.5 text-sm text-white/60">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Product</p>
+              <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
                 <li>
                   <a href="#features" className="transition-colors hover:text-primary">
                     Features
@@ -728,8 +728,8 @@ export function LandingPage() {
             </div>
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">Company</p>
-              <ul className="mt-4 space-y-2.5 text-sm text-white/60">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Company</p>
+              <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
                 <li>
                   <a href="#contact" className="transition-colors hover:text-primary">
                     Contact
@@ -757,8 +757,8 @@ export function LandingPage() {
             </div>
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">Get in touch</p>
-              <ul className="mt-4 space-y-2.5 text-sm text-white/60">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Get in touch</p>
+              <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
                 <li>
                   <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors hover:text-primary">
                     {CONTACT_EMAIL}
@@ -773,7 +773,7 @@ export function LandingPage() {
             </div>
           </div>
 
-          <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-8 text-xs text-white/40 sm:flex-row">
+          <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-border pt-8 text-xs text-muted-foreground sm:flex-row">
             <p>
               © {year} {APP.brand}. All rights reserved.
             </p>

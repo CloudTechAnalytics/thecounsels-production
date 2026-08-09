@@ -26,6 +26,9 @@ export const NOTIFICATION_CATEGORY_META: Record<NotificationCategory, { label: s
  * cover future event types (e.g. a bare hearing/task reminder) that don't yet exist. */
 export function resolveNotificationHref(n: Pick<NotificationRow, 'entity_type' | 'entity_id' | 'category'>): string {
   if (n.entity_type === 'matter' && n.entity_id) return `/matters/${n.entity_id}`
+  // Trial/subscription reminders (notify_org_members, migration 0055) — send
+  // to Firm Settings' Plan & Billing tab, not the time/expense billing page.
+  if (n.entity_type === 'subscription') return '/administration'
   switch (n.category) {
     case 'clients': return '/clients'
     case 'hearings': return '/hearings'

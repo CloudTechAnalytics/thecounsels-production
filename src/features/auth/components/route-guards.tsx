@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
+import { useSubscription } from '@/features/administration/hooks/use-administration'
 import { LoadingScreen } from '@/shared/components/loading-screen'
 import type { PermissionKey } from '@/shared/lib/permissions'
 
@@ -46,6 +47,24 @@ export function RequirePasswordChange() {
 export function RequireOrganization() {
   const { isPlatformAdmin, supportOrgId } = useAuth()
   if (isPlatformAdmin && !supportOrgId) return <Navigate to="/platform" replace />
+  return <Outlet />
+}
+
+/**
+ * Forced stop for an expired/suspended organization — blocks the whole firm
+ * workspace until organization.manage picks a plan (§6/§14). Platform staff
+ * (including Support Mode, which exists precisely to help a stuck org) always
+ * pass through untouched.
+ */
+export function RequireActiveSubscription() {
+  const { activeOrgId, isPlatformAdmin } = useAuth()
+  const { data: sub, isLoading } = useSubscription(isPlatformAdmin ? null : activeOrgId)
+
+  if (isPlatformAdmin) return <Outlet />
+  if (isLoading) return <LoadingScreen />
+  if (sub && (sub.status === 'expired' || sub.status === 'suspended')) {
+    return <Navigate to="/subscription/expired" replace />
+  }
   return <Outlet />
 }
 

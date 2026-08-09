@@ -10,6 +10,7 @@ import {
   RequireOrganization,
   RequireNoOrganization,
   RequirePasswordChange,
+  RequireActiveSubscription,
 } from '@/features/auth/components/route-guards'
 import { LandingPage } from '@/features/landing/pages/landing-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
@@ -21,6 +22,7 @@ import { ChangePasswordPage } from '@/features/auth/pages/change-password-page'
 import { AcceptInvitePage } from '@/features/auth/pages/accept-invite-page'
 import { OnboardingPage } from '@/features/onboarding/pages/onboarding-page'
 import { BillingCallbackPage } from '@/features/subscription-billing/pages/billing-callback-page'
+import { ExpiredSubscriptionPage } from '@/features/subscription-billing/pages/expired-subscription-page'
 
 // Organization (law firm) workspace
 import { DashboardPage } from '@/features/dashboard/pages/dashboard-page'
@@ -123,6 +125,7 @@ export const router = createBrowserRouter([
           // both RequireOrganization and RequireNoOrganization; whoever just
           // finished (or abandoned) checkout already has an org by this point.
           { path: '/subscription/callback', element: <BillingCallbackPage /> },
+          { path: '/subscription/expired', element: <ExpiredSubscriptionPage /> },
 
           // ── CloudTech Platform console ──────────────────────────────
           {
@@ -156,23 +159,28 @@ export const router = createBrowserRouter([
             element: <RequireOrganization />,
             children: [
               {
-                element: <OrganizationLayout />,
+                element: <RequireActiveSubscription />,
                 children: [
-                  { index: true, element: <DashboardPage /> },
-                  { path: 'matters', element: withPermission(<MattersPage />, 'matters.view') },
-                  { path: 'matters/:id', element: withPermission(<MatterDetailPage />, 'matters.view') },
-                  { path: 'clients', element: withPermission(<ClientsPage />, 'clients.view') },
-                  { path: 'documents', element: withPermission(<DocumentsPage />, 'documents.view') },
-                  { path: 'hearings', element: withPermission(<HearingsPage />, 'hearings.view') },
-                  { path: 'calendar', element: withPermission(<CalendarPage />, 'calendar.view') },
-                  { path: 'tasks', element: withPermission(<TasksPage />, 'tasks.view') },
-                  { path: 'staff', element: withPermission(<StaffPage />, 'staff.view') },
-                  { path: 'billing', element: withPermission(<BillingPage />, 'billing.view') },
-                  { path: 'reports', element: withPermission(<ReportsPage />, 'reports.view') },
-                  { path: 'notifications', element: <NotificationsPage /> },
                   {
-                    path: 'administration',
-                    element: withPermission(<AdministrationPage />, ['organization.view', 'members.view'], 'any'),
+                    element: <OrganizationLayout />,
+                    children: [
+                      { index: true, element: <DashboardPage /> },
+                      { path: 'matters', element: withPermission(<MattersPage />, 'matters.view') },
+                      { path: 'matters/:id', element: withPermission(<MatterDetailPage />, 'matters.view') },
+                      { path: 'clients', element: withPermission(<ClientsPage />, 'clients.view') },
+                      { path: 'documents', element: withPermission(<DocumentsPage />, 'documents.view') },
+                      { path: 'hearings', element: withPermission(<HearingsPage />, 'hearings.view') },
+                      { path: 'calendar', element: withPermission(<CalendarPage />, 'calendar.view') },
+                      { path: 'tasks', element: withPermission(<TasksPage />, 'tasks.view') },
+                      { path: 'staff', element: withPermission(<StaffPage />, 'staff.view') },
+                      { path: 'billing', element: withPermission(<BillingPage />, 'billing.view') },
+                      { path: 'reports', element: withPermission(<ReportsPage />, 'reports.view') },
+                      { path: 'notifications', element: <NotificationsPage /> },
+                      {
+                        path: 'administration',
+                        element: withPermission(<AdministrationPage />, ['organization.view', 'members.view'], 'any'),
+                      },
+                    ],
                   },
                 ],
               },

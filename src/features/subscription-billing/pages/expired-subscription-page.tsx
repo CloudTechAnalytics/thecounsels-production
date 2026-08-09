@@ -1,0 +1,109 @@
+import * as React from 'react'
+import { CheckCircle2, LockKeyhole } from 'lucide-react'
+import { useAuth } from '@/features/auth/context/auth-provider'
+import { usePermissions } from '@/features/auth/hooks/use-permissions'
+import { useSelectablePlans } from '@/features/onboarding/hooks/use-onboarding'
+import { useStartCheckout } from '@/features/subscription-billing/hooks/use-paystack'
+import { GetStartedShell } from '@/shared/components/get-started-shell'
+import { Button } from '@/shared/components/ui/button'
+import { Badge } from '@/shared/components/ui/badge'
+import { Skeleton } from '@/shared/components/ui/skeleton'
+import { formatNaira } from '@/shared/lib/format'
+import { cn } from '@/shared/lib/utils'
+import { APP } from '@/shared/config/env'
+import { toast } from '@/shared/components/ui/sonner'
+
+/**
+ * Forced stop for an expired/suspended organization (RequireActiveSubscription).
+ * Everyone in the firm is blocked from the workspace — only organization.manage
+ * holders see payment controls here (§14: Senior Associates never administer
+ * billing), matching every other org-scoped forced-stop screen in this app.
+ */
+export function ExpiredSubscriptionPage() {
+  const { activeMembership } = useAuth()
+  const { has } = usePermissions()
+  const canManage = has('organization.manage')
+  const { data: plans, isLoading } = useSelectablePlans()
+  const checkout = useStartCheckout()
+  const [selectedId, setSelectedId] = React.useState<string | null>(null)
+
+  const orgId = activeMembership?.organization_id ?? null
+
+  const subscribe = async (planId: string) => {
+    if (!orgId) return
+    try {
+      await checkout.mutateAsync({ organizationId: orgId, planId })
+    } catch (err) {
+      toast.error('Could not start checkout', { description: err instanceof Error ? err.message : undefined })
+    }
+  }
+
+  if (!canManage) {
+    return (
+      <GetStartedShell title={APP.product} stepLabel="Trial ended">
+        <div className="flex flex-col items-center py-8 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+            <LockKeyhole className="h-8 w-8" />
+          </span>
+          <h2 className="mt-6 font-display text-xl font-semibold">Your firm's trial has ended</h2>
+          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+            Ask your Managing Partner to choose a plan to continue using {APP.product}.
+          </p>
+        </div>
+      </GetStartedShell>
+    )
+  }
+
+  return (
+    <GetStartedShell title={APP.product} stepLabel="Your free trial has ended" stepDescription="Choose a plan to continue using The Counsel">
+      {isLoading || !plans ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {plans.map((plan) => (
+              <button
+                key={plan.id}
+                type="button"
+                onClick={() => setSelectedId(plan.id)}
+                className={cn(
+                  'relative flex flex-col rounded-xl border p-5 text-left transition-colors',
+                  selectedId === plan.id ? 'border-primary bg-primary/5 shadow-card' : 'border-border hover:border-primary/40',
+                )}
+              >
+                {plan.key === 'professional' && <Badge variant="default" className="absolute -top-2.5 right-4">Recommended</Badge>}
+                <p className="font-display text-base font-semibold">{plan.name}</p>
+                <p className="mt-1 font-display text-2xl font-semibold">
+                  {plan.is_custom ? 'Custom' : (
+                    <>{formatNaira(Number(plan.price_monthly))}<span className="text-sm font-normal text-muted-foreground">/month</span></>
+                  )}
+                </p>
+                <ul className="mt-4 space-y-1.5">
+                  {plan.highlights.slice(0, 4).map((h) => (
+                    <li key={h} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" /> {h}
+                    </li>
+                  ))}
+                </ul>
+              </button>
+            ))}
+          </div>
+
+          {selectedId && (
+            plans.find((p) => p.id === selectedId)?.is_custom ? (
+              <Button asChild size="lg" className="w-full">
+                <a href={`mailto:${APP.contactEmail}?subject=The Counsel — Enterprise plan`}>Contact sales</a>
+              </Button>
+            ) : (
+              <Button size="lg" className="w-full" loading={checkout.isPending} onClick={() => subscribe(selectedId)}>
+                Subscribe now
+              </Button>
+            )
+          )}
+        </div>
+      )}
+    </GetStartedShell>
+  )
+}

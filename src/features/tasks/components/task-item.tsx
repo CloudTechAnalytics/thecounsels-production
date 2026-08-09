@@ -47,9 +47,15 @@ export function TaskItem({
   const { activeOrgId } = useAuth()
   const setStatus = useSetTaskStatus(activeOrgId)
   const done = task.status === 'done'
+  const emphasize = !done && (task.priority === 'urgent' || task.priority === 'high')
 
   return (
-    <Card className="flex items-start gap-3 p-3">
+    <Card
+      className={cn(
+        'flex items-start gap-3 p-3',
+        emphasize && cn('border-l-4', task.priority === 'urgent' ? 'border-l-destructive' : 'border-l-warning'),
+      )}
+    >
       <button
         className="mt-0.5 text-muted-foreground hover:text-primary"
         onClick={() => setStatus.mutate({ id: task.id, status: done ? 'todo' : 'done' })}

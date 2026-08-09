@@ -1,6 +1,14 @@
 import { supabase } from '@/shared/lib/supabase'
-import type { NotificationCategory, NotificationPreferences, NotificationPriority } from '@/shared/types/database.types'
+import type { NotificationCategory, NotificationPreferences, NotificationPriority, TaskChannelPrefs } from '@/shared/types/database.types'
 import type { NotificationItem } from '@/features/notifications/types'
+
+export const DEFAULT_TASK_CHANNEL_PREFS: TaskChannelPrefs = {
+  assigned: { email: true, whatsapp: true },
+  due_soon: { email: true, whatsapp: true },
+  overdue: { email: true, whatsapp: true },
+  completed: { email: true, whatsapp: true },
+  reassigned: { email: true, whatsapp: true },
+}
 
 const SELECT = '*, actor:profiles!notifications_actor_id_fkey(id, full_name, avatar_url)'
 
@@ -100,6 +108,9 @@ export const notificationsService = {
         browser_enabled: false,
         email_enabled: false,
         sms_enabled: false,
+        whatsapp_enabled: false,
+        whatsapp_number: null,
+        task_channel_prefs: DEFAULT_TASK_CHANNEL_PREFS,
         updated_at: new Date().toISOString(),
       }
     )

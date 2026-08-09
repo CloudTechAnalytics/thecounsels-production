@@ -18,6 +18,9 @@ import {
   FileCheck2,
   Lock,
   LockOpen,
+  Trash2,
+  AlertTriangle,
+  BellRing,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
@@ -44,6 +47,12 @@ const EVENT_ICON: Record<string, LucideIcon> = {
   hearing_deleted: CalendarOff,
   task_added: ListChecks,
   task_completed: CheckCheck,
+  task_reassigned: ArrowRightLeft,
+  task_deleted: Trash2,
+  task_priority_changed: Flag,
+  task_due_date_changed: CalendarClock,
+  task_overdue: AlertTriangle,
+  task_reminder_sent: BellRing,
   expense_created: Wallet,
   expense_updated: PencilLine,
   expense_deleted: FileX,

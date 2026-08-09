@@ -29,6 +29,7 @@ import { DateRangeControl } from '@/features/dashboard/components/date-range-con
 import { FirmActivityCard } from '@/features/dashboard/components/firm-activity-card'
 import { BillableHoursCard } from '@/features/dashboard/components/billable-hours-card'
 import { RecentActivityFeed } from '@/features/dashboard/components/recent-activity-feed'
+import { YourTasksCard } from '@/features/dashboard/components/your-tasks-card'
 import { OnboardingChecklistCard } from '@/features/onboarding/components/onboarding-checklist-card'
 import { SubscriptionStatusBanner } from '@/features/subscription-billing/components/subscription-status-banner'
 import { MATTER_STATUS_META } from '@/features/matters/types'
@@ -94,6 +95,11 @@ export function DashboardPage() {
             <StatTile label="My logged expenses" value={formatMoneyCompact(p?.expensesMTD ?? 0)} hint="This month" icon={Receipt} loading={personalLoading} />
           </>
         )}
+      </div>
+
+      {/* Your tasks — its own full-width section, not squeezed into the two-column grid below */}
+      <div className="mt-6">
+        <YourTasksCard />
       </div>
 
       {/* Trend chart + insights */}

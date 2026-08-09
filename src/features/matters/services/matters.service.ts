@@ -241,7 +241,7 @@ export const mattersService = {
       hearings: hearingRows.length,
       upcomingHearings: hearingRows.filter((h) => h.status === 'scheduled' && new Date(h.hearing_at) > new Date()).length,
       tasks: taskRows.length,
-      openTasks: taskRows.filter((t) => t.status !== 'done').length,
+      openTasks: taskRows.filter((t) => t.status !== 'done' && t.status !== 'cancelled').length,
       invoicesCount: invoiceRows.length,
       invoicesTotal: invoiceRows.reduce((s, i) => s + Number(i.total), 0),
       invoicesOutstanding: invoiceRows.reduce((s, i) => s + Number(i.total) - Number(i.amount_paid), 0),

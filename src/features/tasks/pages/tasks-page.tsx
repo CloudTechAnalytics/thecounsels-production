@@ -35,7 +35,7 @@ export function TasksPage() {
   const canEdit = has('tasks.update')
   const canDelete = has('tasks.delete')
 
-  const open = (data ?? []).filter((t) => t.status !== 'done')
+  const open = (data ?? []).filter((t) => t.status !== 'done' && t.status !== 'cancelled')
   const done = (data ?? []).filter((t) => t.status === 'done')
   const overdue = open.filter((t) => t.due_date && isPast(new Date(t.due_date + 'T00:00:00')) && !isToday(new Date(t.due_date + 'T00:00:00')))
 
@@ -95,6 +95,7 @@ export function TasksPage() {
             <SelectItem value="todo">To do</SelectItem>
             <SelectItem value="in_progress">In progress</SelectItem>
             <SelectItem value="done">Done</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
       </div>

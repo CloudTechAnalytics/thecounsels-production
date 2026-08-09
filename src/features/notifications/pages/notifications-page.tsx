@@ -19,6 +19,7 @@ import {
 import { NotificationPreferencesCard } from '@/features/notifications/components/notification-preferences-card'
 import { NOTIFICATIONS_PAGE_SIZE, type NotificationFilters } from '@/features/notifications/services/notifications.service'
 import { NOTIFICATION_CATEGORY_META, NOTIFICATION_PRIORITY_META, resolveNotificationHref } from '@/features/notifications/types'
+import { TASK_PRIORITY_META } from '@/features/tasks/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
@@ -39,6 +40,7 @@ interface Reminder {
   title: string
   date: Date
   href?: string
+  priority?: 'low' | 'medium' | 'high' | 'urgent'
 }
 
 const ALL = 'all'
@@ -58,7 +60,9 @@ function RemindersCard() {
   }, [])
   const in14 = new Date(to)
   const { data: hearings } = useHearings(activeOrgId, { from, to, status: 'scheduled' })
-  const { data: tasks } = useTasks(activeOrgId, { status: 'all', assigneeId: 'all' }, profile?.id ?? null)
+  // Scoped to the signed-in user's own tasks — this card is "your" reminders,
+  // not an org-wide feed (previously fetched assigneeId: 'all', a bug).
+  const { data: tasks } = useTasks(activeOrgId, { status: 'all', assigneeId: 'me' }, profile?.id ?? null)
 
   const reminders: Reminder[] = [
     ...(hearings ?? []).map((h) => ({
@@ -69,13 +73,14 @@ function RemindersCard() {
       href: h.matter ? `/matters/${h.matter.id}` : '/hearings',
     })),
     ...(tasks ?? [])
-      .filter((t) => t.status !== 'done' && t.due_date)
+      .filter((t) => t.status !== 'done' && t.status !== 'cancelled' && t.due_date)
       .map((t) => ({
         id: `t-${t.id}`,
         kind: 'task' as const,
         title: t.title,
         date: new Date(t.due_date + 'T09:00:00'),
         href: t.matter ? `/matters/${t.matter.id}` : '/tasks',
+        priority: t.priority,
       })),
   ]
     .filter((r) => r.date <= in14)
@@ -92,9 +97,16 @@ function RemindersCard() {
           <ul className="space-y-2">
             {reminders.map((r) => {
               const overdue = isPast(r.date) && !isToday(r.date)
+              const emphasize = r.priority === 'urgent' || r.priority === 'high'
               return (
                 <li key={r.id}>
-                  <Link to={r.href ?? '#'} className="flex items-start gap-3 rounded-lg border border-border px-3 py-2 hover:border-primary/40">
+                  <Link
+                    to={r.href ?? '#'}
+                    className={cn(
+                      'flex items-start gap-3 rounded-lg border px-3 py-2 hover:border-primary/40',
+                      emphasize ? cn('border-l-4', r.priority === 'urgent' ? 'border-l-destructive' : 'border-l-warning') : 'border-border',
+                    )}
+                  >
                     <span className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       {r.kind === 'hearing' ? <Gavel className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
                     </span>
@@ -105,7 +117,10 @@ function RemindersCard() {
                         {format(r.date, r.kind === 'hearing' ? 'MMM d, HH:mm' : 'MMM d')}
                       </p>
                     </div>
-                    <Badge variant="outline" className="capitalize">{r.kind}</Badge>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      {r.priority && <Badge variant={TASK_PRIORITY_META[r.priority].variant}>{TASK_PRIORITY_META[r.priority].label}</Badge>}
+                      <Badge variant="outline" className="capitalize">{r.kind}</Badge>
+                    </div>
                   </Link>
                 </li>
               )

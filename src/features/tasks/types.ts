@@ -10,6 +10,7 @@ export const TASK_STATUS_META: Record<TaskStatus, { label: string; variant: Badg
   todo: { label: 'To do', variant: 'muted' },
   in_progress: { label: 'In progress', variant: 'default' },
   done: { label: 'Done', variant: 'success' },
+  cancelled: { label: 'Cancelled', variant: 'outline' },
 }
 
 export const TASK_PRIORITY_META: Record<TaskPriority, { label: string; variant: BadgeProps['variant'] }> = {
@@ -20,4 +21,4 @@ export const TASK_PRIORITY_META: Record<TaskPriority, { label: string; variant: 
 }
 
 export const TASK_PRIORITIES: TaskPriority[] = ['low', 'medium', 'high', 'urgent']
-export const TASK_STATUSES: TaskStatus[] = ['todo', 'in_progress', 'done']
+export const TASK_STATUSES: TaskStatus[] = ['todo', 'in_progress', 'done', 'cancelled']

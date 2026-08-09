@@ -547,7 +547,7 @@ export const billingService = {
         .select('id', { count: 'exact', head: true })
         .eq('organization_id', organizationId)
         .eq('assignee_id', userId)
-        .neq('status', 'done'),
+        .not('status', 'in', '(done,cancelled)'),
     ])
     if (time.error) throw time.error
     if (exp.error) throw exp.error

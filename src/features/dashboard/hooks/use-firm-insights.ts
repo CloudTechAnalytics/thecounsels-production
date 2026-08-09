@@ -88,7 +88,7 @@ export function useFirmInsights(organizationId: string | null, includeFinancial 
       }
 
       // 3. Overdue tasks.
-      const overdueTasks = report.tasks.filter((t) => t.status !== 'done' && t.due_date && t.due_date < todayStr)
+      const overdueTasks = report.tasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled' && t.due_date && t.due_date < todayStr)
       if (overdueTasks.length > 0) {
         insights.push({
           id: 'overdue-tasks',

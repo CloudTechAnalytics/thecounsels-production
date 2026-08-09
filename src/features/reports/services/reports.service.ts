@@ -227,7 +227,7 @@ export const reportsService = {
 
     let tasksQ = matterScopeEmpty
       ? null
-      : supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('organization_id', orgId).neq('status', 'done').not('due_date', 'is', null)
+      : supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('organization_id', orgId).not('status', 'in', '(done,cancelled)').not('due_date', 'is', null)
     if (tasksQ && matterIds) tasksQ = tasksQ.in('matter_id', matterIds)
     if (tasksQ && filters.lawyerId && filters.lawyerId !== 'all') tasksQ = tasksQ.eq('assignee_id', filters.lawyerId)
     if (tasksQ && filters.dateFrom) tasksQ = tasksQ.gte('due_date', filters.dateFrom)

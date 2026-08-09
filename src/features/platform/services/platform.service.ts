@@ -45,12 +45,17 @@ function monthlyValue(sub: { billing_cycle: BillingCycle; plan: Plan | null } | 
 
 export const platformService = {
   /**
-   * Deliberately three plain queries merged client-side rather than one
-   * combined `*, memberships(count), subscription:subscriptions(*, plan:
-   * plans(*))` select — that shape (an aggregate embed alongside a doubly-
-   * nested embed in the same query) was silently failing PostgREST-side,
-   * and since the page only checked `data`, not `error`, it rendered as a
-   * misleading "No organizations yet" instead of surfacing the real error.
+   * Three plain queries merged client-side rather than one combined
+   * `*, memberships(count), subscription:subscriptions(*, plan:plans(*))`
+   * select. The real failure (only visible once the page started
+   * surfacing `error`, not just `data`) was that `subscriptions` has two
+   * foreign keys into `plans` (`plan_id`, and `scheduled_plan_id` added in
+   * migration 0053) — any bare `plan:plans(...)` embed is ambiguous and
+   * PostgREST rejects the whole query (HTTP 300, "more than one
+   * relationship was found"). Fixed by naming the FK explicitly
+   * (`plans!subscriptions_plan_id_fkey`) everywhere a subscription embeds
+   * its plan — see administrationService.getSubscription and
+   * listSubscriptions/listTrials/getStats below, all hit the same bug.
    */
   async listOrganizations(includeDeleted = false): Promise<OrgRow[]> {
     let q = supabase.from('organizations').select('*').order('created_at', { ascending: false })
@@ -62,7 +67,10 @@ export const platformService = {
 
     const ids = rows.map((o) => o.id)
     const [subsRes, membersRes] = await Promise.all([
-      supabase.from('subscriptions').select('*, plan:plans(*)').in('organization_id', ids),
+      // Explicit FK name required — subscriptions has two FKs into plans
+      // (plan_id and scheduled_plan_id, 0053), so the bare `plan:plans(*)`
+      // embed is ambiguous and PostgREST rejects it outright (HTTP 300).
+      supabase.from('subscriptions').select('*, plan:plans!subscriptions_plan_id_fkey(*)').in('organization_id', ids),
       supabase.from('memberships').select('organization_id').eq('status', 'active').in('organization_id', ids),
     ])
     if (subsRes.error) throw subsRes.error
@@ -128,9 +136,13 @@ export const platformService = {
       supabase.from('audit_logs').select('*', { count: 'exact', head: true }).then((r) => r.count ?? 0),
       supabase.from('organizations').select('*', { count: 'exact', head: true }).gte('created_at', startOfMonth.toISOString()).then((r) => r.count ?? 0),
       supabase.from('profiles').select('*', { count: 'exact', head: true }).gte('last_seen_at', startOfDay.toISOString()).then((r) => r.count ?? 0),
-      supabase.from('subscriptions').select('billing_cycle, status, plan:plans(price_monthly, price_yearly)').eq('status', 'active'),
+      supabase
+        .from('subscriptions')
+        .select('billing_cycle, status, plan:plans!subscriptions_plan_id_fkey(price_monthly, price_yearly)')
+        .eq('status', 'active'),
     ])
 
+    if (subs.error) throw subs.error
     const mrr = ((subs.data ?? []) as unknown as { billing_cycle: BillingCycle; plan: Plan | null }[]).reduce(
       (sum, s) => sum + monthlyValue(s),
       0,
@@ -401,7 +413,7 @@ export const platformService = {
     const { data, error } = await supabase
       .from('subscriptions')
       .select(
-        'status, billing_cycle, created_at, cancelled_at, plan:plans(name, price_monthly, price_yearly), organization:organizations(id, name)',
+        'status, billing_cycle, created_at, cancelled_at, plan:plans!subscriptions_plan_id_fkey(name, price_monthly, price_yearly), organization:organizations(id, name)',
       )
     if (error) throw error
 
@@ -517,7 +529,7 @@ export const platformService = {
   async listSubscriptions(): Promise<SubscriptionRow[]> {
     const { data, error } = await supabase
       .from('subscriptions')
-      .select('*, plan:plans(*), organization:organizations(id, name, slug, logo_url, status)')
+      .select('*, plan:plans!subscriptions_plan_id_fkey(*), organization:organizations(id, name, slug, logo_url, status)')
       .order('created_at', { ascending: false })
     if (error) throw error
     return (data ?? []) as unknown as SubscriptionRow[]
@@ -526,7 +538,7 @@ export const platformService = {
   async listTrials(): Promise<SubscriptionRow[]> {
     const { data, error } = await supabase
       .from('subscriptions')
-      .select('*, plan:plans(*), organization:organizations(id, name, slug, logo_url, status)')
+      .select('*, plan:plans!subscriptions_plan_id_fkey(*), organization:organizations(id, name, slug, logo_url, status)')
       .eq('status', 'trialing')
       .order('trial_ends_at', { ascending: true })
     if (error) throw error

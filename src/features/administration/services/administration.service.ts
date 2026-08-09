@@ -87,9 +87,14 @@ export const administrationService = {
   },
 
   async getSubscription(organizationId: string): Promise<SubscriptionWithPlan | null> {
+    // subscriptions has TWO foreign keys into plans (plan_id, and
+    // scheduled_plan_id added in 0053) — the embed must name which one or
+    // PostgREST rejects the whole query with "more than one relationship
+    // was found" (HTTP 300), which is what was silently breaking this for
+    // every firm login (this powers RequireActiveSubscription).
     const { data, error } = await supabase
       .from('subscriptions')
-      .select('*, plan:plans(*)')
+      .select('*, plan:plans!subscriptions_plan_id_fkey(*)')
       .eq('organization_id', organizationId)
       .maybeSingle()
     if (error) throw error

@@ -160,25 +160,35 @@ const STEPS = [
   },
 ]
 
+// Mirrors the plans table (migration 0053) — keep in sync if pricing changes
+// there. Public pricing isn't queried live here since anonymous visitors
+// can't read `plans` under RLS, and we don't weaken RLS to expose it.
 const PLANS = [
   {
-    name: 'Basic',
-    price: '₦50,000',
-    tagline: 'For small chambers getting organised',
-    features: ['Matters, clients & calendar', 'Document vault', 'Tasks & hearings', 'Email support'],
+    name: 'Starter',
+    price: '₦15,000',
+    tagline: 'For solo lawyers and small law firms',
+    features: ['Up to 3 users', 'Core matter & client management', 'Documents, hearings & calendar', 'Time tracking & expenses', 'Basic billing & reports'],
   },
   {
     name: 'Professional',
-    price: '₦100,000',
-    tagline: 'For growing firms that bill seriously',
-    features: ['Everything in Basic', 'Billing & invoicing', 'Reports & Excel export', 'Role-based permissions'],
+    price: '₦50,000',
+    tagline: 'For growing and established law firms',
+    features: ['Up to 10 users', 'Everything in Starter', 'Advanced tasks & notifications', 'Email + WhatsApp reminders', 'Advanced billing & reports'],
     highlight: true,
   },
   {
+    name: 'Business',
+    price: '₦100,000',
+    tagline: 'For larger law firms',
+    features: ['Up to 25 users', 'Everything in Professional', 'Advanced analytics', 'Workflow automation', 'Advanced firm controls'],
+  },
+  {
     name: 'Enterprise',
-    price: '₦250,000',
-    tagline: 'For firms that run on their data',
-    features: ['Everything in Professional', 'Advanced analytics', 'Priority support', 'Custom onboarding'],
+    price: 'Custom',
+    priceHint: 'Starting from ₦150,000/month',
+    tagline: 'For larger or custom firms',
+    features: ['Custom users & storage', 'Custom features & workflows', 'Custom integrations', 'Custom support requirements'],
   },
 ]
 
@@ -201,7 +211,7 @@ const FAQS = [
   },
   {
     q: 'Can we change plans later?',
-    a: 'Yes. Upgrade, downgrade or add seats at any time by reaching out to your account contact.',
+    a: 'Yes — your Managing Partner can upgrade, downgrade or subscribe any time from Firm Settings. Upgrades apply immediately; downgrades take effect on your next billing date.',
   },
 ]
 
@@ -563,11 +573,14 @@ export function LandingPage() {
             Simple plans, per firm
           </motion.h2>
           <motion.p variants={fadeUp} className="mt-4 text-muted-foreground">
-            Every plan starts with a 14-day Professional trial. No card required.
+            Start free for 30 days. No payment required.
+          </motion.p>
+          <motion.p variants={fadeUp} className="text-sm text-muted-foreground">
+            Or choose a plan and subscribe now.
           </motion.p>
         </Reveal>
 
-        <Reveal className="mt-14 grid gap-6 lg:grid-cols-3">
+        <Reveal className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {PLANS.map((p) => (
             <motion.div
               key={p.name}
@@ -581,15 +594,16 @@ export function LandingPage() {
             >
               {p.highlight && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground">
-                  Most popular
+                  Recommended
                 </span>
               )}
               <h3 className="font-display text-xl font-semibold">{p.name}</h3>
               <p className="mt-1 text-sm text-muted-foreground">{p.tagline}</p>
               <p className="mt-5">
                 <span className="font-display text-4xl font-semibold">{p.price}</span>
-                <span className="text-sm text-muted-foreground"> /month</span>
+                {p.price !== 'Custom' && <span className="text-sm text-muted-foreground"> /month</span>}
               </p>
+              {p.priceHint && <p className="text-xs text-muted-foreground">{p.priceHint}</p>}
               <ul className="mt-6 flex-1 space-y-2.5">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm">
@@ -597,9 +611,15 @@ export function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Button asChild className="mt-7" variant={p.highlight ? 'default' : 'outline'}>
-                <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — ${p.name} plan`}>Contact sales</a>
-              </Button>
+              {p.name === 'Enterprise' ? (
+                <Button asChild className="mt-7" variant="outline">
+                  <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — Enterprise plan`}>Contact sales</a>
+                </Button>
+              ) : (
+                <Button asChild className="mt-7" variant={p.highlight ? 'default' : 'outline'}>
+                  <Link to="/auth/register">Start Free Trial</Link>
+                </Button>
+              )}
             </motion.div>
           ))}
         </Reveal>

@@ -1398,6 +1398,18 @@ export interface Database {
         Args: { p_org: string }
         Returns: boolean
       }
+      schedule_plan_downgrade: {
+        Args: { p_org: string; p_plan_id: string }
+        Returns: Database['public']['Tables']['subscriptions']['Row']
+      }
+      cancel_scheduled_downgrade: {
+        Args: { p_org: string }
+        Returns: Database['public']['Tables']['subscriptions']['Row']
+      }
+      cancel_subscription: {
+        Args: { p_org: string; p_reason?: string | null }
+        Returns: Database['public']['Tables']['subscriptions']['Row']
+      }
       find_similar_clients: {
         Args: {
           p_org: string

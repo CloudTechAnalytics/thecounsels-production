@@ -91,6 +91,11 @@ Deno.serve(async (req: Request) => {
         .from('subscriptions')
         .update({
           status: 'active',
+          // metadata.plan_id is always the plan being paid for — this is what
+          // makes an upgrade (re-checkout at the new plan's price) actually
+          // switch the org onto that plan once payment is confirmed here,
+          // not just re-activate whatever plan_id it already had.
+          plan_id: data.metadata?.plan_id ?? undefined,
           paystack_customer_code: data.customer?.customer_code ?? undefined,
           paystack_subscription_code: data.subscription_code ?? data.plan?.plan_code ?? undefined,
           amount: data.amount != null ? data.amount / 100 : undefined,

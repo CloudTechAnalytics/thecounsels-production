@@ -81,6 +81,38 @@ export function useSubscription(organizationId: string | null) {
   })
 }
 
+function useInvalidateSubscription(organizationId: string | null) {
+  const qc = useQueryClient()
+  return () => {
+    qc.invalidateQueries({ queryKey: ['administration', 'subscription', organizationId ?? 'none'] })
+    qc.invalidateQueries({ queryKey: ['billing-callback-subscription', organizationId ?? 'none'] })
+  }
+}
+
+export function useScheduleDowngrade(organizationId: string | null) {
+  const invalidate = useInvalidateSubscription(organizationId)
+  return useMutation({
+    mutationFn: (planId: string) => administrationService.scheduleDowngrade(organizationId!, planId),
+    onSuccess: invalidate,
+  })
+}
+
+export function useCancelScheduledDowngrade(organizationId: string | null) {
+  const invalidate = useInvalidateSubscription(organizationId)
+  return useMutation({
+    mutationFn: () => administrationService.cancelScheduledDowngrade(organizationId!),
+    onSuccess: invalidate,
+  })
+}
+
+export function useCancelSubscription(organizationId: string | null) {
+  const invalidate = useInvalidateSubscription(organizationId)
+  return useMutation({
+    mutationFn: (reason: string | undefined) => administrationService.cancelSubscription(organizationId!, reason),
+    onSuccess: invalidate,
+  })
+}
+
 export function useRolesWithPermissions() {
   return useQuery({
     queryKey: ['administration', 'roles-permissions'],

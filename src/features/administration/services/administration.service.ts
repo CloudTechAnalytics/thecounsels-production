@@ -96,6 +96,22 @@ export const administrationService = {
     return (data ?? null) as unknown as SubscriptionWithPlan | null
   },
 
+  /** Downgrades take effect on the next billing date (schedule_plan_downgrade RPC, migration 0056) — never immediately. */
+  async scheduleDowngrade(organizationId: string, planId: string): Promise<void> {
+    const { error } = await supabase.rpc('schedule_plan_downgrade', { p_org: organizationId, p_plan_id: planId })
+    if (error) throw error
+  },
+
+  async cancelScheduledDowngrade(organizationId: string): Promise<void> {
+    const { error } = await supabase.rpc('cancel_scheduled_downgrade', { p_org: organizationId })
+    if (error) throw error
+  },
+
+  async cancelSubscription(organizationId: string, reason: string | undefined): Promise<void> {
+    const { error } = await supabase.rpc('cancel_subscription', { p_org: organizationId, p_reason: reason || null })
+    if (error) throw error
+  },
+
   async listRolesWithPermissions(): Promise<RoleWithPermissions[]> {
     const { data, error } = await supabase
       .from('roles')

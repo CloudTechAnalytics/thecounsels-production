@@ -5,9 +5,15 @@ import { authService } from '@/features/auth/services/auth.service'
 import type { ActiveMembership, AuthContextValue, AuthState } from '@/features/auth/types'
 import type { Organization } from '@/shared/types/database.types'
 import { toast } from '@/shared/components/ui/sonner'
+import { errorMessage, withTimeout } from '@/shared/lib/errors'
 
 const ACTIVE_ORG_KEY = 'counsel.active_org'
 const SUPPORT_KEY = 'counsel.support_org'
+// Neither the initial session check nor the profile/membership fetch below
+// may ever hang the app forever — a stalled network request (bad env vars,
+// DNS, CORS, a paused Supabase project) must resolve into a visible error
+// state within a bounded time, not an infinite "Loading your workspace…".
+const BOOTSTRAP_TIMEOUT_MS = 15_000
 
 const initialState: AuthState = {
   userId: null,
@@ -82,10 +88,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => (prev.status === 'authenticated' ? prev : { ...prev, status: 'loading' }))
 
     try {
-      const [profile, memberships] = await Promise.all([
-        authService.getProfile(userId),
-        authService.getMemberships(userId),
-      ])
+      const [profile, memberships] = await withTimeout(
+        Promise.all([authService.getProfile(userId), authService.getMemberships(userId)]),
+        BOOTSTRAP_TIMEOUT_MS,
+        'Connecting to the server timed out. Check your connection and reload.',
+      )
 
       const isPlatformAdmin = Boolean(profile?.is_platform_admin)
 
@@ -144,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // surface it and fall back to signed-out so the app is usable again.
       console.error('Failed to load session profile/memberships:', error)
       toast.error('Could not load your workspace', {
-        description: error instanceof Error ? error.message : 'Please try signing in again.',
+        description: errorMessage(error, 'Please try signing in again.'),
       })
       setState({ ...initialState, status: 'unauthenticated' })
     }
@@ -153,20 +160,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     let mounted = true
 
-    supabase.auth
-      .getSession()
+    withTimeout(supabase.auth.getSession(), BOOTSTRAP_TIMEOUT_MS, 'Connecting to Supabase timed out.')
       .then(({ data }) => {
         if (mounted) void load(data.session?.user.id ?? null)
       })
       .catch((error) => {
-        // Without this, a transient network/CORS hiccup on the very first
-        // getSession() call leaves `status` stuck at 'loading' forever —
-        // load() never runs, so every guarded route (RequireAuth,
-        // RedirectIfAuthenticated, RequireActiveSubscription) hangs on the
-        // brand loading screen indefinitely instead of settling into
-        // 'unauthenticated'. Fall back the same way load()'s own catch does.
+        // Without this, a transient network/CORS hiccup (or a genuinely
+        // stalled request — the timeout above guarantees this settles
+        // either way) on the very first getSession() call leaves `status`
+        // stuck at 'loading' forever — load() never runs, so every guarded
+        // route (RequireAuth, RedirectIfAuthenticated,
+        // RequireActiveSubscription) hangs on the brand loading screen
+        // indefinitely instead of settling into 'unauthenticated'. Fall
+        // back the same way load()'s own catch does.
         console.error('Failed to get initial session:', error)
-        if (mounted) void load(null)
+        if (mounted) {
+          toast.error('Could not connect', { description: errorMessage(error, 'Check your connection and reload.') })
+          void load(null)
+        }
       })
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {

@@ -46,6 +46,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
 import { initialsOf, titleCase, formatStorage, daysUntil } from '@/shared/lib/format'
+import { errorMessage } from '@/shared/lib/errors'
 import { toast } from '@/shared/components/ui/sonner'
 
 const STATUS_VARIANT: Record<string, BadgeProps['variant']> = {
@@ -265,7 +266,7 @@ export function OrganizationsPage() {
             </span>
             <p className="font-display text-lg font-semibold">Couldn't load organizations</p>
             <p className="max-w-sm text-sm text-muted-foreground">
-              {error instanceof Error ? error.message : 'Something went wrong loading this list. Please try again.'}
+              {errorMessage(error, 'Something went wrong loading this list. Please try again.')}
             </p>
           </div>
         ) : data && data.length > 0 ? (

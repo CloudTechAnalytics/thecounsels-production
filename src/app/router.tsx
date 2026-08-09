@@ -20,6 +20,7 @@ import { ResetPasswordPage } from '@/features/auth/pages/reset-password-page'
 import { ChangePasswordPage } from '@/features/auth/pages/change-password-page'
 import { AcceptInvitePage } from '@/features/auth/pages/accept-invite-page'
 import { OnboardingPage } from '@/features/onboarding/pages/onboarding-page'
+import { BillingCallbackPage } from '@/features/subscription-billing/pages/billing-callback-page'
 
 // Organization (law firm) workspace
 import { DashboardPage } from '@/features/dashboard/pages/dashboard-page'
@@ -117,6 +118,11 @@ export const router = createBrowserRouter([
             element: <RequireNoOrganization />,
             children: [{ index: true, element: <OnboardingPage /> }],
           },
+
+          // Paystack's redirect target after checkout — deliberately outside
+          // both RequireOrganization and RequireNoOrganization; whoever just
+          // finished (or abandoned) checkout already has an org by this point.
+          { path: '/subscription/callback', element: <BillingCallbackPage /> },
 
           // ── CloudTech Platform console ──────────────────────────────
           {

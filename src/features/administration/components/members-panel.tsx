@@ -3,7 +3,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { KeyRound, Users } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useMembers } from '@/features/administration/hooks/use-administration'
+import { useMembers, useSubscription } from '@/features/administration/hooks/use-administration'
 import { CreateUserDialog } from '@/features/administration/components/create-user-dialog'
 import { adminUsersService } from '@/shared/services/admin-users.service'
 import { initialsOf } from '@/shared/lib/format'
@@ -39,19 +39,50 @@ function ResetPasswordAction({ member, organizationId }: { member: MemberWithRel
   )
 }
 
-export function MembersPanel({ organizationId }: { organizationId: string }) {
+export function MembersPanel({
+  organizationId,
+  onNavigateToPlan,
+}: {
+  organizationId: string
+  /** Switches Firm Settings to the Plan & Billing tab — parent owns tab state. */
+  onNavigateToPlan?: () => void
+}) {
   const members = useMembers(organizationId)
+  const subscription = useSubscription(organizationId)
   const { has } = usePermissions()
   const { userId } = useAuth()
   const canManage = has('members.manage')
 
+  const activeCount = members.data?.filter((m) => m.status === 'active').length ?? 0
+  const seats = subscription.data?.seats ?? null
+  const atLimit = seats != null && activeCount >= seats
+  const planName = subscription.data?.plan?.name ?? 'current'
+
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Users className="h-4 w-4 text-muted-foreground" /> Members
-        </CardTitle>
-        <CreateUserDialog organizationId={organizationId} />
+        <div>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Users className="h-4 w-4 text-muted-foreground" /> Members
+          </CardTitle>
+          {seats != null && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {activeCount} of {seats} seats used
+            </p>
+          )}
+        </div>
+        {atLimit ? (
+          <div className="flex flex-col items-end gap-1">
+            <Button variant="outline" onClick={onNavigateToPlan} disabled={!onNavigateToPlan}>
+              Upgrade plan
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              You've reached the {seats}-user limit on your {planName} plan.
+            </p>
+          </div>
+        ) : (
+          <CreateUserDialog organizationId={organizationId} />
+        )}
       </CardHeader>
       <CardContent>
         {members.isLoading ? (

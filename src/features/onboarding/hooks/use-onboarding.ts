@@ -9,9 +9,18 @@ export function useRegistrationSettings() {
   })
 }
 
+export function useSelectablePlans() {
+  return useQuery({
+    queryKey: ['selectable-plans'],
+    queryFn: () => onboardingService.getSelectablePlans(),
+    staleTime: 5 * 60_000,
+  })
+}
+
 export function useRegisterOrganization() {
   return useMutation({
-    mutationFn: (values: FirmSetupValues) => onboardingService.registerOrganization(values),
+    mutationFn: ({ values, planId }: { values: FirmSetupValues; planId: string }) =>
+      onboardingService.registerOrganization(values, planId),
   })
 }
 

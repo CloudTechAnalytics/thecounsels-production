@@ -1383,6 +1383,7 @@ export interface Database {
         Args: {
           p_name: string
           p_slug: string
+          p_plan_id: string
           p_legal_name?: string | null
           p_country?: string | null
           p_timezone?: string | null
@@ -1392,6 +1393,10 @@ export interface Database {
           p_practice_areas?: string[] | null
         }
         Returns: Database['public']['Tables']['organizations']['Row']
+      }
+      can_add_member: {
+        Args: { p_org: string }
+        Returns: boolean
       }
       find_similar_clients: {
         Args: {

@@ -63,7 +63,7 @@ export function AdministrationPage() {
       </div>
 
       {tab === 'organization' && <OrganizationSettings />}
-      {tab === 'members' && <MembersPanel organizationId={activeOrgId} />}
+      {tab === 'members' && <MembersPanel organizationId={activeOrgId} onNavigateToPlan={() => setTab('plan')} />}
       {tab === 'roles' && <RolesViewer />}
       {tab === 'plan' && <PlanSummary />}
       {tab === 'support' && <FirmSupportPanel organizationId={activeOrgId} />}

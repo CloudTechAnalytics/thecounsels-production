@@ -1,0 +1,19 @@
+import { useMutation } from '@tanstack/react-query'
+import { paystackService } from '@/features/subscription-billing/services/paystack.service'
+import { env } from '@/shared/config/env'
+
+/**
+ * Starts a Paystack checkout and redirects the whole page there — never
+ * resolves normally on success, since the browser navigates away.
+ */
+export function useStartCheckout() {
+  return useMutation({
+    mutationFn: async ({ organizationId, planId }: { organizationId: string; planId: string }) => {
+      if (!env.isPaystackConfigured) {
+        throw new Error('Payment integration is not configured yet — contact support.')
+      }
+      const { authorizationUrl } = await paystackService.initTransaction(organizationId, planId)
+      window.location.href = authorizationUrl
+    },
+  })
+}

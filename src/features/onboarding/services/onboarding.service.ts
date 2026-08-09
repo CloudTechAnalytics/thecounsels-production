@@ -12,7 +12,7 @@ export interface RegistrationSettingsRow {
 }
 
 export const onboardingService = {
-  /** The Platform-Console-configurable trial/plan the "Choose your plan" step renders — never hardcoded. */
+  /** Whether a trial is offered at all, and its default length — Platform-Console-configurable. */
   async getRegistrationSettings(): Promise<RegistrationSettingsRow> {
     const { data, error } = await supabase
       .from('registration_settings')
@@ -21,6 +21,13 @@ export const onboardingService = {
       .single()
     if (error) throw error
     return data as unknown as RegistrationSettingsRow
+  },
+
+  /** The 4 plans the onboarding plan step lets a registering firm choose among. */
+  async getSelectablePlans(): Promise<Plan[]> {
+    const { data, error } = await supabase.from('plans').select('*').eq('is_active', true).order('sort_order')
+    if (error) throw error
+    return (data ?? []) as Plan[]
   },
 
   /**
@@ -50,11 +57,12 @@ export const onboardingService = {
     }
   },
 
-  /** Atomic self-service org + trial + owner-membership creation. See register_organization() (migration 0051). */
-  async registerOrganization(values: FirmSetupValues) {
+  /** Atomic self-service org + trial + owner-membership creation. See register_organization() (migration 0054). */
+  async registerOrganization(values: FirmSetupValues, planId: string) {
     const { data, error } = await supabase.rpc('register_organization', {
       p_name: values.firmName.trim(),
       p_slug: values.shortName.trim(),
+      p_plan_id: planId,
       p_legal_name: values.legalName?.trim() || null,
       p_country: values.country || null,
       p_timezone: values.timezone || null,

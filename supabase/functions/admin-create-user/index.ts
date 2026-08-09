@@ -148,6 +148,22 @@ Deno.serve(async (req: Request) => {
     return json({ userId, email }, 201)
   }
 
+  // Firm user — enforce the plan's seat limit before creating anything.
+  // The RLS insert policy (memberships_insert, see migration 0054) is the
+  // real backstop; this is just a friendlier error than a raw RLS denial.
+  {
+    const [{ data: sub }, { count: activeCount }] = await Promise.all([
+      admin.from('subscriptions').select('seats, plan:plans(name)').eq('organization_id', organizationId).maybeSingle(),
+      admin.from('memberships').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('status', 'active'),
+    ])
+    const seats = sub?.seats ?? null
+    if (seats != null && (activeCount ?? 0) >= seats) {
+      await rollbackIfNew()
+      const planName = (sub as unknown as { plan?: { name?: string } } | null)?.plan?.name ?? 'current'
+      return json({ error: `You've reached the ${seats}-user limit on your ${planName} plan. Upgrade your plan to add more users.` }, 400)
+    }
+  }
+
   // Firm user — seat in the organization.
   const isOwnerRole = role!.key === 'managing_partner'
   const { error: memErr } = await admin.from('memberships').upsert(

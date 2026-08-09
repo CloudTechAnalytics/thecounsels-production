@@ -5,7 +5,7 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { useClients } from '@/features/clients/hooks/use-clients'
 import { useCreateMatter, useUpdateMatter, useFirmMembers } from '@/features/matters/hooks/use-matters'
 import { matterSchema, type MatterFormValues } from '@/features/matters/schemas'
-import { PRACTICE_AREAS, PRIORITIES, MATTER_STATUS_META, type MatterRow } from '@/features/matters/types'
+import { PRACTICE_AREAS, PRIORITIES, MATTER_STATUSES, MATTER_STATUS_META, type MatterRow } from '@/features/matters/types'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
@@ -177,9 +177,9 @@ export function MatterFormDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(MATTER_STATUS_META).map(([value, meta]) => (
+                        {MATTER_STATUSES.map((value) => (
                           <SelectItem key={value} value={value}>
-                            {meta.label}
+                            {MATTER_STATUS_META[value].label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -215,7 +215,7 @@ export function MatterFormDialog({
                 name="leadLawyerId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Lead lawyer</FormLabel>
+                    <FormLabel>Lead Counsel</FormLabel>
                     <Select value={field.value || NONE} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
@@ -255,7 +255,7 @@ export function MatterFormDialog({
                 name="judge"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Judge</FormLabel>
+                    <FormLabel>Magistrate/Judge</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -267,7 +267,7 @@ export function MatterFormDialog({
                 name="opposingCounsel"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Opposing counsel</FormLabel>
+                    <FormLabel>Defendant Counsel</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>

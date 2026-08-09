@@ -6,7 +6,7 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useMatters } from '@/features/matters/hooks/use-matters'
 import { MatterFormDialog } from '@/features/matters/components/matter-form-dialog'
-import { MATTER_STATUS_META, PRACTICE_AREAS } from '@/features/matters/types'
+import { MATTER_STATUS_META, MATTER_STATUSES, PRACTICE_AREAS } from '@/features/matters/types'
 import type { MatterFilters } from '@/features/matters/services/matters.service'
 import { PageHeader } from '@/shared/components/page-header'
 import { ExportButton } from '@/shared/components/export-button'
@@ -66,8 +66,8 @@ export function MattersPage() {
           <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
-            {Object.entries(MATTER_STATUS_META).map(([value, meta]) => (
-              <SelectItem key={value} value={value}>{meta.label}</SelectItem>
+            {MATTER_STATUSES.map((value) => (
+              <SelectItem key={value} value={value}>{MATTER_STATUS_META[value].label}</SelectItem>
             ))}
           </SelectContent>
         </Select>

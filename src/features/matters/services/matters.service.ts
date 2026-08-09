@@ -1,7 +1,14 @@
 import { supabase } from '@/shared/lib/supabase'
 import type { MatterStatus } from '@/shared/types/database.types'
 import type { MatterFormValues } from '@/features/matters/schemas'
-import type { MatterAssignmentRow, MatterEventRow, MatterNoteRow, MatterRow, MatterSummary } from '@/features/matters/types'
+import {
+  MATTER_STATUS_FILTER_GROUPS,
+  type MatterAssignmentRow,
+  type MatterEventRow,
+  type MatterNoteRow,
+  type MatterRow,
+  type MatterSummary,
+} from '@/features/matters/types'
 
 const MATTER_SELECT =
   '*, client:clients(id, display_name, type), lead_lawyer:profiles!matters_lead_lawyer_id_fkey(id, full_name, avatar_url)'
@@ -34,7 +41,10 @@ export const mattersService = {
       .select(MATTER_SELECT)
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: false })
-    if (filters.status && filters.status !== 'all') q = q.eq('status', filters.status)
+    if (filters.status && filters.status !== 'all') {
+      const group = MATTER_STATUS_FILTER_GROUPS[filters.status]
+      q = group ? q.in('status', group) : q.eq('status', filters.status)
+    }
     if (filters.practiceArea && filters.practiceArea !== 'all') q = q.eq('practice_area', filters.practiceArea)
     if (filters.search?.trim()) {
       const s = `%${filters.search.trim()}%`

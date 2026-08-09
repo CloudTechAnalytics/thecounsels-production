@@ -6,7 +6,10 @@ import { cn } from '@/shared/lib/utils'
 
 export function StatusTracker({ status }: { status: MatterStatus }) {
   const terminal = status === 'won' || status === 'lost'
-  const currentIndex = terminal ? MATTER_LIFECYCLE.length : MATTER_LIFECYCLE.indexOf(status)
+  // Legacy 'pending' matters track exactly where 'in_court' would sit —
+  // Pending and In Court were retired into a single step.
+  const normalized = status === 'pending' ? 'in_court' : status
+  const currentIndex = terminal ? MATTER_LIFECYCLE.length : MATTER_LIFECYCLE.indexOf(normalized)
 
   const steps = MATTER_LIFECYCLE.map((s) => ({ key: s, label: MATTER_STATUS_META[s].label }))
   if (terminal) {

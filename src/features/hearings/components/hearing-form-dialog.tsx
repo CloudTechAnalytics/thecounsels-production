@@ -210,7 +210,7 @@ export function HearingFormDialog({
                 name="judge"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Judge</FormLabel>
+                    <FormLabel>Magistrate/Judge</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>

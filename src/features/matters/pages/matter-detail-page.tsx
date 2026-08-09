@@ -148,7 +148,7 @@ export function MatterDetailPage() {
                 <Detail label="Client" value={matter.client?.display_name} />
                 <Detail label="Practice area" value={matter.practice_area} />
                 <Detail
-                  label="Lead lawyer"
+                  label="Lead Counsel"
                   value={
                     matter.lead_lawyer ? (
                       <span className="inline-flex items-center gap-2">
@@ -160,9 +160,9 @@ export function MatterDetailPage() {
                     ) : null
                   }
                 />
-                <Detail label="Opposing counsel" value={matter.opposing_counsel} />
+                <Detail label="Defendant Counsel" value={matter.opposing_counsel} />
                 <Detail label="Court" value={matter.court} />
-                <Detail label="Judge" value={matter.judge} />
+                <Detail label="Magistrate/Judge" value={matter.judge} />
                 <Detail label="Opened" value={format(new Date(matter.opened_on), 'PP')} />
                 <Detail label="Closed" value={matter.closed_on ? format(new Date(matter.closed_on), 'PP') : null} />
               </div>

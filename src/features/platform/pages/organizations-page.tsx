@@ -234,7 +234,7 @@ function TrashRowActions({ org }: { org: OrgRow }) {
 
 export function OrganizationsPage() {
   const [trash, setTrash] = React.useState(false)
-  const { data, isLoading } = usePlatformOrganizations(trash)
+  const { data, isLoading, isError, error } = usePlatformOrganizations(trash)
 
   return (
     <div>
@@ -257,6 +257,16 @@ export function OrganizationsPage() {
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-12 w-full" />
             ))}
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/12 text-destructive">
+              <Globe className="h-7 w-7" />
+            </span>
+            <p className="font-display text-lg font-semibold">Couldn't load organizations</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              {error instanceof Error ? error.message : 'Something went wrong loading this list. Please try again.'}
+            </p>
           </div>
         ) : data && data.length > 0 ? (
           <Table>

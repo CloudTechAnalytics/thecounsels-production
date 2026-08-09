@@ -37,31 +37,50 @@ import type {
   SubscriptionWithPlan,
 } from '@/features/platform/types'
 
-const ORG_SELECT = '*, memberships(count), subscription:subscriptions(*, plan:plans(*))'
-
 /** Monthly-equivalent revenue contribution of one active subscription. */
 function monthlyValue(sub: { billing_cycle: BillingCycle; plan: Plan | null } | null): number {
   if (!sub?.plan) return 0
   return sub.billing_cycle === 'yearly' ? Number(sub.plan.price_yearly) / 12 : Number(sub.plan.price_monthly)
 }
 
-function mapOrg(row: unknown): OrgRow {
-  const r = row as Organization & {
-    memberships: { count: number }[]
-    subscription: SubscriptionWithPlan[] | SubscriptionWithPlan | null
-  }
-  const { memberships, subscription, ...rest } = r
-  const sub = Array.isArray(subscription) ? (subscription[0] ?? null) : subscription
-  return { ...rest, member_count: memberships?.[0]?.count ?? 0, subscription: sub }
-}
-
 export const platformService = {
+  /**
+   * Deliberately three plain queries merged client-side rather than one
+   * combined `*, memberships(count), subscription:subscriptions(*, plan:
+   * plans(*))` select — that shape (an aggregate embed alongside a doubly-
+   * nested embed in the same query) was silently failing PostgREST-side,
+   * and since the page only checked `data`, not `error`, it rendered as a
+   * misleading "No organizations yet" instead of surfacing the real error.
+   */
   async listOrganizations(includeDeleted = false): Promise<OrgRow[]> {
-    let q = supabase.from('organizations').select(ORG_SELECT).order('created_at', { ascending: false })
+    let q = supabase.from('organizations').select('*').order('created_at', { ascending: false })
     q = includeDeleted ? q.not('deleted_at', 'is', null) : q.is('deleted_at', null)
-    const { data, error } = await q
+    const { data: orgs, error } = await q
     if (error) throw error
-    return (data ?? []).map(mapOrg)
+    const rows = (orgs ?? []) as Organization[]
+    if (rows.length === 0) return []
+
+    const ids = rows.map((o) => o.id)
+    const [subsRes, membersRes] = await Promise.all([
+      supabase.from('subscriptions').select('*, plan:plans(*)').in('organization_id', ids),
+      supabase.from('memberships').select('organization_id').eq('status', 'active').in('organization_id', ids),
+    ])
+    if (subsRes.error) throw subsRes.error
+    if (membersRes.error) throw membersRes.error
+
+    const subByOrg = new Map(
+      ((subsRes.data ?? []) as unknown as SubscriptionWithPlan[]).map((s) => [s.organization_id, s]),
+    )
+    const countByOrg = new Map<string, number>()
+    for (const m of membersRes.data ?? []) {
+      countByOrg.set(m.organization_id, (countByOrg.get(m.organization_id) ?? 0) + 1)
+    }
+
+    return rows.map((o) => ({
+      ...o,
+      member_count: countByOrg.get(o.id) ?? 0,
+      subscription: subByOrg.get(o.id) ?? null,
+    }))
   },
 
   async getStats(): Promise<PlatformStats> {
@@ -89,7 +108,22 @@ export const platformService = {
       supabase.from('organizations').select('*', { count: 'exact', head: true }).eq('status', 'active').is('deleted_at', null).then((r) => r.count ?? 0),
       supabase.from('organizations').select('*', { count: 'exact', head: true }).eq('status', 'trial').is('deleted_at', null).then((r) => r.count ?? 0),
       supabase.from('organizations').select('*', { count: 'exact', head: true }).eq('status', 'suspended').is('deleted_at', null).then((r) => r.count ?? 0),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_platform_admin', false).then((r) => r.count ?? 0),
+      // Distinct users with an active membership somewhere — NOT a raw
+      // `profiles` count. Removing a member only ever deletes their
+      // `memberships` row (see administrationService.removeMember); the
+      // `profiles` row itself is intentionally kept for audit/history
+      // (audit_logs, matter_events, etc. reference it). Counting profiles
+      // directly means every removed user still inflates this figure
+      // forever — this counts only people who actually still belong
+      // somewhere.
+      supabase
+        .from('memberships')
+        .select('user_id')
+        .eq('status', 'active')
+        .then((r) => {
+          if (r.error) throw r.error
+          return new Set((r.data ?? []).map((m) => m.user_id)).size
+        }),
       supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_platform_admin', true).then((r) => r.count ?? 0),
       supabase.from('audit_logs').select('*', { count: 'exact', head: true }).then((r) => r.count ?? 0),
       supabase.from('organizations').select('*', { count: 'exact', head: true }).gte('created_at', startOfMonth.toISOString()).then((r) => r.count ?? 0),

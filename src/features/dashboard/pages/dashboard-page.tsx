@@ -31,7 +31,6 @@ import { BillableHoursCard } from '@/features/dashboard/components/billable-hour
 import { RecentActivityFeed } from '@/features/dashboard/components/recent-activity-feed'
 import { YourTasksCard } from '@/features/dashboard/components/your-tasks-card'
 import { OnboardingChecklistCard } from '@/features/onboarding/components/onboarding-checklist-card'
-import { SubscriptionStatusBanner } from '@/features/subscription-billing/components/subscription-status-banner'
 import { MATTER_STATUS_META } from '@/features/matters/types'
 import { formatMoneyCompact, initialsOf } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
@@ -67,7 +66,6 @@ export function DashboardPage() {
         description={orgName ? `Here's what's happening at ${orgName} today.` : undefined}
       />
 
-      <SubscriptionStatusBanner organizationId={activeOrgId} />
       <OnboardingChecklistCard organizationId={activeOrgId} />
 
       {/* KPIs — role-aware, wraps onto multiple rows like the Platform Console's KPI grid, never scrolls horizontally */}

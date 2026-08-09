@@ -1,20 +1,21 @@
 import { Link } from 'react-router-dom'
 import { differenceInCalendarDays } from 'date-fns'
-import { AlertTriangle, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
+import { useAuth } from '@/features/auth/context/auth-provider'
 import { useSubscription } from '@/features/administration/hooks/use-administration'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { Card } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
-import { Button } from '@/shared/components/ui/button'
 import type { BadgeProps } from '@/shared/components/ui/badge'
 
 /**
- * Live-rendered subscription status, always accurate (unlike the
- * threshold-crossing reminder notifications, which only fire once per
- * threshold) — the exact per-status wording from the commercial-model spec.
+ * Compact, always-accurate subscription status pill — lives in the topbar
+ * beside the theme toggle, notifications, and profile menu, rather than a
+ * full-width dashboard banner. Clickable straight to Plan & Billing
+ * (organization.manage holders only) whenever the status needs action.
  */
-export function SubscriptionStatusBanner({ organizationId }: { organizationId: string | null }) {
-  const { data: sub } = useSubscription(organizationId)
+export function SubscriptionStatusPill() {
+  const { activeOrgId } = useAuth()
+  const { data: sub } = useSubscription(activeOrgId)
   const { has } = usePermissions()
 
   if (!sub || !sub.plan) return null
@@ -64,20 +65,23 @@ export function SubscriptionStatusBanner({ organizationId }: { organizationId: s
       return null
   }
 
-  // Only leadership (organization.manage) sees the action button — everyone
-  // else just sees the status, matching the "no billing administration for
-  // Senior Associates" rule.
-  return (
-    <Card className="mb-6 flex items-center justify-between gap-3 p-4">
-      <div className="flex items-center gap-2.5">
-        {sub.status === 'trialing' ? <Sparkles className="h-4 w-4 text-primary" /> : <AlertTriangle className={showUpgradeCta ? 'h-4 w-4 text-destructive' : 'hidden'} />}
-        <Badge variant={variant}>{label}</Badge>
-      </div>
-      {showUpgradeCta && has('organization.manage') && (
-        <Button asChild size="sm" variant="outline">
-          <Link to="/administration">{sub.status === 'trialing' ? 'Upgrade plan' : 'Manage billing'}</Link>
-        </Button>
-      )}
-    </Card>
+  const pill = (
+    <Badge variant={variant} className="hidden items-center gap-1 whitespace-nowrap md:inline-flex">
+      {sub.status === 'trialing' && <Sparkles className="h-3 w-3" />}
+      {label}
+    </Badge>
   )
+
+  // Only leadership (organization.manage) can act on it — everyone else
+  // just sees the status, matching the "no billing administration for
+  // Senior Associates" rule. Non-actionable statuses render as a plain,
+  // unclickable badge.
+  if (showUpgradeCta && has('organization.manage')) {
+    return (
+      <Link to="/administration" className="transition-opacity hover:opacity-80" aria-label={`${label} — manage billing`}>
+        {pill}
+      </Link>
+    )
+  }
+  return pill
 }

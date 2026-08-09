@@ -385,6 +385,14 @@ export const platformService = {
     return data ?? []
   },
 
+  /** Platform-admin-only, enforced server-side (migration 0062). Wipes
+   * every audit_logs row and writes back exactly one entry recording who
+   * cleared it and when — never a silently-empty log. */
+  async clearAuditLog(): Promise<void> {
+    const { error } = await supabase.rpc('clear_audit_log')
+    if (error) throw error
+  },
+
   async getOrganizationGrowth(months = 6): Promise<GrowthPoint[]> {
     const since = new Date()
     since.setMonth(since.getMonth() - (months - 1))

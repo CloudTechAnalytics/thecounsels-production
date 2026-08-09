@@ -62,6 +62,13 @@ export function usePlatformActivity() {
 
   return { ...query, live }
 }
+export function useClearAuditLog() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => platformService.clearAuditLog(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.activity }),
+  })
+}
 export function useOrganizationGrowth() {
   return useQuery({ queryKey: keys.growth, queryFn: () => platformService.getOrganizationGrowth() })
 }

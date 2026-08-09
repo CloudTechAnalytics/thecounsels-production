@@ -6,18 +6,21 @@ import { supabase } from '@/shared/lib/supabase'
 import type { ChannelMessageRow, DirectMessageRow } from '@/features/messaging/types'
 
 const keys = {
-  channels: (orgId: string) => ['messaging', 'channels', orgId] as const,
+  // 3-element prefix — invalidating with this (no `exact: true`) catches
+  // both the active and archived variants below in one call.
+  channelsAll: (orgId: string) => ['messaging', 'channels', orgId] as const,
+  channels: (orgId: string, includeArchived = false) => ['messaging', 'channels', orgId, includeArchived] as const,
   channelMessages: (channelId: string) => ['messaging', 'channel-messages', channelId] as const,
   conversations: (orgId: string) => ['messaging', 'conversations', orgId] as const,
   directMessages: (conversationId: string) => ['messaging', 'direct-messages', conversationId] as const,
   unread: (orgId: string) => ['messaging', 'unread', orgId] as const,
 }
 
-export function useChannels(orgId: string | null, userId: string | null) {
+export function useChannels(orgId: string | null, userId: string | null, includeArchived = false) {
   return useQuery({
-    queryKey: keys.channels(orgId ?? 'none'),
+    queryKey: keys.channels(orgId ?? 'none', includeArchived),
     enabled: Boolean(orgId && userId),
-    queryFn: () => messagingService.listChannels(orgId!, userId!),
+    queryFn: () => messagingService.listChannels(orgId!, userId!, includeArchived),
   })
 }
 
@@ -25,7 +28,7 @@ export function useCreateChannel(orgId: string | null, createdBy: string | null)
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (values: ChannelFormValues) => messagingService.createChannel(orgId!, values, createdBy!),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.channels(orgId ?? 'none') }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.channelsAll(orgId ?? 'none') }),
   })
 }
 
@@ -33,7 +36,23 @@ export function useArchiveChannel(orgId: string | null) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => messagingService.archiveChannel(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.channels(orgId ?? 'none') }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.channelsAll(orgId ?? 'none') }),
+  })
+}
+
+export function useUnarchiveChannel(orgId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => messagingService.unarchiveChannel(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.channelsAll(orgId ?? 'none') }),
+  })
+}
+
+export function useDeleteChannel(orgId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => messagingService.deleteChannel(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.channelsAll(orgId ?? 'none') }),
   })
 }
 

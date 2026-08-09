@@ -1,13 +1,15 @@
 import * as React from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Hash, MessageSquare, Plus } from 'lucide-react'
+import { Archive, Hash, MessageSquare, Plus } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
+  useArchiveChannel,
   useChannelMessages,
   useChannelRealtime,
   useChannels,
   useConversations,
+  useDeleteChannel,
   useDeleteChannelMessage,
   useDeleteDirectMessage,
   useDirectMessages,
@@ -16,6 +18,7 @@ import {
   useMarkDmRead,
   useSendChannelMessage,
   useSendDirectMessage,
+  useUnarchiveChannel,
 } from '@/features/messaging/hooks/use-messaging'
 import { ChannelList } from '@/features/messaging/components/channel-list'
 import { DmList } from '@/features/messaging/components/dm-list'
@@ -23,13 +26,28 @@ import { MessageThread } from '@/features/messaging/components/message-thread'
 import { MessageComposer } from '@/features/messaging/components/message-composer'
 import { NewChannelDialog } from '@/features/messaging/components/new-channel-dialog'
 import { NewDmDialog } from '@/features/messaging/components/new-dm-dialog'
-import { toThreadMessage } from '@/features/messaging/types'
+import { toThreadMessage, type ChannelRow } from '@/features/messaging/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { toast } from '@/shared/components/ui/sonner'
+import { errorMessage } from '@/shared/lib/errors'
 
-function ChannelPane({ channelId, orgId, userId, name }: { channelId: string; orgId: string | null; userId: string | null; name?: string }) {
+function ChannelPane({
+  channelId,
+  orgId,
+  userId,
+  name,
+  archived,
+}: {
+  channelId: string
+  orgId: string | null
+  userId: string | null
+  name?: string
+  archived?: boolean
+}) {
   const { messages, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useChannelMessages(channelId)
   useChannelRealtime(channelId)
   const send = useSendChannelMessage(orgId, channelId, userId)
@@ -46,6 +64,7 @@ function ChannelPane({ channelId, orgId, userId, name }: { channelId: string; or
       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
         <Hash className="h-4 w-4 text-muted-foreground" />
         <p className="text-sm font-semibold">{name ?? 'Channel'}</p>
+        {archived && <span className="text-xs text-muted-foreground">— archived, read-only</span>}
       </div>
       <MessageThread
         messages={messages.map(toThreadMessage)}
@@ -56,7 +75,7 @@ function ChannelPane({ channelId, orgId, userId, name }: { channelId: string; or
         onLoadMore={() => fetchNextPage()}
         onDelete={(id) => del.mutate(id)}
       />
-      <MessageComposer disabled={!userId} onSend={(body) => send.mutateAsync(body)} />
+      <MessageComposer disabled={!userId || archived} onSend={(body) => send.mutateAsync(body)} />
     </>
   )
 }
@@ -97,7 +116,7 @@ function DmPane({ conversationId, orgId, userId, name }: { conversationId: strin
  * (?c=<channelId> / ?dm=<conversationId>) — shareable, back-button-friendly,
  * and what a DM notification's link lands on directly. */
 export function MessagesPage() {
-  const { activeOrgId, profile } = useAuth()
+  const { activeOrgId, profile, activeMembership } = useAuth()
   const { has } = usePermissions()
   const userId = profile?.id ?? null
 
@@ -105,18 +124,24 @@ export function MessagesPage() {
   const activeChannelId = params.get('c')
   const activeConversationId = params.get('dm')
 
-  const { data: channels, isLoading: channelsLoading } = useChannels(activeOrgId, userId)
+  const [showArchived, setShowArchived] = React.useState(false)
+  const { data: channels, isLoading: channelsLoading } = useChannels(activeOrgId, userId, showArchived)
   const { data: conversations, isLoading: conversationsLoading } = useConversations(activeOrgId, userId)
+
+  const archiveChannel = useArchiveChannel(activeOrgId)
+  const unarchiveChannel = useUnarchiveChannel(activeOrgId)
+  const deleteChannel = useDeleteChannel(activeOrgId)
 
   const [newChannelOpen, setNewChannelOpen] = React.useState(false)
   const [newDmOpen, setNewDmOpen] = React.useState(false)
+  const [toDelete, setToDelete] = React.useState<ChannelRow | null>(null)
 
   const selectChannel = (id: string) => setParams({ c: id })
   const selectConversation = (id: string) => setParams({ dm: id })
 
   // Land on the first channel by default so the hub never opens to a blank pane.
   React.useEffect(() => {
-    if (!activeChannelId && !activeConversationId && channels && channels.length > 0) {
+    if (!activeChannelId && !activeConversationId && channels && channels.length > 0 && !showArchived) {
       setParams({ c: channels[0].id }, { replace: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -125,6 +150,40 @@ export function MessagesPage() {
   const activeChannel = channels?.find((c) => c.id === activeChannelId)
   const activeConversation = conversations?.find((c) => c.id === activeConversationId)
 
+  // Creator, org admin (owner), or messaging.manage_channels — mirrors the
+  // channels_update/delete_channel RLS predicate server-side; this is only
+  // for which button to show, RLS is the real gate either way.
+  const canManageChannel = (c: ChannelRow) =>
+    c.created_by === userId || Boolean(activeMembership?.is_owner) || has('messaging.manage_channels')
+
+  const doArchive = async (c: ChannelRow) => {
+    try {
+      await archiveChannel.mutateAsync(c.id)
+      toast.success(`#${c.name} archived`)
+    } catch (err) {
+      toast.error('Could not archive channel', { description: errorMessage(err) })
+    }
+  }
+  const doUnarchive = async (c: ChannelRow) => {
+    try {
+      await unarchiveChannel.mutateAsync(c.id)
+      toast.success(`#${c.name} restored`)
+    } catch (err) {
+      toast.error('Could not restore channel', { description: errorMessage(err) })
+    }
+  }
+  const doDelete = async () => {
+    if (!toDelete) return
+    try {
+      await deleteChannel.mutateAsync(toDelete.id)
+      toast.success(`#${toDelete.name} and its messages were deleted`)
+      if (activeChannelId === toDelete.id) setParams({}, { replace: true })
+      setToDelete(null)
+    } catch (err) {
+      toast.error('Could not delete channel', { description: errorMessage(err) })
+    }
+  }
+
   return (
     <div>
       <PageHeader title="Messages" description="Chat with your firm — channels and direct messages." />
@@ -132,8 +191,22 @@ export function MessagesPage() {
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <Card className="flex h-[70vh] flex-col overflow-hidden">
           <div className="flex items-center justify-between px-3 py-2.5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Channels</p>
-            {has('messaging.create_channels') && (
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {showArchived ? 'Archived channels' : 'Channels'}
+              </p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 text-muted-foreground"
+                onClick={() => setShowArchived((s) => !s)}
+                aria-label={showArchived ? 'Back to active channels' : 'Show archived channels'}
+                title={showArchived ? 'Back to active channels' : 'Show archived channels'}
+              >
+                <Archive className="h-3 w-3" />
+              </Button>
+            </div>
+            {!showArchived && has('messaging.create_channels') && (
               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setNewChannelOpen(true)} aria-label="New channel">
                 <Plus className="h-3.5 w-3.5" />
               </Button>
@@ -143,7 +216,15 @@ export function MessagesPage() {
             {channelsLoading ? (
               <div className="space-y-1.5 px-1">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-7 w-full" />)}</div>
             ) : (
-              <ChannelList channels={channels ?? []} activeId={activeChannelId} onSelect={selectChannel} />
+              <ChannelList
+                channels={channels ?? []}
+                activeId={activeChannelId}
+                onSelect={selectChannel}
+                canManage={canManageChannel}
+                onArchive={doArchive}
+                onUnarchive={doUnarchive}
+                onDelete={setToDelete}
+              />
             )}
           </div>
 
@@ -164,7 +245,14 @@ export function MessagesPage() {
 
         <Card className="flex h-[70vh] flex-col overflow-hidden">
           {activeChannelId ? (
-            <ChannelPane key={activeChannelId} channelId={activeChannelId} orgId={activeOrgId} userId={userId} name={activeChannel ? `#${activeChannel.name}` : undefined} />
+            <ChannelPane
+              key={activeChannelId}
+              channelId={activeChannelId}
+              orgId={activeOrgId}
+              userId={userId}
+              name={activeChannel ? `#${activeChannel.name}` : undefined}
+              archived={Boolean(activeChannel?.archived_at)}
+            />
           ) : activeConversationId ? (
             <DmPane key={activeConversationId} conversationId={activeConversationId} orgId={activeOrgId} userId={userId} name={activeConversation?.other?.full_name ?? undefined} />
           ) : (
@@ -181,6 +269,23 @@ export function MessagesPage() {
 
       <NewChannelDialog open={newChannelOpen} onOpenChange={setNewChannelOpen} onCreated={selectChannel} />
       <NewDmDialog open={newDmOpen} onOpenChange={setNewDmOpen} onSelected={selectConversation} />
+
+      <ConfirmDialog
+        open={Boolean(toDelete)}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title="Delete channel"
+        destructive
+        confirmPhrase="DELETE CHANNEL"
+        confirmLabel="Delete channel"
+        loading={deleteChannel.isPending}
+        description={
+          <>
+            This permanently deletes <strong>#{toDelete?.name}</strong> and every message in it, for everyone.
+            This cannot be undone — if you might want this back, Archive it instead.
+          </>
+        }
+        onConfirm={doDelete}
+      />
     </div>
   )
 }

@@ -1485,6 +1485,7 @@ export interface Database {
         Returns: Database['public']['Tables']['direct_conversations']['Row']
       }
       mark_channel_read: { Args: { p_channel: string }; Returns: undefined }
+      delete_channel: { Args: { p_channel: string }; Returns: undefined }
       mark_dm_read: { Args: { p_conversation: string }; Returns: undefined }
       get_unread_message_count: { Args: { p_org: string }; Returns: number }
       clear_audit_log: { Args: Record<string, never>; Returns: undefined }

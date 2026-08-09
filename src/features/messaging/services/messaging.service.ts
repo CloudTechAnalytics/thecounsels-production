@@ -12,15 +12,17 @@ const CONVERSATION_SELECT =
   '*, a:profiles!direct_conversations_user_a_fkey(id, full_name, avatar_url, last_seen_at), b:profiles!direct_conversations_user_b_fkey(id, full_name, avatar_url, last_seen_at)'
 
 export const messagingService = {
-  async listChannels(organizationId: string, userId: string): Promise<ChannelRow[]> {
+  async listChannels(organizationId: string, userId: string, includeArchived = false): Promise<ChannelRow[]> {
+    let q = supabase
+      .from('channels')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .order('last_message_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+    q = includeArchived ? q.not('archived_at', 'is', null) : q.is('archived_at', null)
+
     const [{ data: channels, error: chErr }, { data: reads, error: readErr }] = await Promise.all([
-      supabase
-        .from('channels')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .is('archived_at', null)
-        .order('last_message_at', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false }),
+      q,
       supabase.from('channel_reads').select('channel_id, last_read_at').eq('user_id', userId),
     ])
     if (chErr) throw chErr
@@ -52,6 +54,19 @@ export const messagingService = {
 
   async archiveChannel(id: string): Promise<void> {
     const { error } = await supabase.from('channels').update({ archived_at: new Date().toISOString() }).eq('id', id)
+    if (error) throw error
+  },
+
+  async unarchiveChannel(id: string): Promise<void> {
+    const { error } = await supabase.from('channels').update({ archived_at: null }).eq('id', id)
+    if (error) throw error
+  },
+
+  /** Permanently removes the channel and every message in it — routed
+   * through the delete_channel RPC so it's always recorded in audit_logs
+   * (see migration 0064); there's no direct delete policy on `channels`. */
+  async deleteChannel(id: string): Promise<void> {
+    const { error } = await supabase.rpc('delete_channel', { p_channel: id })
     if (error) throw error
   },
 

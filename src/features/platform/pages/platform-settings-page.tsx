@@ -5,7 +5,6 @@ import {
   useUpdatePlatformSettings,
   useRegistrationSettingsAdmin,
   useUpdateRegistrationSettings,
-  usePlans,
 } from '@/features/platform/hooks/use-platform'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
@@ -14,7 +13,6 @@ import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Skeleton } from '@/shared/components/ui/skeleton'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { cn } from '@/shared/lib/utils'
 import { toast } from '@/shared/components/ui/sonner'
 
@@ -56,35 +54,30 @@ function Section({ icon: Icon, title, children }: { icon: typeof Palette; title:
 }
 
 /**
- * The configurable knobs behind /onboarding's plan step and register_organization()
- * (migration 0051) — changing these here takes effect for the next self-service
- * signup immediately, no redeploy, satisfying §9's "don't hardcode 3 months".
- * Self-contained (own load/save) since it reads a different table than the rest
- * of this page's single big platform_settings form.
+ * The one global knob behind /onboarding's free-trial offer: whether a
+ * trial is offered at all, and its default length. Which plan a registering
+ * firm gets is now their own choice on the onboarding plan step (see
+ * useSelectablePlans/register_organization's p_plan_id) — each plan's own
+ * price and trial_duration_days (Platform Console → Plans) drive what's
+ * shown, so there's no longer a single "trial plan"/"future price" to
+ * configure here. Self-contained (own load/save) since it reads a
+ * different table than the rest of this page's single big platform_settings form.
  */
 function RegistrationSettingsSection() {
   const { data, isLoading } = useRegistrationSettingsAdmin()
-  const { data: plans } = usePlans()
   const update = useUpdateRegistrationSettings()
-  const [form, setForm] = React.useState({ trial_enabled: true, trial_duration_days: 90, trial_plan_id: '', trial_future_price: '' })
+  const [form, setForm] = React.useState({ trial_enabled: true, trial_duration_days: 30 })
 
   React.useEffect(() => {
     if (!data) return
-    setForm({
-      trial_enabled: data.trial_enabled,
-      trial_duration_days: data.trial_duration_days,
-      trial_plan_id: data.trial_plan_id ?? '',
-      trial_future_price: data.trial_future_price != null ? String(data.trial_future_price) : '',
-    })
+    setForm({ trial_enabled: data.trial_enabled, trial_duration_days: data.trial_duration_days })
   }, [data])
 
   const save = async () => {
     try {
       await update.mutateAsync({
         trial_enabled: form.trial_enabled,
-        trial_duration_days: Number(form.trial_duration_days) || 90,
-        trial_plan_id: form.trial_plan_id || null,
-        trial_future_price: form.trial_future_price ? Number(form.trial_future_price) : null,
+        trial_duration_days: Number(form.trial_duration_days) || 30,
       })
       toast.success('Registration settings saved')
     } catch (err) {
@@ -101,41 +94,19 @@ function RegistrationSettingsSection() {
           checked={form.trial_enabled}
           onChange={(b) => setForm((f) => ({ ...f, trial_enabled: b }))}
           label="Trial enabled"
-          hint="Whether new self-registered firms get a free trial at all"
+          hint="Whether new self-registered firms can start a free trial at all"
         />
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label>Trial length (days)</Label>
-            <Input
-              type="number"
-              value={form.trial_duration_days}
-              onChange={(e) => setForm((f) => ({ ...f, trial_duration_days: Number(e.target.value) }))}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Trial plan</Label>
-            <Select value={form.trial_plan_id} onValueChange={(v) => setForm((f) => ({ ...f, trial_plan_id: v }))}>
-              <SelectTrigger><SelectValue placeholder="Choose a plan" /></SelectTrigger>
-              <SelectContent>
-                {plans?.filter((p) => p.is_active).map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Future price (₦/month)</Label>
-            <Input
-              type="number"
-              value={form.trial_future_price}
-              onChange={(e) => setForm((f) => ({ ...f, trial_future_price: e.target.value }))}
-              placeholder="15000"
-            />
-          </div>
+        <div className="max-w-xs space-y-1.5">
+          <Label>Trial length (days)</Label>
+          <Input
+            type="number"
+            value={form.trial_duration_days}
+            onChange={(e) => setForm((f) => ({ ...f, trial_duration_days: Number(e.target.value) }))}
+          />
         </div>
         <p className="text-xs text-muted-foreground">
-          Shown on the onboarding plan step exactly as configured here — e.g. "{form.trial_duration_days} days free, then
-          ₦{form.trial_future_price || '—'}/month". No code change needed to adjust it later.
+          Per-plan pricing and trial length live on each plan (Platform Console → Plans) — this is
+          just the global default and the on/off switch for offering a trial at all.
         </p>
         <div className="flex justify-end">
           <Button onClick={save} loading={update.isPending}>Save registration settings</Button>

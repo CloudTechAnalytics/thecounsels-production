@@ -19,7 +19,7 @@ export type OrgStatus = 'trial' | 'active' | 'suspended' | 'cancelled'
 export type OrganizationType = 'customer' | 'demo' | 'internal'
 export type MembershipStatus = 'invited' | 'active' | 'suspended' | 'disabled'
 export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired'
-export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'paused' | 'cancelled'
+export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'paused' | 'cancelled' | 'expired' | 'suspended'
 export type BillingCycle = 'monthly' | 'yearly'
 export type ClientType = 'individual' | 'corporate'
 export type ClientStatus = 'active' | 'inactive' | 'prospect'
@@ -319,6 +319,7 @@ export interface Database {
           is_active: boolean
           sort_order: number
           trial_duration_days: number | null
+          paystack_plan_code: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -337,6 +338,7 @@ export interface Database {
           is_active?: boolean
           sort_order?: number
           trial_duration_days?: number | null
+          paystack_plan_code?: string | null
         }
         Update: Partial<Database['public']['Tables']['plans']['Insert']>
         Relationships: []
@@ -1182,6 +1184,16 @@ export interface Database {
           trial_ends_at: string | null
           current_period_end: string | null
           cancelled_at: string | null
+          paystack_customer_code: string | null
+          paystack_subscription_code: string | null
+          paystack_transaction_reference: string | null
+          amount: number | null
+          currency: string
+          cancellation_reason: string | null
+          next_billing_date: string | null
+          scheduled_plan_id: string | null
+          scheduled_change_at: string | null
+          last_trial_reminder_days: number | null
         } & Timestamps
         Insert: {
           id?: string
@@ -1194,6 +1206,16 @@ export interface Database {
           trial_ends_at?: string | null
           current_period_end?: string | null
           cancelled_at?: string | null
+          paystack_customer_code?: string | null
+          paystack_subscription_code?: string | null
+          paystack_transaction_reference?: string | null
+          amount?: number | null
+          currency?: string
+          cancellation_reason?: string | null
+          next_billing_date?: string | null
+          scheduled_plan_id?: string | null
+          scheduled_change_at?: string | null
+          last_trial_reminder_days?: number | null
         }
         Update: Partial<Database['public']['Tables']['subscriptions']['Insert']>
         Relationships: [

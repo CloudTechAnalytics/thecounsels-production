@@ -153,9 +153,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     let mounted = true
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) void load(data.session?.user.id ?? null)
-    })
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (mounted) void load(data.session?.user.id ?? null)
+      })
+      .catch((error) => {
+        // Without this, a transient network/CORS hiccup on the very first
+        // getSession() call leaves `status` stuck at 'loading' forever —
+        // load() never runs, so every guarded route (RequireAuth,
+        // RedirectIfAuthenticated, RequireActiveSubscription) hangs on the
+        // brand loading screen indefinitely instead of settling into
+        // 'unauthenticated'. Fall back the same way load()'s own catch does.
+        console.error('Failed to get initial session:', error)
+        if (mounted) void load(null)
+      })
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return

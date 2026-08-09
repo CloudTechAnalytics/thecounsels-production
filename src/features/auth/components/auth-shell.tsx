@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Scale, ShieldCheck, Sparkles } from 'lucide-react'
 import { APP } from '@/shared/config/env'
@@ -32,7 +33,7 @@ export function AuthShell({
               'radial-gradient(60rem 60rem at 80% -10%, hsl(var(--sidebar-accent) / 0.5), transparent 60%)',
           }}
         />
-        <div className="relative flex items-center gap-3">
+        <Link to="/welcome" className="relative flex items-center gap-3 transition-opacity hover:opacity-80">
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15 text-sidebar-accent ring-1 ring-sidebar-border">
             <Scale className="h-6 w-6" />
           </span>
@@ -40,7 +41,7 @@ export function AuthShell({
             <p className="font-display text-lg font-semibold">{APP.product}</p>
             <p className="text-xs text-sidebar-muted">{APP.brand}</p>
           </div>
-        </div>
+        </Link>
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -80,7 +81,7 @@ export function AuthShell({
           transition={{ duration: 0.4, ease: 'easeOut' }}
           className="w-full max-w-md"
         >
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
+          <Link to="/welcome" className="mb-8 flex items-center gap-3 transition-opacity hover:opacity-80 lg:hidden">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
               <Scale className="h-5 w-5" />
             </span>
@@ -88,7 +89,7 @@ export function AuthShell({
               <p className="font-display text-base font-semibold">{APP.product}</p>
               <p className="text-xs text-muted-foreground">{APP.brand}</p>
             </div>
-          </div>
+          </Link>
 
           {back && <div className="mb-6">{back}</div>}
 

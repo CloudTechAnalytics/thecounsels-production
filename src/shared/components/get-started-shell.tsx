@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { ArrowLeft, Scale, Settings } from 'lucide-react'
 import { APP } from '@/shared/config/env'
 import { ThemeToggle } from '@/shared/components/theme-toggle'
@@ -32,12 +33,12 @@ export function GetStartedShell({
   return (
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border/70 px-6 py-5">
-        <div className="flex items-center gap-2.5">
+        <Link to="/welcome" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Scale className="h-5 w-5" />
           </span>
           <p className="font-display text-lg font-semibold">{APP.product}</p>
-        </div>
+        </Link>
         <ThemeToggle />
       </header>
 

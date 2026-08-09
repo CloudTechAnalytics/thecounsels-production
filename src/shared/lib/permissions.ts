@@ -60,6 +60,10 @@ export const PERMISSION_KEYS = [
   'reports.view',
   'reports.financial',
   'notifications.view',
+  'messaging.view',
+  'messaging.send',
+  'messaging.create_channels',
+  'messaging.manage_channels',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]

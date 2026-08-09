@@ -72,7 +72,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                               isActive ? 'text-sidebar-accent' : 'text-sidebar-muted group-hover:text-sidebar-foreground',
                             )}
                           />
-                          {item.label}
+                          <span className="flex-1 truncate">{item.label}</span>
+                          {item.badge && <item.badge />}
                         </>
                       )}
                     </NavLink>

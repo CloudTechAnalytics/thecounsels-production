@@ -20,6 +20,7 @@ export const NOTIFICATION_CATEGORY_META: Record<NotificationCategory, { label: s
   tasks: { label: 'Tasks' },
   documents: { label: 'Documents' },
   notes: { label: 'Notes' },
+  messaging: { label: 'Messages' },
 }
 
 /** Every trigger wired so far links to the parent matter; category-based fallbacks
@@ -29,6 +30,9 @@ export function resolveNotificationHref(n: Pick<NotificationRow, 'entity_type' |
   // Trial/subscription reminders (notify_org_members, migration 0055) — send
   // to Firm Settings' Plan & Billing tab, not the time/expense billing page.
   if (n.entity_type === 'subscription') return '/administration'
+  // Direct-message notifications (notify_dm_message, migration 0061) — deep
+  // link straight into that conversation.
+  if (n.entity_type === 'conversation' && n.entity_id) return `/messages?dm=${n.entity_id}`
   switch (n.category) {
     case 'clients': return '/clients'
     case 'hearings': return '/hearings'
@@ -36,6 +40,7 @@ export function resolveNotificationHref(n: Pick<NotificationRow, 'entity_type' |
     case 'documents': return '/documents'
     case 'billing': return '/billing'
     case 'notes': return '/matters'
+    case 'messaging': return '/messages'
     default: return '/notifications'
   }
 }

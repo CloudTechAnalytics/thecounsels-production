@@ -32,6 +32,7 @@ import { BillingPage } from '@/features/billing/pages/billing-page'
 import { ReportsPage } from '@/features/reports/pages/reports-page'
 import { ClientsPage } from '@/features/clients/pages/clients-page'
 import { NotificationsPage } from '@/features/notifications/pages/notifications-page'
+import { MessagesPage } from '@/features/messaging/pages/messages-page'
 import { MattersPage } from '@/features/matters/pages/matters-page'
 import { MatterDetailPage } from '@/features/matters/pages/matter-detail-page'
 import { DocumentsPage } from '@/features/documents/pages/documents-page'
@@ -176,6 +177,7 @@ export const router = createBrowserRouter([
                       { path: 'billing', element: withPermission(<BillingPage />, 'billing.view') },
                       { path: 'reports', element: withPermission(<ReportsPage />, 'reports.view') },
                       { path: 'notifications', element: <NotificationsPage /> },
+                      { path: 'messages', element: withPermission(<MessagesPage />, 'messaging.view') },
                       {
                         path: 'administration',
                         element: withPermission(<AdministrationPage />, ['organization.view', 'members.view'], 'any'),

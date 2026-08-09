@@ -38,7 +38,7 @@ export type TimeEntryStatus = 'draft' | 'submitted' | 'approved' | 'invoiced' | 
 export type TicketStatus = 'open' | 'in_progress' | 'waiting' | 'resolved' | 'closed'
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type NotificationPriority = 'info' | 'reminder' | 'warning' | 'urgent'
-export type NotificationCategory = 'matters' | 'clients' | 'hearings' | 'billing' | 'tasks' | 'documents' | 'notes'
+export type NotificationCategory = 'matters' | 'clients' | 'hearings' | 'billing' | 'tasks' | 'documents' | 'notes' | 'messaging'
 export type RoleKey =
   | 'platform_owner'
   | 'platform_admin'
@@ -1358,6 +1358,120 @@ export interface Database {
           },
         ]
       }
+      channels: {
+        Row: {
+          id: string
+          organization_id: string
+          name: string
+          description: string | null
+          created_by: string | null
+          last_message_at: string | null
+          archived_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          name: string
+          description?: string | null
+          created_by?: string | null
+          last_message_at?: string | null
+          archived_at?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['channels']['Insert']>
+        Relationships: []
+      }
+      channel_messages: {
+        Row: {
+          id: string
+          organization_id: string
+          channel_id: string
+          author_id: string | null
+          body: string
+          created_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          channel_id: string
+          author_id?: string | null
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['channel_messages']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'channel_messages_channel_id_fkey'
+            columns: ['channel_id']
+            isOneToOne: false
+            referencedRelation: 'channels'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      channel_reads: {
+        Row: { channel_id: string; user_id: string; last_read_at: string }
+        Insert: { channel_id: string; user_id: string; last_read_at?: string }
+        Update: Partial<Database['public']['Tables']['channel_reads']['Insert']>
+        Relationships: []
+      }
+      direct_conversations: {
+        Row: {
+          id: string
+          organization_id: string
+          user_a: string
+          user_b: string
+          user_a_last_read_at: string | null
+          user_b_last_read_at: string | null
+          last_message_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_a: string
+          user_b: string
+          user_a_last_read_at?: string | null
+          user_b_last_read_at?: string | null
+          last_message_at?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['direct_conversations']['Insert']>
+        Relationships: []
+      }
+      direct_messages: {
+        Row: {
+          id: string
+          organization_id: string
+          conversation_id: string
+          author_id: string | null
+          body: string
+          created_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          conversation_id: string
+          author_id?: string | null
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['direct_messages']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'direct_messages_conversation_id_fkey'
+            columns: ['conversation_id']
+            isOneToOne: false
+            referencedRelation: 'direct_conversations'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: { [_ in never]: never }
     Functions: {
@@ -1366,6 +1480,13 @@ export interface Database {
       is_org_admin: { Args: { org: string }; Returns: boolean }
       has_permission: { Args: { org: string; perm: string }; Returns: boolean }
       has_financial_access: { Args: { p_org: string; p_perm: string }; Returns: boolean }
+      get_or_create_dm_conversation: {
+        Args: { p_org: string; p_other: string }
+        Returns: Database['public']['Tables']['direct_conversations']['Row']
+      }
+      mark_channel_read: { Args: { p_channel: string }; Returns: undefined }
+      mark_dm_read: { Args: { p_conversation: string }; Returns: undefined }
+      get_unread_message_count: { Args: { p_org: string }; Returns: number }
       create_organization: {
         Args: {
           p_name: string
@@ -1530,3 +1651,8 @@ export type DocumentRow = Database['public']['Tables']['documents']['Row']
 export type NotificationRow = Database['public']['Tables']['notifications']['Row']
 export type NotificationPreferences = Database['public']['Tables']['notification_preferences']['Row']
 export type NotificationLog = Database['public']['Tables']['notification_log']['Row']
+export type Channel = Database['public']['Tables']['channels']['Row']
+export type ChannelMessage = Database['public']['Tables']['channel_messages']['Row']
+export type ChannelRead = Database['public']['Tables']['channel_reads']['Row']
+export type DirectConversation = Database['public']['Tables']['direct_conversations']['Row']
+export type DirectMessage = Database['public']['Tables']['direct_messages']['Row']

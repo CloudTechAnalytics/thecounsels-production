@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react'
 import {
   LayoutDashboard,
   Users,
@@ -9,10 +10,12 @@ import {
   Receipt,
   BarChart3,
   Bell,
+  MessageSquare,
   Settings,
   type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey } from '@/shared/lib/permissions'
+import { MessagesNavBadge } from '@/features/messaging/components/messages-nav-badge'
 
 export interface NavItem {
   label: string
@@ -21,6 +24,8 @@ export interface NavItem {
   /** Any of these permissions grants visibility. */
   permission?: PermissionKey | PermissionKey[]
   end?: boolean
+  /** Rendered inline after the label, e.g. an unread-count pill. */
+  badge?: ComponentType
 }
 
 export interface NavSection {
@@ -51,6 +56,7 @@ export const NAVIGATION: NavSection[] = [
       { label: 'Billing', to: '/billing', icon: Receipt, permission: 'billing.view' },
       { label: 'Reports', to: '/reports', icon: BarChart3, permission: 'reports.view' },
       { label: 'Notifications', to: '/notifications', icon: Bell, permission: 'notifications.view' },
+      { label: 'Messages', to: '/messages', icon: MessageSquare, permission: 'messaging.view', badge: MessagesNavBadge },
     ],
   },
   {

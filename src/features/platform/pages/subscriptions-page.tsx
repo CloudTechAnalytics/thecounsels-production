@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { CreditCard, TrendingUp, CircleDollarSign, Building2, Hourglass } from 'lucide-react'
 import {
   usePlans,
@@ -14,15 +15,32 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { initialsOf, formatNaira, formatMoneyCompact, daysUntil } from '@/shared/lib/format'
+import { cn } from '@/shared/lib/utils'
 import { toast } from '@/shared/components/ui/sonner'
 
 const STATUS_OPTIONS: { value: SubscriptionStatus; label: string }[] = [
   { value: 'trialing', label: 'Trial' },
   { value: 'active', label: 'Active' },
   { value: 'past_due', label: 'Past due' },
+  { value: 'suspended', label: 'Suspended' },
   { value: 'paused', label: 'Paused' },
   { value: 'cancelled', label: 'Cancelled' },
+  { value: 'expired', label: 'Expired' },
 ]
+
+type FilterKey = 'all' | 'starter' | 'professional' | 'business' | 'enterprise' | 'trialing' | 'expired' | 'cancelled' | 'past_due'
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'starter', label: 'Starter' },
+  { key: 'professional', label: 'Professional' },
+  { key: 'business', label: 'Business' },
+  { key: 'enterprise', label: 'Enterprise' },
+  { key: 'trialing', label: 'Trial' },
+  { key: 'expired', label: 'Expired trials' },
+  { key: 'cancelled', label: 'Cancelled' },
+  { key: 'past_due', label: 'Past-due' },
+]
+const PLAN_KEYS = new Set(['starter', 'professional', 'business', 'enterprise'])
 
 function monthlyPrice(row: SubscriptionRow): number {
   if (!row.plan) return 0
@@ -106,7 +124,14 @@ function SubscriptionRowItem({ row }: { row: SubscriptionRow }) {
 export function SubscriptionsPage() {
   const { data, isLoading } = useSubscriptions()
   const stats = usePlatformStats()
+  const [filter, setFilter] = React.useState<FilterKey>('all')
   const trials = (data ?? []).filter((s) => s.status === 'trialing').length
+
+  const filtered = (data ?? []).filter((row) => {
+    if (filter === 'all') return true
+    if (PLAN_KEYS.has(filter)) return row.plan?.key === filter
+    return row.status === filter
+  })
 
   return (
     <div>
@@ -119,10 +144,25 @@ export function SubscriptionsPage() {
         <KpiCard label="MRR" value={formatMoneyCompact(stats.data?.mrr ?? 0)} hint="Monthly recurring revenue" icon={TrendingUp} loading={stats.isLoading} />
         <KpiCard label="ARR" value={formatMoneyCompact(stats.data?.arr ?? 0)} hint="Annualised" icon={CircleDollarSign} loading={stats.isLoading} />
         <KpiCard label="Customers" value={data?.length ?? 0} hint="Paying + trial tenants" icon={Building2} loading={isLoading} />
-        <KpiCard label="Trials" value={trials} hint="Not yet billing" icon={Hourglass} loading={isLoading} />
+        <KpiCard label="Trials" value={trials} hint="Not yet billing (excluded from MRR)" icon={Hourglass} loading={isLoading} />
       </div>
 
-      <Card className="mt-6 overflow-hidden">
+      <div className="mt-6 flex flex-wrap gap-1.5">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={cn(
+              'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+              filter === f.key ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground',
+            )}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <Card className="mt-4 overflow-hidden">
         <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
           <CreditCard className="h-4 w-4 text-primary" />
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Customer plans</h2>
@@ -133,7 +173,7 @@ export function SubscriptionsPage() {
               <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
-        ) : data && data.length > 0 ? (
+        ) : filtered.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -145,14 +185,14 @@ export function SubscriptionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((row) => (
+              {filtered.map((row) => (
                 <SubscriptionRowItem key={row.id} row={row} />
               ))}
             </TableBody>
           </Table>
         ) : (
           <div className="px-6 py-16 text-center text-sm text-muted-foreground">
-            No subscriptions yet — they're created automatically with each organization.
+            {data && data.length > 0 ? 'No subscriptions match this filter.' : "No subscriptions yet — they're created automatically with each organization."}
           </div>
         )}
       </Card>

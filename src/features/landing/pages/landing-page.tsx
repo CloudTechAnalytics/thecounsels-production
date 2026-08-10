@@ -21,6 +21,8 @@ import {
   PhoneCall,
   UploadCloud,
   ClipboardCheck,
+  Lock,
+  ScrollText,
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { APP } from '@/shared/config/env'
@@ -190,6 +192,13 @@ const PLANS = [
     tagline: 'For larger or custom firms',
     features: ['Custom users & storage', 'Custom features & workflows', 'Custom integrations', 'Custom support requirements'],
   },
+]
+
+const COMPLIANCE = [
+  { icon: ShieldCheck, label: 'Row-level tenant isolation' },
+  { icon: Lock, label: 'Encrypted document storage' },
+  { icon: ClipboardCheck, label: 'Full audit trail on every action' },
+  { icon: ScrollText, label: 'Designed with NDPR principles in mind' },
 ]
 
 const FAQS = [
@@ -563,6 +572,22 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* ── Compliance strip ─────────────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-6 py-12">
+        <Reveal className="flex flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
+          <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary sm:shrink-0">
+            Built with compliance in mind
+          </motion.p>
+          <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 sm:justify-end">
+            {COMPLIANCE.map((c) => (
+              <span key={c.label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <c.icon className="h-4 w-4 shrink-0 text-primary" /> {c.label}
+              </span>
+            ))}
+          </motion.div>
+        </Reveal>
+      </section>
+
       {/* ── Pricing ─────────────────────────────────────────── */}
       <section id="pricing" className="mx-auto max-w-6xl px-6 py-24">
         <Reveal className="mx-auto max-w-2xl text-center">
@@ -574,9 +599,6 @@ export function LandingPage() {
           </motion.h2>
           <motion.p variants={fadeUp} className="mt-4 text-muted-foreground">
             Start free for 30 days. No payment required.
-          </motion.p>
-          <motion.p variants={fadeUp} className="text-sm text-muted-foreground">
-            Or choose a plan and subscribe now.
           </motion.p>
         </Reveal>
 

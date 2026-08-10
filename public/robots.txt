@@ -1,0 +1,18 @@
+# The Counsel — everything under the app itself requires a signed-in
+# session and RLS-scoped data, so there's nothing there worth a crawler's
+# time; only the public marketing/auth surface is worth indexing.
+User-agent: *
+Allow: /welcome
+Allow: /auth/login
+Allow: /auth/register
+Disallow: /platform
+Disallow: /matters
+Disallow: /clients
+Disallow: /billing
+Disallow: /administration
+Disallow: /settings
+Disallow: /messages
+Disallow: /notifications
+Disallow: /onboarding
+
+Sitemap: https://thecounsel.app/sitemap.xml

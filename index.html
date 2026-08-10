@@ -3,19 +3,79 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/scales.svg" />
+    <link rel="apple-touch-icon" href="/scales.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#1a1d21" />
+
+    <!-- Update if/when the app moves off its placeholder domain — kept in
+         sync with APP.domain (src/shared/config/env.ts), the one other
+         place this canonical domain is referenced. -->
+    <link rel="canonical" href="https://thecounsel.app/welcome" />
+
+    <title>The Counsel — Enterprise Legal Practice Management | CloudTech Legal Suite</title>
     <meta
       name="description"
-      content="The Counsel — Enterprise Legal Practice Management Platform by CloudTech Legal Suite."
+      content="The Counsel is an enterprise legal practice management platform for Nigerian law firms — matters, clients, hearings, billing, documents and reports in one secure, role-based workspace. Start a free 30-day trial, no card required."
     />
+    <meta name="keywords" content="legal practice management software, law firm software Nigeria, case management system, legal billing software, matter management, law firm CRM, legal document management, court diary software" />
+    <meta name="author" content="CloudTech Legal Suite" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="The Counsel" />
+    <meta property="og:title" content="The Counsel — Enterprise Legal Practice Management" />
+    <meta
+      property="og:description"
+      content="Run your law firm with confidence — matters, billing, hearings, documents and reports in one secure workspace. Start a free 30-day trial, no card required."
+    />
+    <meta property="og:url" content="https://thecounsel.app/welcome" />
+    <meta property="og:image" content="https://thecounsel.app/og-image.svg" />
+    <meta property="og:locale" content="en_NG" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="The Counsel — Enterprise Legal Practice Management" />
+    <meta
+      name="twitter:description"
+      content="Run your law firm with confidence — matters, billing, hearings, documents and reports in one secure workspace."
+    />
+    <meta name="twitter:image" content="https://thecounsel.app/og-image.svg" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <title>The Counsel — CloudTech Legal Suite</title>
+
+    <!-- Structured data — describes the product for search engines. Pricing
+         mirrors the Starter tier (supabase/migrations 0053); update both
+         together if pricing changes. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "The Counsel",
+        "applicationCategory": "BusinessApplication",
+        "applicationSubCategory": "Legal Practice Management Software",
+        "operatingSystem": "Web",
+        "description": "Enterprise legal practice management platform for law firms — matters, clients, hearings, billing, documents and reports in one secure, role-based workspace.",
+        "url": "https://thecounsel.app/welcome",
+        "offers": {
+          "@type": "Offer",
+          "price": "15000",
+          "priceCurrency": "NGN",
+          "priceValidUntil": "2026-12-31"
+        },
+        "provider": {
+          "@type": "Organization",
+          "name": "CloudTech Legal Suite",
+          "email": "cloudtechanalytics.consultant@gmail.com"
+        }
+      }
+    </script>
+
     <script>
       // Applied before paint so a stored/system dark preference never flashes light first.
       try {

@@ -27,6 +27,18 @@ function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}): Pro
   return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timeoutId))
 }
 
+// A `code` (or `token_hash`) query param on the very first page load only
+// ever comes from clicking a Supabase Auth email link — signup
+// confirmation, invite, password recovery, magic link. This app's own
+// sign-in form never produces one (it calls signInWithPassword directly,
+// no redirect involved). Captured once, synchronously, right here — before
+// the client below is even constructed, let alone gets a chance to run its
+// async detectSessionInUrl and strip the param — so it's reliable no
+// matter which page the email link actually lands the browser on. See
+// auth-provider.tsx for how this is used to catch a just-verified session
+// globally, regardless of route.
+export const hadAuthRedirectInUrl = /[?&](code|token_hash)=/.test(window.location.href)
+
 /**
  * Singleton, fully-typed Supabase client. This is the ONLY backend in the app —
  * PostgreSQL, Auth, Storage, and Realtime are all reached through it, with

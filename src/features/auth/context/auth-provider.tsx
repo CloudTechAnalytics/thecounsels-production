@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { supabase } from '@/shared/lib/supabase'
+import { supabase, hadAuthRedirectInUrl } from '@/shared/lib/supabase'
 import { PERMISSION_KEYS, type PermissionKey } from '@/shared/lib/permissions'
 import { authService } from '@/features/auth/services/auth.service'
 import type { ActiveMembership, AuthContextValue, AuthState } from '@/features/auth/types'
@@ -82,6 +82,7 @@ function isTransientAuthError(error: unknown): boolean {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<AuthState>(initialState)
+  const emailConfirmHandledRef = React.useRef(false)
 
   const load = React.useCallback(async (userId: string | null, isRetry = false) => {
     if (!userId) {
@@ -204,6 +205,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
       if (event === 'PASSWORD_RECOVERY') return // handled by reset-password page
+
+      // A session that appears via a URL-detected email link — not our own
+      // sign-in form — must never ride straight into the app. This fires
+      // regardless of which page the confirmation link actually landed on
+      // (root, /auth/callback, anywhere), so it doesn't depend on Supabase's
+      // Redirect URL allow-list being configured for every deployed domain.
+      // A hard navigation (not react-router) is used deliberately: this
+      // provider may render before/outside the router in some trees, and a
+      // full reload guarantees a clean slate with no leftover URL params.
+      if (event === 'SIGNED_IN' && hadAuthRedirectInUrl && !emailConfirmHandledRef.current) {
+        emailConfirmHandledRef.current = true
+        void (async () => {
+          await authService.signOut()
+          toast.success('Email verified', { description: 'Sign in to continue setting up your firm.' })
+          window.location.assign('/auth/login')
+        })()
+        return
+      }
+
       void load(session?.user.id ?? null)
     })
 

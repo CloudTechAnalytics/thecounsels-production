@@ -62,7 +62,7 @@ const STATS = [
   { value: '6', label: 'Purpose-built modules, working as one workspace' },
   { value: '₦', label: 'Native naira billing & invoicing' },
   { value: 'Row-level', label: 'Security isolating every firm’s data by default' },
-  { value: '14-day', label: 'Free trial on Professional, no card required' },
+  { value: '30-day', label: 'Free trial on any plan, no card required' },
 ]
 
 const SEGMENTS = [
@@ -167,12 +167,14 @@ const STEPS = [
 // can't read `plans` under RLS, and we don't weaken RLS to expose it.
 const PLANS = [
   {
+    key: 'starter',
     name: 'Starter',
     price: '₦15,000',
     tagline: 'For solo lawyers and small law firms',
     features: ['Up to 3 users', 'Core matter & client management', 'Documents, hearings & calendar', 'Time tracking & expenses', 'Basic billing & reports'],
   },
   {
+    key: 'professional',
     name: 'Professional',
     price: '₦50,000',
     tagline: 'For growing and established law firms',
@@ -180,12 +182,14 @@ const PLANS = [
     highlight: true,
   },
   {
+    key: 'business',
     name: 'Business',
     price: '₦100,000',
     tagline: 'For larger law firms',
     features: ['Up to 25 users', 'Everything in Professional', 'Advanced analytics', 'Workflow automation', 'Advanced firm controls'],
   },
   {
+    key: 'enterprise',
     name: 'Enterprise',
     price: 'Custom',
     priceHint: 'Starting from ₦150,000/month',
@@ -193,6 +197,15 @@ const PLANS = [
     features: ['Custom users & storage', 'Custom features & workflows', 'Custom integrations', 'Custom support requirements'],
   },
 ]
+
+/** Landing-page plan buttons lead toward payment, not another trial CTA —
+ * "Start Free"/"Start Free Trial" already exist in the nav and hero for
+ * that. Clicking a paid tier here stashes the intent so the onboarding
+ * wizard's plan step preselects it (instead of defaulting to Trial),
+ * surviving the account-creation + email-verification gap in between —
+ * a query param wouldn't (Supabase's verification link redirects to a
+ * fixed callback URL). Cleared once the wizard reads it. */
+const INTENDED_PLAN_KEY = 'counsel.intended_plan'
 
 const COMPLIANCE = [
   { icon: ShieldCheck, label: 'Row-level tenant isolation' },
@@ -295,6 +308,96 @@ function HeroEmblem() {
         <p className="text-[5px] uppercase leading-tight tracking-[0.18em] opacity-80 sm:text-[9px] sm:tracking-[0.22em]">
           Est. one firm · one system
         </p>
+      </motion.div>
+    </div>
+  )
+}
+
+const PREVIEW_NAV = ['Dashboard', 'Matters', 'Clients', 'Hearings', 'Billing', 'Reports']
+const PREVIEW_STATS = ['Active matters', 'Hearings this week', 'Revenue this month']
+
+/** An illustrated mockup of the real dashboard's actual layout (sidebar,
+ * stat tiles, recent-activity list) — hand-built to match the app's own
+ * look, not a literal screenshot standing in for one. */
+function DashboardPreview() {
+  return (
+    <div className="relative mx-auto w-full max-w-xl">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-elevated">
+        <div className="flex items-center gap-1.5 border-b border-border bg-muted/40 px-4 py-2.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-destructive/50" />
+          <span className="h-2.5 w-2.5 rounded-full bg-warning/50" />
+          <span className="h-2.5 w-2.5 rounded-full bg-success/50" />
+          <span className="ml-3 flex-1 truncate rounded-md bg-background px-3 py-1 text-[10px] text-muted-foreground">
+            app.{APP.domain}/dashboard
+          </span>
+        </div>
+        <div className="flex h-72 sm:h-80">
+          <div className="hidden w-36 shrink-0 border-r border-border bg-sidebar p-3 sm:block">
+            <div className="mb-4 flex items-center gap-2 px-1">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <Scale className="h-3.5 w-3.5" />
+              </span>
+              <span className="text-[10px] font-semibold text-sidebar-foreground">{APP.product}</span>
+            </div>
+            <div className="space-y-1">
+              {PREVIEW_NAV.map((label, i) => (
+                <div
+                  key={label}
+                  className={cn(
+                    'rounded-md px-2 py-1.5 text-[10px]',
+                    i === 0 ? 'bg-sidebar-hover font-medium text-sidebar-foreground' : 'text-sidebar-muted',
+                  )}
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex-1 space-y-3 overflow-hidden bg-background p-4">
+            <div>
+              <p className="font-display text-sm font-semibold">Welcome back</p>
+              <p className="text-[10px] text-muted-foreground">Here's what's happening at your firm today.</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {PREVIEW_STATS.map((label) => (
+                <div key={label} className="rounded-lg border border-border bg-card p-2.5">
+                  <p className="text-[9px] leading-tight text-muted-foreground">{label}</p>
+                  <p className="mt-1 font-display text-base font-semibold text-primary">••</p>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3">
+              <p className="mb-2.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Recently updated matters
+              </p>
+              <div className="space-y-2.5">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="h-5 w-5 shrink-0 rounded-full bg-primary/15" />
+                    <span className="h-1.5 flex-1 rounded-full bg-muted" style={{ opacity: 1 - i * 0.15 }} />
+                    <span className="h-4 w-10 shrink-0 rounded-full bg-muted" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.3, duration: 0.6 }}
+        className="absolute -bottom-6 -left-6 hidden items-center gap-2.5 rounded-xl border border-border bg-card p-3 shadow-elevated sm:flex"
+      >
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/12 text-success">
+          <CheckCircle2 className="h-4 w-4" />
+        </span>
+        <div>
+          <p className="text-[10px] font-semibold">Invoice paid</p>
+          <p className="text-[9px] text-muted-foreground">₦450,000 received</p>
+        </div>
       </motion.div>
     </div>
   )
@@ -415,7 +518,7 @@ export function LandingPage() {
               </Button>
             </motion.div>
             <motion.p variants={fadeUp} className="mt-6 text-xs text-foreground/35">
-              3 months free, no card required. Set up your firm in minutes.
+              30 days free, no card required. Set up your firm in minutes.
             </motion.p>
           </motion.div>
 
@@ -448,6 +551,37 @@ export function LandingPage() {
             Legal work is detail work. The Counsel exists so your team spends that care on cases —
             not on spreadsheets, shared drives, and missed filing dates.
           </motion.p>
+        </Reveal>
+      </section>
+
+      {/* ── Product preview ─────────────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-6 py-24">
+        <Reveal className="grid items-center gap-14 lg:grid-cols-2">
+          <motion.div variants={fadeUp}>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">See it in action</p>
+            <h2 className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
+              Everything your firm needs, at a glance
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Open your dashboard and see what matters — active matters, this week's hearings, revenue,
+              and every client's latest activity — the moment you log in. No spreadsheets to reconcile,
+              no separate tools to check.
+            </p>
+            <ul className="mt-6 space-y-3">
+              {[
+                'Role-aware dashboards for partners, associates and finance',
+                'Live activity across every matter your team touches',
+                'One-click Excel exports for anything you see',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2 text-sm">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> {item}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+          <motion.div variants={fadeUp}>
+            <DashboardPreview />
+          </motion.div>
         </Reveal>
       </section>
 
@@ -639,7 +773,9 @@ export function LandingPage() {
                 </Button>
               ) : (
                 <Button asChild className="mt-7" variant={p.highlight ? 'default' : 'outline'}>
-                  <Link to="/auth/register">Start Free Trial</Link>
+                  <Link to="/auth/register" onClick={() => localStorage.setItem(INTENDED_PLAN_KEY, p.key)}>
+                    Get Started
+                  </Link>
                 </Button>
               )}
             </motion.div>

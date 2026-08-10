@@ -13,6 +13,12 @@ import type { Plan } from '@/shared/types/database.types'
 const TRIAL = 'trial' as const
 type Selection = typeof TRIAL | string
 
+/** Set by the landing page's pricing CTAs (src/features/landing/pages/landing-page.tsx)
+ * when someone clicks a specific paid tier there, so registering carries that
+ * intent through the account-creation + email-verification gap — a query
+ * param wouldn't survive Supabase's verification-link redirect. */
+const INTENDED_PLAN_KEY = 'counsel.intended_plan'
+
 function CardShell({
   selected,
   onSelect,
@@ -124,9 +130,20 @@ export function PlanStep({
   const { data: settings } = useRegistrationSettings()
   const [selected, setSelected] = React.useState<Selection | null>(null)
 
-  // Trial is preselected by default — it's the recommended, no-payment path.
+  // Trial is preselected by default — it's the recommended, no-payment path
+  // — unless the landing page's pricing section pointed here with a
+  // specific paid tier in mind, in which case that's what's preselected.
   React.useEffect(() => {
     if (!plans || selected) return
+    const intendedKey = localStorage.getItem(INTENDED_PLAN_KEY)
+    if (intendedKey) {
+      localStorage.removeItem(INTENDED_PLAN_KEY)
+      const match = plans.find((p) => p.key === intendedKey)
+      if (match) {
+        setSelected(match.id)
+        return
+      }
+    }
     setSelected(TRIAL)
   }, [plans, selected])
 

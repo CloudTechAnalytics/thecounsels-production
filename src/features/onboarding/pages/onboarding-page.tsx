@@ -23,13 +23,12 @@ const STEP_COPY: Record<Step, { label: string; description: string }> = {
   welcome: { label: "You're All Set", description: 'Your workspace is ready' },
 }
 
-const REDIRECT_SECONDS = 4
-
 /**
  * Trial registration doesn't drop the new admin straight into the app —
  * it confirms the account/firm were created and sends them to sign in
- * properly with the credentials they just set, auto-redirecting after a
- * few seconds (or immediately via the button).
+ * properly with the credentials they just set. Navigation only ever
+ * happens when they click through — no auto-redirect, so they have time
+ * to actually read the confirmation.
  */
 function WelcomeStep({
   firstName,
@@ -40,18 +39,6 @@ function WelcomeStep({
   onDone: () => void
   message?: string
 }) {
-  const [seconds, setSeconds] = React.useState(REDIRECT_SECONDS)
-
-  React.useEffect(() => {
-    if (seconds <= 0) {
-      onDone()
-      return
-    }
-    const t = setTimeout(() => setSeconds((s) => s - 1), 1000)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seconds])
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -92,7 +79,6 @@ function WelcomeStep({
         <Button size="lg" className="w-full" onClick={onDone}>
           Go to sign in
         </Button>
-        <p className="text-xs text-muted-foreground">Redirecting automatically in {seconds}s…</p>
       </motion.div>
     </motion.div>
   )

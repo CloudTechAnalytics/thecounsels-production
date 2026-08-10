@@ -20,6 +20,7 @@ export function GetStartedShell({
   totalSteps,
   onBack,
   children,
+  maxWidthClassName = 'max-w-lg',
 }: {
   title?: string
   stepLabel: string
@@ -29,6 +30,8 @@ export function GetStartedShell({
   totalSteps?: number
   onBack?: { label?: string; onClick: () => void }
   children: ReactNode
+  /** Override the container width — e.g. a wide plan-selection grid needs more room than a name/email form. */
+  maxWidthClassName?: string
 }) {
   return (
     <div className="min-h-screen bg-background">
@@ -42,7 +45,7 @@ export function GetStartedShell({
         <ThemeToggle />
       </header>
 
-      <div className="mx-auto max-w-md px-6 py-12">
+      <div className={cn('mx-auto px-6 py-12', maxWidthClassName)}>
         <div className="flex flex-col items-center text-center">
           <span className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-foreground">
             <Settings className="h-5 w-5" />

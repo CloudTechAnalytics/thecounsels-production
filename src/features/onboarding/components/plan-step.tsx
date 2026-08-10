@@ -126,7 +126,11 @@ export function PlanStep({
   trialLoading: boolean
   subscribeLoading: boolean
 }) {
-  const { data: plans, isLoading } = useSelectablePlans()
+  // Defaults to [] on error too (not just while loading) — after retries are
+  // exhausted (see useSelectablePlans), falling back to an empty list means
+  // the step still renders (Trial only) instead of hanging on the skeleton
+  // forever if paid plans genuinely can't be loaded.
+  const { data: plans = [], isLoading } = useSelectablePlans()
   const { data: settings } = useRegistrationSettings()
   const [selected, setSelected] = React.useState<Selection | null>(null)
 
@@ -134,7 +138,7 @@ export function PlanStep({
   // — unless the landing page's pricing section pointed here with a
   // specific paid tier in mind, in which case that's what's preselected.
   React.useEffect(() => {
-    if (!plans || selected) return
+    if (isLoading || selected) return
     const intendedKey = localStorage.getItem(INTENDED_PLAN_KEY)
     if (intendedKey) {
       localStorage.removeItem(INTENDED_PLAN_KEY)
@@ -145,9 +149,9 @@ export function PlanStep({
       }
     }
     setSelected(TRIAL)
-  }, [plans, selected])
+  }, [plans, selected, isLoading])
 
-  if (isLoading || !plans) {
+  if (isLoading) {
     return (
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-56 w-full" />)}

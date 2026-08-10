@@ -133,6 +133,12 @@ export function PlanSummary() {
         <div className="flex justify-between"><span className="text-muted-foreground">Billing cycle</span><span className="font-medium capitalize">{sub.billing_cycle}</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">Seats</span><span className="font-medium">{activeSeats} of {sub.seats} used</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">Payment status</span><span className="font-medium">{statusMeta.label}</span></div>
+        {sub.status !== 'trialing' && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Last payment</span>
+            <span className="font-medium">{sub.last_payment_at ? format(new Date(sub.last_payment_at), 'PP') : '—'}</span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span className="text-muted-foreground">{sub.status === 'trialing' ? 'Trial ends' : 'Next billing date'}</span>
           <span className="font-medium">

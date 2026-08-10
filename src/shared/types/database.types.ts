@@ -1209,6 +1209,7 @@ export interface Database {
           scheduled_plan_id: string | null
           scheduled_change_at: string | null
           last_trial_reminder_days: number | null
+          last_payment_at: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -1231,6 +1232,7 @@ export interface Database {
           scheduled_plan_id?: string | null
           scheduled_change_at?: string | null
           last_trial_reminder_days?: number | null
+          last_payment_at?: string | null
         }
         Update: Partial<Database['public']['Tables']['subscriptions']['Insert']>
         Relationships: [

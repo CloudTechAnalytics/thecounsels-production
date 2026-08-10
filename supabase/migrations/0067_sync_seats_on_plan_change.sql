@@ -24,14 +24,15 @@
 --      now syncs seats to the plan being paid for on charge.success.
 -- ============================================================================
 
--- 1. One-time backfill. max_users = null (unlimited) correctly produces
---    seats = null, matching how can_add_member()/the UI already treat null
---    as "no limit" — no separate case needed.
+-- 1. One-time backfill. subscriptions.seats is NOT NULL (see migration
+--    0006), so a custom/Enterprise plan's max_users = null must coalesce
+--    to something — 5 matches the exact fallback register_organization()
+--    already uses (migration 0065), not a new convention.
 update public.subscriptions s
-set seats = p.max_users
+set seats = coalesce(p.max_users, 5)
 from public.plans p
 where s.plan_id = p.id
-  and s.seats is distinct from p.max_users;
+  and s.seats is distinct from coalesce(p.max_users, 5);
 
 -- 2. Scheduled downgrades now sync seats when they take effect.
 create or replace function public.run_daily_subscription_checks()
@@ -75,7 +76,7 @@ begin
   -- seats both move to the new plan together, never just one of them.
   update public.subscriptions s
   set plan_id = s.scheduled_plan_id,
-      seats = p.max_users,
+      seats = coalesce(p.max_users, 5),
       scheduled_plan_id = null,
       scheduled_change_at = null
   from public.plans p

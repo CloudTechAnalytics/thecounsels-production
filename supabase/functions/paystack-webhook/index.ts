@@ -86,23 +86,45 @@ Deno.serve(async (req: Request) => {
     case 'subscription.create': {
       const orgId = await matchOrg()
       if (!orgId) break
-      const nextBilling = data.next_payment_date ? new Date(data.next_payment_date).toISOString() : null
 
       // Seats must move together with plan_id — the seat limit shown/
       // enforced elsewhere (members-panel.tsx, can_add_member() RLS,
       // admin-create-user) reads subscriptions.seats directly, so an
       // upgrade that only changed plan_id would leave the org capped at
-      // its old plan's seat count. null max_users (unlimited) correctly
-      // produces seats = null, same "no limit" meaning used everywhere
-      // else.
-      let seats: number | null | undefined
+      // its old plan's seat count. subscriptions.seats is NOT NULL, so a
+      // custom/Enterprise plan's max_users = null coalesces to 5 — the
+      // same fallback register_organization() already uses, not a new one.
+      let seats: number | undefined
       if (data.metadata?.plan_id) {
         const { data: plan } = await admin
           .from('plans')
           .select('max_users')
           .eq('id', data.metadata.plan_id)
           .maybeSingle()
-        seats = plan?.max_users ?? null
+        seats = plan?.max_users ?? 5
+      }
+
+      // Paystack only includes next_payment_date on transactions tied to
+      // a Paystack-managed recurring Subscription (paystackBody.plan in
+      // paystack-init-transaction) — plans.paystack_plan_code has never
+      // actually been populated, so every checkout so far has been a
+      // one-time transaction and this field has always been absent.
+      // Trusting it left next_billing_date/current_period_end null on
+      // every real payment. Compute it ourselves from the org's own
+      // billing_cycle instead — still preferring Paystack's own value
+      // when it IS present, for whenever recurring subscriptions are
+      // wired up for real.
+      let nextBilling = data.next_payment_date ? new Date(data.next_payment_date).toISOString() : null
+      if (!nextBilling) {
+        const { data: existingSub } = await admin
+          .from('subscriptions')
+          .select('billing_cycle')
+          .eq('organization_id', orgId)
+          .maybeSingle()
+        const next = new Date()
+        if (existingSub?.billing_cycle === 'yearly') next.setFullYear(next.getFullYear() + 1)
+        else next.setMonth(next.getMonth() + 1)
+        nextBilling = next.toISOString()
       }
 
       await admin
@@ -120,6 +142,7 @@ Deno.serve(async (req: Request) => {
           amount: data.amount != null ? data.amount / 100 : undefined,
           next_billing_date: nextBilling,
           current_period_end: nextBilling,
+          last_payment_at: new Date().toISOString(),
         })
         .eq('organization_id', orgId)
       await admin.rpc('log_audit', {

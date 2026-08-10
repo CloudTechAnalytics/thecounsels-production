@@ -1,8 +1,12 @@
 import * as React from 'react'
-import { Camera, Loader2 } from 'lucide-react'
+import { AlertTriangle, Camera, Loader2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useUpdateOrganization, useUploadOrganizationLogo } from '@/features/administration/hooks/use-administration'
+import {
+  useUpdateOrganization,
+  useUpdateOrganizationSlug,
+  useUploadOrganizationLogo,
+} from '@/features/administration/hooks/use-administration'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
@@ -10,15 +14,33 @@ import { Label } from '@/shared/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar'
 import { initialsOf } from '@/shared/lib/format'
 import { toast } from '@/shared/components/ui/sonner'
+import { APP } from '@/shared/config/env'
 
 export function OrganizationSettings() {
   const { activeMembership, activeOrgId, refresh } = useAuth()
   const { has } = usePermissions()
   const org = activeMembership?.organization
   const update = useUpdateOrganization(activeOrgId)
+  const updateSlug = useUpdateOrganizationSlug(activeOrgId)
   const uploadLogo = useUploadOrganizationLogo(activeOrgId)
   const fileRef = React.useRef<HTMLInputElement>(null)
   const canManage = has('organization.manage')
+
+  const [slug, setSlug] = React.useState('')
+  React.useEffect(() => {
+    setSlug(org?.slug ?? '')
+  }, [org?.slug])
+  const slugChanged = slug.trim().toLowerCase() !== (org?.slug ?? '')
+
+  const saveSlug = async () => {
+    try {
+      await updateSlug.mutateAsync(slug)
+      await refresh()
+      toast.success('Workspace address updated')
+    } catch (err) {
+      toast.error('Could not update workspace address', { description: err instanceof Error ? err.message : undefined })
+    }
+  }
 
   const [form, setForm] = React.useState({
     name: '', legal_name: '', industry: '', website: '', phone: '', billing_email: '', timezone: '',
@@ -89,7 +111,7 @@ export function OrganizationSettings() {
         </div>
         <div>
           <p className="font-display text-lg font-semibold">{form.name || 'Your firm'}</p>
-          <p className="text-sm text-muted-foreground">/{org?.slug}</p>
+          <p className="text-sm text-muted-foreground">{APP.domain}/w/{org?.slug}</p>
         </div>
       </div>
 
@@ -114,6 +136,38 @@ export function OrganizationSettings() {
           <Button onClick={save} loading={update.isPending}>Save changes</Button>
         </div>
       )}
+
+      <div className="mt-6 border-t border-border pt-6">
+        <p className="text-sm font-semibold">Workspace address</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Your firm's own web address — not a login email. Everyone still signs in with their own
+          email address.
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-1 items-center overflow-hidden rounded-md border border-input">
+            <span className="shrink-0 bg-muted px-3 py-2 text-sm text-muted-foreground">{APP.domain}/w/</span>
+            <input
+              value={slug}
+              disabled={!canManage}
+              onChange={(e) => setSlug(e.target.value.toLowerCase())}
+              className="min-w-0 flex-1 bg-card px-2 py-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            />
+          </div>
+          {canManage && (
+            <Button variant="outline" disabled={!slugChanged || !slug.trim()} loading={updateSlug.isPending} onClick={saveSlug}>
+              Update address
+            </Button>
+          )}
+        </div>
+        {canManage && slugChanged && (
+          <p className="mt-2 flex items-start gap-1.5 text-xs text-warning-foreground">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+            Changing this changes your workspace's web address. Your matters, clients, documents,
+            tasks, billing, users and everything else stay exactly as they are — this only affects
+            the address people use to reach your sign-in page.
+          </p>
+        )}
+      </div>
     </Card>
   )
 }

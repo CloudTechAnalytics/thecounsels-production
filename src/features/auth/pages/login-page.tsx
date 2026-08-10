@@ -1,11 +1,13 @@
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import { AuthShell } from '@/features/auth/components/auth-shell'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { loginSchema, type LoginValues } from '@/features/auth/schemas'
+import { supabase } from '@/shared/lib/supabase'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import {
@@ -19,10 +21,34 @@ import {
 import { toast } from '@/shared/components/ui/sonner'
 import { env } from '@/shared/config/env'
 
+/**
+ * Cosmetic only — resolves a workspace slug (from /w/:slug) to a firm's
+ * display name/logo via the narrow public get_organization_by_slug RPC, so
+ * the login screen can say "Sign in to {firm}". It plays no role in what
+ * the signed-in user can actually access: that's entirely determined by
+ * their own memberships once real Supabase Auth completes, same as
+ * visiting /auth/login directly. An unknown/mistyped slug just falls back
+ * to the generic "Welcome back" — never an error, since guessing at slugs
+ * reveals nothing (only a name is ever returned, no data access).
+ */
+function useWorkspaceBySlug(slug: string | undefined) {
+  return useQuery({
+    queryKey: ['workspace-by-slug', slug ?? 'none'],
+    enabled: Boolean(slug),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_organization_by_slug', { p_slug: slug! })
+      if (error) throw error
+      return data?.[0] ?? null
+    },
+  })
+}
+
 export function LoginPage() {
   const { signIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const { slug } = useParams<{ slug?: string }>()
+  const { data: workspace } = useWorkspaceBySlug(slug)
   const [showPassword, setShowPassword] = React.useState(false)
 
   const form = useForm<LoginValues>({
@@ -44,7 +70,7 @@ export function LoginPage() {
 
   return (
     <AuthShell
-      title="Welcome back"
+      title={workspace ? `Sign in to ${workspace.name}` : 'Welcome back'}
       subtitle="Sign in to your firm's workspace to continue."
       back={
         <Link

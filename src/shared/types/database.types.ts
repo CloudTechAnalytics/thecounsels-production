@@ -1576,6 +1576,14 @@ export interface Database {
         }
         Returns: Database['public']['Tables']['organizations']['Row']
       }
+      get_organization_by_slug: {
+        Args: { p_slug: string }
+        Returns: { id: string; name: string; slug: string; logo_url: string | null }[]
+      }
+      update_organization_slug: {
+        Args: { p_org: string; p_slug: string }
+        Returns: Database['public']['Tables']['organizations']['Row']
+      }
       can_add_member: {
         Args: { p_org: string }
         Returns: boolean

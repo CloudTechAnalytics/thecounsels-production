@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AtSign } from 'lucide-react'
+import { Globe } from 'lucide-react'
 import { firmSetupSchema, slugify, USER_COUNT_BANDS, type FirmSetupValues } from '@/features/onboarding/schemas'
 import { COUNTRIES } from '@/features/onboarding/countries'
 import { PRACTICE_AREAS } from '@/features/matters/types'
@@ -111,13 +111,16 @@ export function FirmSetupStep({
               </FormControl>
               {shortName && (
                 <div className="flex items-center gap-2 rounded-lg bg-primary/5 px-3 py-2 text-sm">
-                  <AtSign className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <Globe className="h-3.5 w-3.5 shrink-0 text-primary" />
                   <span className="text-muted-foreground">
-                    <span className="font-medium text-primary">{shortName}</span>@{APP.domain}
+                    {APP.domain}/w/<span className="font-medium text-primary">{shortName}</span>
                   </span>
                 </div>
               )}
-              <p className="text-xs text-muted-foreground">This will be your organization's handle.</p>
+              <p className="text-xs text-muted-foreground">
+                This becomes your workspace's web address — not a login email. You'll always sign in
+                with your own email address.
+              </p>
               <FormMessage />
             </FormItem>
           )}

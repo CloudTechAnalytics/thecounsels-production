@@ -16,6 +16,7 @@ import {
   Globe,
   Undo2,
   Eraser,
+  Search,
 } from 'lucide-react'
 import {
   usePlatformOrganizations,
@@ -33,6 +34,7 @@ import type { OrgRow } from '@/features/platform/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { Card } from '@/shared/components/ui/card'
+import { Input } from '@/shared/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Badge, type BadgeProps } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
@@ -235,7 +237,19 @@ function TrashRowActions({ org }: { org: OrgRow }) {
 
 export function OrganizationsPage() {
   const [trash, setTrash] = React.useState(false)
+  const [search, setSearch] = React.useState('')
   const { data, isLoading, isError, error } = usePlatformOrganizations(trash)
+
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return data
+    return data?.filter(
+      (org) =>
+        org.name.toLowerCase().includes(q) ||
+        org.slug.toLowerCase().includes(q) ||
+        org.owner?.email.toLowerCase().includes(q),
+    )
+  }, [data, search])
 
   return (
     <div>
@@ -251,6 +265,16 @@ export function OrganizationsPage() {
           </div>
         }
       />
+
+      <div className="relative mb-4 max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, workspace or owner email…"
+          className="pl-9"
+        />
+      </div>
 
       <Card className="overflow-hidden">
         {isLoading ? (
@@ -269,11 +293,12 @@ export function OrganizationsPage() {
               {errorMessage(error, 'Something went wrong loading this list. Please try again.')}
             </p>
           </div>
-        ) : data && data.length > 0 ? (
+        ) : filtered && filtered.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Organization</TableHead>
+                <TableHead>Owner</TableHead>
                 <TableHead>Plan</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Users</TableHead>
@@ -284,7 +309,7 @@ export function OrganizationsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((org) => (
+              {filtered.map((org) => (
                 <TableRow key={org.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -298,6 +323,16 @@ export function OrganizationsPage() {
                         </p>
                       </div>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {org.owner ? (
+                      <div className="min-w-0">
+                        <p className="truncate text-sm">{org.owner.full_name ?? '—'}</p>
+                        <p className="truncate text-xs text-muted-foreground">{org.owner.email}</p>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     {org.organization_type === 'customer' ? (
@@ -336,9 +371,15 @@ export function OrganizationsPage() {
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/12 text-primary">
               <Globe className="h-7 w-7" />
             </span>
-            <p className="font-display text-lg font-semibold">{trash ? 'Trash is empty' : 'No organizations yet'}</p>
+            <p className="font-display text-lg font-semibold">
+              {search.trim() ? 'No matches' : trash ? 'Trash is empty' : 'No organizations yet'}
+            </p>
             <p className="max-w-sm text-sm text-muted-foreground">
-              {trash ? 'Deleted organizations will appear here.' : 'Create your first law firm workspace and its administrator.'}
+              {search.trim()
+                ? 'No organization matches that name, workspace address or owner email.'
+                : trash
+                  ? 'Deleted organizations will appear here.'
+                  : 'Create your first law firm workspace and its administrator.'}
             </p>
           </div>
         )}

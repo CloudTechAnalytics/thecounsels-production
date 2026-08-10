@@ -31,7 +31,7 @@ const STATUS_OPTIONS: { value: SubscriptionStatus; label: string }[] = [
 type FilterKey = 'all' | 'starter' | 'professional' | 'business' | 'enterprise' | 'trialing' | 'expired' | 'cancelled' | 'past_due'
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'starter', label: 'Starter' },
+  { key: 'starter', label: 'Basic' },
   { key: 'professional', label: 'Professional' },
   { key: 'business', label: 'Business' },
   { key: 'enterprise', label: 'Enterprise' },

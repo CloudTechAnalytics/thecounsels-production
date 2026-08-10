@@ -168,7 +168,7 @@ const STEPS = [
 const PLANS = [
   {
     key: 'starter',
-    name: 'Starter',
+    name: 'Basic',
     price: '₦15,000',
     tagline: 'For solo lawyers and small law firms',
     features: ['Up to 3 users', 'Core matter & client management', 'Documents, hearings & calendar', 'Time tracking & expenses', 'Basic billing & reports'],
@@ -178,7 +178,7 @@ const PLANS = [
     name: 'Professional',
     price: '₦50,000',
     tagline: 'For growing and established law firms',
-    features: ['Up to 10 users', 'Everything in Starter', 'Advanced tasks & notifications', 'Email + WhatsApp reminders', 'Advanced billing & reports'],
+    features: ['Up to 10 users', 'Everything in Basic', 'Advanced tasks & notifications', 'Email + WhatsApp reminders', 'Advanced billing & reports'],
     highlight: true,
   },
   {

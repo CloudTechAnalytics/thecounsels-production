@@ -66,15 +66,21 @@ export const platformService = {
     if (rows.length === 0) return []
 
     const ids = rows.map((o) => o.id)
-    const [subsRes, membersRes] = await Promise.all([
+    const [subsRes, membersRes, ownersRes] = await Promise.all([
       // Explicit FK name required — subscriptions has two FKs into plans
       // (plan_id and scheduled_plan_id, 0053), so the bare `plan:plans(*)`
       // embed is ambiguous and PostgREST rejects it outright (HTTP 300).
       supabase.from('subscriptions').select('*, plan:plans!subscriptions_plan_id_fkey(*)').in('organization_id', ids),
       supabase.from('memberships').select('organization_id').eq('status', 'active').in('organization_id', ids),
+      supabase
+        .from('memberships')
+        .select('organization_id, profile:profiles!memberships_user_id_fkey(full_name, email)')
+        .eq('is_owner', true)
+        .in('organization_id', ids),
     ])
     if (subsRes.error) throw subsRes.error
     if (membersRes.error) throw membersRes.error
+    if (ownersRes.error) throw ownersRes.error
 
     const subByOrg = new Map(
       ((subsRes.data ?? []) as unknown as SubscriptionWithPlan[]).map((s) => [s.organization_id, s]),
@@ -83,11 +89,18 @@ export const platformService = {
     for (const m of membersRes.data ?? []) {
       countByOrg.set(m.organization_id, (countByOrg.get(m.organization_id) ?? 0) + 1)
     }
+    const ownerByOrg = new Map(
+      (ownersRes.data ?? []).map((r) => [
+        r.organization_id,
+        r.profile as unknown as { full_name: string | null; email: string } | null,
+      ]),
+    )
 
     return rows.map((o) => ({
       ...o,
       member_count: countByOrg.get(o.id) ?? 0,
       subscription: subByOrg.get(o.id) ?? null,
+      owner: ownerByOrg.get(o.id) ?? null,
     }))
   },
 

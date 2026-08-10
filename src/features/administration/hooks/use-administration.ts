@@ -129,6 +129,14 @@ export function useUpdateOrganization(organizationId: string | null) {
   })
 }
 
+export function useUpdateOrganizationSlug(organizationId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (slug: string) => administrationService.updateOrganizationSlug(organizationId!, slug),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['administration'] }),
+  })
+}
+
 export function useUploadOrganizationLogo(organizationId: string | null) {
   const qc = useQueryClient()
   return useMutation({

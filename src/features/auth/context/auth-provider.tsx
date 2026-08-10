@@ -70,10 +70,20 @@ function pickActiveOrg(
   return ids[0] ?? null
 }
 
+/** A freshly-issued session's JWT can occasionally not yet be accepted by
+ * PostgREST the instant sign-in resolves — a well-documented Supabase
+ * eventual-consistency gotcha, not a real auth failure. Matches PostgREST's
+ * own error code for it plus the common wording variants. */
+function isTransientAuthError(error: unknown): boolean {
+  const message = errorMessage(error)?.toLowerCase() ?? ''
+  const code = error && typeof error === 'object' && 'code' in error ? String((error as { code: unknown }).code) : ''
+  return code === 'PGRST301' || message.includes('jwt')
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<AuthState>(initialState)
 
-  const load = React.useCallback(async (userId: string | null) => {
+  const load = React.useCallback(async (userId: string | null, isRetry = false) => {
     if (!userId) {
       setState({ ...initialState, status: 'unauthenticated' })
       return
@@ -147,6 +157,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       void authService.touchLastSeen(userId)
     } catch (error) {
+      // A fresh sign-in occasionally hits this on the very first attempt —
+      // the just-issued JWT isn't accepted by PostgREST for a brief moment
+      // (see isTransientAuthError) — retrying once after a short delay
+      // silently recovers instead of bouncing a just-signed-in user back to
+      // login with a confusing "JWT ..." error they'd otherwise have to
+      // retry manually (exactly what a second sign-in attempt was doing).
+      if (!isRetry && isTransientAuthError(error)) {
+        console.warn('Transient auth error loading session, retrying once:', error)
+        await new Promise((resolve) => setTimeout(resolve, 800))
+        return load(userId, true)
+      }
       // A failed fetch here must never leave status stuck at 'loading' forever —
       // surface it and fall back to signed-out so the app is usable again.
       console.error('Failed to load session profile/memberships:', error)

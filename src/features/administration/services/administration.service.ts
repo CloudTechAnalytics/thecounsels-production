@@ -76,6 +76,16 @@ export const administrationService = {
     })
   },
 
+  /** Routed through update_organization_slug (migration 0065) rather than a
+   * direct table update — it normalizes the input and gives a clean "that
+   * address is taken" error instead of a raw unique-constraint violation.
+   * Never touches organization_id or any other column/table. */
+  async updateOrganizationSlug(organizationId: string, slug: string): Promise<Organization> {
+    const { data, error } = await supabase.rpc('update_organization_slug', { p_org: organizationId, p_slug: slug })
+    if (error) throw error
+    return data as unknown as Organization
+  },
+
   async uploadOrganizationLogo(organizationId: string, file: File): Promise<string> {
     const ext = (file.name.split('.').pop() || 'png').toLowerCase()
     const path = `${organizationId}/logo-${crypto.randomUUID()}.${ext}`

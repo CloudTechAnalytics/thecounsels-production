@@ -18,6 +18,7 @@ export interface SubscriptionWithPlan extends Subscription {
 export interface OrgRow extends Organization {
   member_count: number
   subscription: SubscriptionWithPlan | null
+  owner: { full_name: string | null; email: string } | null
 }
 
 export interface RegistrationSettings {

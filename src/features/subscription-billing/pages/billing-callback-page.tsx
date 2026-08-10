@@ -18,9 +18,18 @@ const POLL_MS = 3_000
  * rather than pretending success.
  */
 export function BillingCallbackPage() {
-  const { activeOrgId, refresh } = useAuth()
+  const { activeOrgId, refresh, signOut } = useAuth()
   const navigate = useNavigate()
   const [elapsed, setElapsed] = React.useState(0)
+
+  // Same "sign in fresh, don't just carry the session forward" treatment
+  // the onboarding wizard's own welcome screen uses — payment confirmed or
+  // not, the next thing this page does is send them to sign in with their
+  // own credentials rather than dropping them straight into the dashboard.
+  const goToSignIn = async () => {
+    await signOut()
+    navigate('/auth/login', { replace: true })
+  }
 
   const { data: subscription } = useQuery({
     queryKey: ['billing-callback-subscription', activeOrgId],
@@ -52,21 +61,21 @@ export function BillingCallbackPage() {
           <>
             <h2 className="mt-6 font-display text-xl font-semibold">You're all set</h2>
             <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-              Your subscription is active. Thanks for subscribing to The Counsel.
+              Your subscription is active. Sign in with your email and password to enter your workspace.
             </p>
-            <Button size="lg" className="mt-8 w-full" onClick={() => navigate('/', { replace: true })}>
-              Enter your workspace
+            <Button size="lg" className="mt-8 w-full" onClick={goToSignIn}>
+              Go to sign in
             </Button>
           </>
         ) : timedOut ? (
           <>
             <h2 className="mt-6 font-display text-xl font-semibold">Still processing</h2>
             <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-              Your payment is still being confirmed. This can occasionally take a few minutes — check
-              back shortly, or reach out if this persists.
+              Your payment is still being confirmed. This can occasionally take a few minutes — sign
+              in and check Firm Settings shortly, or reach out if this persists.
             </p>
-            <Button variant="outline" size="lg" className="mt-8 w-full" onClick={() => navigate('/', { replace: true })}>
-              Go to workspace
+            <Button variant="outline" size="lg" className="mt-8 w-full" onClick={goToSignIn}>
+              Go to sign in
             </Button>
           </>
         ) : (

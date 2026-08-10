@@ -31,7 +31,15 @@ const REDIRECT_SECONDS = 4
  * properly with the credentials they just set, auto-redirecting after a
  * few seconds (or immediately via the button).
  */
-function WelcomeStep({ firstName, onDone }: { firstName: string; onDone: () => void }) {
+function WelcomeStep({
+  firstName,
+  onDone,
+  message = "You're registered — your account and firm workspace are ready. Sign in with your email and password to get started.",
+}: {
+  firstName: string
+  onDone: () => void
+  message?: string
+}) {
   const [seconds, setSeconds] = React.useState(REDIRECT_SECONDS)
 
   React.useEffect(() => {
@@ -73,8 +81,7 @@ function WelcomeStep({ firstName, onDone }: { firstName: string; onDone: () => v
         transition={{ delay: 0.4 }}
         className="mt-2 max-w-sm text-sm text-muted-foreground"
       >
-        You're registered — your account and firm workspace are ready. Sign in with your email and
-        password to get started.
+        {message}
       </motion.p>
       <motion.div
         initial={{ opacity: 0 }}
@@ -105,6 +112,7 @@ export function OnboardingPage() {
   const [step, setStep] = React.useState<Step>('firm')
   const [firmValues, setFirmValues] = React.useState<FirmSetupValues | null>(null)
   const [pendingAction, setPendingAction] = React.useState<'trial' | 'subscribe' | null>(null)
+  const [welcomeMessage, setWelcomeMessage] = React.useState<string | undefined>(undefined)
 
   const startTrial = async (planId: string) => {
     if (!firmValues) return
@@ -127,16 +135,38 @@ export function OnboardingPage() {
   const subscribeNow = async (planId: string) => {
     if (!firmValues) return
     setPendingAction('subscribe')
+
+    let org: { id: string } | null = null
     try {
-      const org = await register.mutateAsync({ values: firmValues, planId })
-      // Leaves the SPA entirely (Paystack's hosted checkout), then returns
-      // to /billing/callback — the org already exists on its normal trial
-      // regardless, so an abandoned checkout never strands anyone.
-      await checkout.mutateAsync({ organizationId: (org as { id: string }).id, planId })
+      org = (await register.mutateAsync({ values: firmValues, planId })) as { id: string }
     } catch (err) {
-      toast.error('Could not start checkout', {
+      // Registration itself never happened — nothing was created, just
+      // stay on this screen so they can retry.
+      toast.error('Could not set up your firm', {
         description: err instanceof Error ? err.message : 'Please try again.',
       })
+      setPendingAction(null)
+      return
+    }
+
+    try {
+      // On success this leaves the SPA entirely (Paystack's hosted
+      // checkout) and never resolves normally — the browser navigates away.
+      await checkout.mutateAsync({ organizationId: org.id, planId })
+    } catch (err) {
+      // Checkout failed to even start, but register_organization() already
+      // created the org + a trial subscription unconditionally (same as
+      // the Trial path) — leaving them here would mean a stray refresh or
+      // navigation silently drops them into the dashboard as an
+      // unintended trial user, since RequireNoOrganization now sees an
+      // active membership. Route through the same "sign in to continue"
+      // screen instead, so nothing happens silently.
+      console.error('Checkout failed to start:', err)
+      setWelcomeMessage(
+        "We couldn't start checkout, so your workspace was created on a free 30-day trial instead. " +
+          'Sign in to continue — you can subscribe any time from Firm Settings.',
+      )
+      setStep('welcome')
       setPendingAction(null)
     }
   }
@@ -176,7 +206,11 @@ export function OnboardingPage() {
       )}
 
       {step === 'welcome' && (
-        <WelcomeStep firstName={profile?.full_name?.split(' ')[0] ?? 'there'} onDone={goToSignIn} />
+        <WelcomeStep
+          firstName={profile?.full_name?.split(' ')[0] ?? 'there'}
+          onDone={goToSignIn}
+          message={welcomeMessage}
+        />
       )}
     </GetStartedShell>
   )

@@ -87,6 +87,24 @@ Deno.serve(async (req: Request) => {
       const orgId = await matchOrg()
       if (!orgId) break
       const nextBilling = data.next_payment_date ? new Date(data.next_payment_date).toISOString() : null
+
+      // Seats must move together with plan_id — the seat limit shown/
+      // enforced elsewhere (members-panel.tsx, can_add_member() RLS,
+      // admin-create-user) reads subscriptions.seats directly, so an
+      // upgrade that only changed plan_id would leave the org capped at
+      // its old plan's seat count. null max_users (unlimited) correctly
+      // produces seats = null, same "no limit" meaning used everywhere
+      // else.
+      let seats: number | null | undefined
+      if (data.metadata?.plan_id) {
+        const { data: plan } = await admin
+          .from('plans')
+          .select('max_users')
+          .eq('id', data.metadata.plan_id)
+          .maybeSingle()
+        seats = plan?.max_users ?? null
+      }
+
       await admin
         .from('subscriptions')
         .update({
@@ -96,6 +114,7 @@ Deno.serve(async (req: Request) => {
           // switch the org onto that plan once payment is confirmed here,
           // not just re-activate whatever plan_id it already had.
           plan_id: data.metadata?.plan_id ?? undefined,
+          seats,
           paystack_customer_code: data.customer?.customer_code ?? undefined,
           paystack_subscription_code: data.subscription_code ?? data.plan?.plan_code ?? undefined,
           amount: data.amount != null ? data.amount / 100 : undefined,

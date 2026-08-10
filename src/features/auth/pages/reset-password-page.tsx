@@ -9,6 +9,7 @@ import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { toast } from '@/shared/components/ui/sonner'
+import { errorMessage } from '@/shared/lib/errors'
 
 export function ResetPasswordPage() {
   const { updatePassword } = useAuth()
@@ -29,8 +30,7 @@ export function ResetPasswordPage() {
       navigate('/', { replace: true })
     } catch (err) {
       toast.error('Could not update password', {
-        description:
-          err instanceof Error ? err.message : 'Your reset link may have expired. Request a new one.',
+        description: errorMessage(err, 'Your reset link may have expired. Request a new one.'),
       })
     }
   }

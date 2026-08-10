@@ -21,6 +21,7 @@ import {
 } from '@/shared/components/ui/form'
 import { toast } from '@/shared/components/ui/sonner'
 import { env } from '@/shared/config/env'
+import { errorMessage } from '@/shared/lib/errors'
 
 /**
  * Cosmetic only — resolves a workspace slug (from /w/:slug) to a firm's
@@ -65,7 +66,7 @@ export function LoginPage() {
       navigate(to, { replace: true })
     } catch (err) {
       toast.error('Sign in failed', {
-        description: err instanceof Error ? err.message : 'Check your credentials and try again.',
+        description: errorMessage(err, 'Check your credentials and try again.'),
       })
       // Turnstile tokens are single-use — a fresh one is required to retry.
       setCaptchaToken(null)

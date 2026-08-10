@@ -13,6 +13,7 @@ import { Button } from '@/shared/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { toast } from '@/shared/components/ui/sonner'
 import { env } from '@/shared/config/env'
+import { errorMessage } from '@/shared/lib/errors'
 
 /**
  * Public self-service registration — Step 1 (Create Account) of the
@@ -46,7 +47,7 @@ export function RegisterPage() {
       )
       setSentTo(values.email)
     } catch (err) {
-      const message = err instanceof Error ? err.message : ''
+      const message = errorMessage(err, '') ?? ''
       if (/already registered|already exists|already been registered/i.test(message)) {
         toast.error('Account already exists', {
           description: 'An account with this email already exists. Please sign in instead.',

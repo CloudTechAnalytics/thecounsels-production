@@ -10,6 +10,7 @@ import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { toast } from '@/shared/components/ui/sonner'
+import { errorMessage } from '@/shared/lib/errors'
 
 /**
  * Forced stop-gap between signing in with an admin-set temporary password
@@ -40,7 +41,7 @@ export function ChangePasswordPage() {
       navigate('/', { replace: true })
     } catch (err) {
       toast.error('Could not set password', {
-        description: err instanceof Error ? err.message : 'Please try again.',
+        description: errorMessage(err, 'Please try again.'),
       })
     }
   }

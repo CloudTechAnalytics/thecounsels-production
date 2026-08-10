@@ -7,6 +7,7 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { authService } from '@/features/auth/services/auth.service'
 import { Button } from '@/shared/components/ui/button'
 import { toast } from '@/shared/components/ui/sonner'
+import { errorMessage } from '@/shared/lib/errors'
 
 export function AcceptInvitePage() {
   const [params] = useSearchParams()
@@ -25,7 +26,7 @@ export function AcceptInvitePage() {
       navigate('/', { replace: true })
     } catch (err) {
       toast.error('Could not accept invitation', {
-        description: err instanceof Error ? err.message : 'The invitation may be invalid or expired.',
+        description: errorMessage(err, 'The invitation may be invalid or expired.'),
       })
     } finally {
       setBusy(false)

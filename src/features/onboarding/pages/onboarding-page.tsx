@@ -12,6 +12,7 @@ import { GetStartedShell } from '@/shared/components/get-started-shell'
 import { Button } from '@/shared/components/ui/button'
 import { toast } from '@/shared/components/ui/sonner'
 import { APP } from '@/shared/config/env'
+import { errorMessage } from '@/shared/lib/errors'
 
 type Step = 'firm' | 'plan' | 'welcome'
 const STEP_INDEX: Record<Step, number> = { firm: 0, plan: 1, welcome: 2 }
@@ -111,7 +112,7 @@ export function OnboardingPage() {
       setStep('welcome')
     } catch (err) {
       toast.error('Could not set up your firm', {
-        description: err instanceof Error ? err.message : 'Please try again.',
+        description: errorMessage(err, 'Please try again.'),
       })
     } finally {
       setPendingAction(null)
@@ -129,7 +130,7 @@ export function OnboardingPage() {
       // Registration itself never happened — nothing was created, just
       // stay on this screen so they can retry.
       toast.error('Could not set up your firm', {
-        description: err instanceof Error ? err.message : 'Please try again.',
+        description: errorMessage(err, 'Please try again.'),
       })
       setPendingAction(null)
       return

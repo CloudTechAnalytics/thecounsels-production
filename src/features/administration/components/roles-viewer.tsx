@@ -16,7 +16,7 @@ export function RolesViewer() {
     <div className="grid gap-4 md:grid-cols-2">
       {data?.map((role) => {
         const byCategory = role.permissions.reduce<Record<string, string[]>>((acc, p) => {
-          ;(acc[p.category] ??= []).push(p.action)
+          ;(acc[p.resource] ??= []).push(p.action)
           return acc
         }, {})
         return (

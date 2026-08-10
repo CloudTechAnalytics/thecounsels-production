@@ -12,7 +12,7 @@ export interface RoleWithPermissions {
   key: string | null
   description: string | null
   rank: number
-  permissions: { key: string; category: string; action: string; description: string | null }[]
+  permissions: { key: string; resource: string; action: string; description: string | null }[]
 }
 export interface SubscriptionWithPlan extends Subscription {
   plan: Plan | null
@@ -130,14 +130,14 @@ export const administrationService = {
   async listRolesWithPermissions(): Promise<RoleWithPermissions[]> {
     const { data, error } = await supabase
       .from('roles')
-      .select('id, name, key, description, rank, role_permissions(permission:permissions(key, category, action, description))')
+      .select('id, name, key, description, rank, role_permissions(permission:permissions(key, resource, action, description))')
       .eq('is_system', true)
       .gte('rank', 10)
       .order('rank', { ascending: true })
     if (error) throw error
     type Row = {
       id: string; name: string; key: string | null; description: string | null; rank: number
-      role_permissions: { permission: { key: string; category: string; action: string; description: string | null } | null }[]
+      role_permissions: { permission: { key: string; resource: string; action: string; description: string | null } | null }[]
     }
     return ((data ?? []) as unknown as Row[]).map((r) => ({
       id: r.id,

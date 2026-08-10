@@ -1,21 +1,33 @@
-import { Navigate } from 'react-router-dom'
+import * as React from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { LoadingScreen } from '@/shared/components/loading-screen'
+import { toast } from '@/shared/components/ui/sonner'
 
 /**
  * Landing spot for Supabase's email-confirmation redirect (emailRedirectTo
- * in authService.signUp). By the time this renders, onAuthStateChange has
- * already fired and AuthProvider has a confirmed session — this component
- * only needs to route onward, never to do any auth work itself.
+ * in authService.signUp). Confirming the link also establishes a session
+ * (PKCE) — but this deliberately doesn't ride that session into the app.
+ * Same "confirm your own credentials before entering" rule as everywhere
+ * else in this flow now (registration, checkout): sign the confirmation
+ * session out and send them to a normal sign-in instead of auto-continuing
+ * into onboarding/the dashboard.
  */
 export function AuthCallbackPage() {
-  const { status, isPlatformAdmin, memberships } = useAuth()
+  const { status, signOut } = useAuth()
+  const navigate = useNavigate()
+  const handledRef = React.useRef(false)
 
-  if (status === 'loading') return <LoadingScreen />
+  React.useEffect(() => {
+    if (status !== 'authenticated' || handledRef.current) return
+    handledRef.current = true
+    void (async () => {
+      await signOut()
+      toast.success('Email verified', { description: 'Sign in to continue setting up your firm.' })
+      navigate('/auth/login', { replace: true })
+    })()
+  }, [status, signOut, navigate])
+
   if (status === 'unauthenticated') return <Navigate to="/auth/login" replace />
-  if (isPlatformAdmin) return <Navigate to="/platform" replace />
-  // A verified account with no firm yet always continues straight into
-  // onboarding; one that somehow already has a membership (e.g. re-clicking
-  // an old confirmation link after already finishing setup) goes home.
-  return <Navigate to={memberships.length > 0 ? '/' : '/onboarding'} replace />
+  return <LoadingScreen label="Verifying your email…" />
 }

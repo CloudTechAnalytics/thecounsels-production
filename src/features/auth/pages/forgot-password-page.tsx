@@ -9,10 +9,13 @@ import { forgotPasswordSchema, type ForgotPasswordValues } from '@/features/auth
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
+import { TurnstileWidget } from '@/shared/components/turnstile-widget'
+import { env } from '@/shared/config/env'
 
 export function ForgotPasswordPage() {
   const { sendPasswordReset } = useAuth()
   const [sentTo, setSentTo] = React.useState<string | null>(null)
+  const [captchaToken, setCaptchaToken] = React.useState<string | null>(null)
 
   const form = useForm<ForgotPasswordValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -24,10 +27,11 @@ export function ForgotPasswordPage() {
     // but still surface the real failure to the console so a misconfigured
     // project (rate limit, SMTP, redirect URL) is debuggable instead of silent.
     try {
-      await sendPasswordReset(values.email)
+      await sendPasswordReset(values.email, captchaToken ?? undefined)
     } catch (err) {
       console.error('Password reset request failed:', err)
     }
+    setCaptchaToken(null)
     setSentTo(values.email)
   }
 
@@ -80,7 +84,15 @@ export function ForgotPasswordPage() {
               </FormItem>
             )}
           />
-          <Button type="submit" size="lg" className="w-full" loading={form.formState.isSubmitting}>
+          {env.isTurnstileConfigured && <TurnstileWidget onToken={setCaptchaToken} />}
+
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            loading={form.formState.isSubmitting}
+            disabled={env.isTurnstileConfigured && !captchaToken}
+          >
             Send reset link
           </Button>
         </form>

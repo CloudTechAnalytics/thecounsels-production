@@ -247,8 +247,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = React.useMemo<AuthContextValue>(
     () => ({
       ...state,
-      signIn: async (email, password) => {
-        await authService.signIn(email, password)
+      signIn: async (email, password, captchaToken) => {
+        await authService.signIn(email, password, captchaToken)
       },
       signOut: async () => {
         await authService.signOut()
@@ -257,7 +257,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOutEverywhere: async () => {
         await authService.signOutEverywhere()
       },
-      sendPasswordReset: (email) => authService.sendPasswordReset(email),
+      sendPasswordReset: (email, captchaToken) => authService.sendPasswordReset(email, captchaToken),
       updatePassword: async (pwd) => {
         await authService.updatePassword(pwd)
         // Refresh so a cleared must_change_password flag is reflected immediately —

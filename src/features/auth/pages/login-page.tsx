@@ -10,6 +10,7 @@ import { loginSchema, type LoginValues } from '@/features/auth/schemas'
 import { supabase } from '@/shared/lib/supabase'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
+import { TurnstileWidget } from '@/shared/components/turnstile-widget'
 import {
   Form,
   FormControl,
@@ -50,6 +51,7 @@ export function LoginPage() {
   const { slug } = useParams<{ slug?: string }>()
   const { data: workspace } = useWorkspaceBySlug(slug)
   const [showPassword, setShowPassword] = React.useState(false)
+  const [captchaToken, setCaptchaToken] = React.useState<string | null>(null)
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -58,13 +60,15 @@ export function LoginPage() {
 
   const onSubmit = async (values: LoginValues) => {
     try {
-      await signIn(values.email, values.password)
+      await signIn(values.email, values.password, captchaToken ?? undefined)
       const to = (location.state as { from?: string } | null)?.from ?? '/'
       navigate(to, { replace: true })
     } catch (err) {
       toast.error('Sign in failed', {
         description: err instanceof Error ? err.message : 'Check your credentials and try again.',
       })
+      // Turnstile tokens are single-use — a fresh one is required to retry.
+      setCaptchaToken(null)
     }
   }
 
@@ -153,7 +157,15 @@ export function LoginPage() {
             )}
           />
 
-          <Button type="submit" size="lg" className="w-full" loading={form.formState.isSubmitting}>
+          {env.isTurnstileConfigured && <TurnstileWidget onToken={setCaptchaToken} />}
+
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            loading={form.formState.isSubmitting}
+            disabled={env.isTurnstileConfigured && !captchaToken}
+          >
             Sign in
           </Button>
         </form>

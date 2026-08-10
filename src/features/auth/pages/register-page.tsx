@@ -5,12 +5,14 @@ import { Link } from 'react-router-dom'
 import { Mail, MailCheck } from 'lucide-react'
 import { GetStartedShell } from '@/shared/components/get-started-shell'
 import { HintInput } from '@/shared/components/hint-input'
+import { TurnstileWidget } from '@/shared/components/turnstile-widget'
 import { PasswordChecklist } from '@/features/auth/components/password-checklist'
 import { authService } from '@/features/auth/services/auth.service'
 import { selfRegisterSchema, type SelfRegisterValues } from '@/features/auth/schemas'
 import { Button } from '@/shared/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { toast } from '@/shared/components/ui/sonner'
+import { env } from '@/shared/config/env'
 
 /**
  * Public self-service registration — Step 1 (Create Account) of the
@@ -21,6 +23,7 @@ import { toast } from '@/shared/components/ui/sonner'
 export function RegisterPage() {
   const [sentTo, setSentTo] = React.useState<string | null>(null)
   const [showPassword, setShowPassword] = React.useState(false)
+  const [captchaToken, setCaptchaToken] = React.useState<string | null>(null)
 
   const form = useForm<SelfRegisterValues>({
     resolver: zodResolver(selfRegisterSchema),
@@ -39,6 +42,7 @@ export function RegisterPage() {
         values.email,
         values.password,
         `${values.firstName.trim()} ${values.lastName.trim()}`.trim(),
+        captchaToken ?? undefined,
       )
       setSentTo(values.email)
     } catch (err) {
@@ -50,6 +54,8 @@ export function RegisterPage() {
       } else {
         toast.error('Could not create account', { description: message || 'Please try again.' })
       }
+      // Turnstile tokens are single-use — a fresh one is required to retry.
+      setCaptchaToken(null)
     }
   }
 
@@ -189,7 +195,15 @@ export function RegisterPage() {
             )}
           />
 
-          <Button type="submit" size="lg" className="w-full" loading={form.formState.isSubmitting}>
+          {env.isTurnstileConfigured && <TurnstileWidget onToken={setCaptchaToken} />}
+
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            loading={form.formState.isSubmitting}
+            disabled={env.isTurnstileConfigured && !captchaToken}
+          >
             Sign Up
           </Button>
         </form>

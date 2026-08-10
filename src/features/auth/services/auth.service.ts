@@ -10,8 +10,12 @@ export const authService = {
     return data.session?.user.id ?? null
   },
 
-  async signIn(email: string, password: string): Promise<void> {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+  async signIn(email: string, password: string, captchaToken?: string): Promise<void> {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+      options: captchaToken ? { captchaToken } : undefined,
+    })
     if (error) throw error
   },
 
@@ -28,6 +32,7 @@ export const authService = {
     email: string,
     password: string,
     fullName: string,
+    captchaToken?: string,
   ): Promise<{ needsConfirmation: boolean }> {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -35,6 +40,7 @@ export const authService = {
       options: {
         data: { full_name: fullName },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
+        ...(captchaToken ? { captchaToken } : {}),
       },
     })
     if (error) throw error
@@ -58,9 +64,10 @@ export const authService = {
     if (error) throw error
   },
 
-  async sendPasswordReset(email: string): Promise<void> {
+  async sendPasswordReset(email: string, captchaToken?: string): Promise<void> {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
+      ...(captchaToken ? { captchaToken } : {}),
     })
     if (error) throw error
   },

@@ -28,13 +28,13 @@ export interface AuthState {
 }
 
 export interface AuthContextValue extends AuthState {
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<void>
   signOut: () => Promise<void>
   /** Revoke every other session, keeping this device signed in. */
   signOutOtherSessions: () => Promise<void>
   /** Revoke every session including this one. */
   signOutEverywhere: () => Promise<void>
-  sendPasswordReset: (email: string) => Promise<void>
+  sendPasswordReset: (email: string, captchaToken?: string) => Promise<void>
   updatePassword: (newPassword: string) => Promise<void>
   setActiveOrg: (orgId: string) => void
   /** Enter a firm's workspace in Support Mode (platform staff only). */

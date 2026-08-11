@@ -47,6 +47,11 @@ export function RegisterPage() {
       )
       setSentTo(values.email)
     } catch (err) {
+      // Logged unconditionally so a failure anyone else hits (not just
+      // reproducible locally) is diagnosable from their own browser console
+      // instead of guessing blind — errorMessage() below already handles
+      // the common shapes, but this is the fallback when it can't.
+      console.error('Sign-up failed:', err)
       const message = errorMessage(err, '') ?? ''
       if (/already registered|already exists|already been registered/i.test(message)) {
         toast.error('Account already exists', {

@@ -1,16 +1,38 @@
 import * as React from 'react'
-import { Outlet } from 'react-router-dom'
+import { useNavigate, Outlet } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Sidebar } from '@/shared/components/layout/sidebar'
 import { Topbar } from '@/shared/components/layout/topbar'
 import { NoOrganizationState } from '@/shared/components/layout/no-organization-state'
 import { SupportModeBanner } from '@/shared/components/layout/support-mode-banner'
 import { useAuth } from '@/features/auth/context/auth-provider'
+import { useMessagingBadgeRealtime } from '@/features/messaging/hooks/use-messaging'
+import { useNotificationPreferences } from '@/features/notifications/hooks/use-notifications'
+import { fireBrowserNotification } from '@/features/notifications/lib/browser-push'
+import { toast } from '@/shared/components/ui/sonner'
 
 /** Law-firm workspace shell. Scoped entirely to the signed-in user's firm. */
 export function OrganizationLayout() {
   const [mobileOpen, setMobileOpen] = React.useState(false)
-  const { memberships, activeOrgId, supportOrgId } = useAuth()
+  const { memberships, activeOrgId, supportOrgId, profile } = useAuth()
+  const navigate = useNavigate()
+  const { data: prefs } = useNotificationPreferences(profile?.id ?? null)
+
+  // Mounted once, here, regardless of which page is open — a WhatsApp-style
+  // pop (in-app toast always; a real OS-level push too when the user has
+  // browser notifications enabled) for any new channel/DM message that
+  // isn't your own. Was previously written but never actually mounted
+  // anywhere, so the sidebar's unread badge only ever updated on the next
+  // manual refetch instead of live.
+  useMessagingBadgeRealtime(activeOrgId, profile?.id ?? null, (info) => {
+    toast.message(info.title, {
+      description: info.body,
+      action: { label: 'View', onClick: () => navigate(info.href) },
+    })
+    if (prefs?.browser_enabled) {
+      fireBrowserNotification(info.title, { body: info.body, tag: info.href, onClick: () => navigate(info.href) })
+    }
+  })
 
   const hasWorkspace = (memberships.length > 0 || Boolean(supportOrgId)) && Boolean(activeOrgId)
 

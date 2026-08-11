@@ -203,12 +203,37 @@ export function useDmRealtime(conversationId: string | null) {
   }, [conversationId, qc])
 }
 
+export interface NewMessageInfo {
+  kind: 'channel' | 'dm'
+  /** Channel name (e.g. "#General") or the other DM participant's name. */
+  title: string
+  body: string
+  href: string
+}
+
 /** Org-wide subscription keeping the sidebar unread badge and lists fresh
- * regardless of which (if any) thread is currently open. Mount once, high
- * in the tree (OrganizationLayout), same relationship
- * useNotificationsRealtime has with useUnreadNotificationCount. */
-export function useMessagingBadgeRealtime(orgId: string | null) {
+ * regardless of which (if any) thread is currently open, and optionally
+ * popping a WhatsApp-style alert for a new message that isn't your own.
+ * Mount once, high in the tree (OrganizationLayout), same relationship
+ * useNotificationsRealtime has with useUnreadNotificationCount. Channel
+ * name / DM contact name are read straight from whatever's already cached
+ * for useChannels/useConversations — no extra fetch — falling back to a
+ * generic label if that list hasn't been loaded yet in this session. */
+export function useMessagingBadgeRealtime(
+  orgId: string | null,
+  currentUserId: string | null,
+  onNewMessage?: (info: NewMessageInfo) => void,
+) {
   const qc = useQueryClient()
+  // A caller passing an inline arrow function (the common case) would
+  // otherwise change identity every render, tearing down and re-subscribing
+  // the realtime channel constantly. Keeping it in a ref lets the effect
+  // below depend only on the values that should actually cause a
+  // resubscribe (org/user changing), while still always calling the latest
+  // callback.
+  const onNewMessageRef = React.useRef(onNewMessage)
+  onNewMessageRef.current = onNewMessage
+
   React.useEffect(() => {
     if (!orgId) return
     const invalidate = () => {
@@ -216,13 +241,37 @@ export function useMessagingBadgeRealtime(orgId: string | null) {
       qc.invalidateQueries({ queryKey: keys.channels(orgId) })
       qc.invalidateQueries({ queryKey: keys.conversations(orgId) })
     }
+    const notify = (
+      kind: 'channel' | 'dm',
+      row: { author_id: string | null; body: string; channel_id?: string; conversation_id?: string },
+    ) => {
+      const onNewMessage = onNewMessageRef.current
+      if (!onNewMessage || !row.author_id || row.author_id === currentUserId) return
+      if (kind === 'channel' && row.channel_id) {
+        const channels = qc.getQueryData<{ id: string; name: string }[]>(keys.channels(orgId))
+        const found = (channels ?? []).find((c) => c.id === row.channel_id)
+        onNewMessage({ kind, title: found ? `#${found.name}` : 'New channel message', body: row.body, href: `/messages?c=${row.channel_id}` })
+      } else if (kind === 'dm' && row.conversation_id) {
+        const conversations = qc.getQueryData<{ id: string; other: { full_name: string | null } | null }[]>(keys.conversations(orgId))
+        const found = (conversations ?? []).find((c) => c.id === row.conversation_id)
+        onNewMessage({ kind, title: found?.other?.full_name ?? 'New direct message', body: row.body, href: `/messages?dm=${row.conversation_id}` })
+      }
+    }
     const channel = supabase
       .channel(`messaging-badge:${orgId}:${Date.now()}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'channel_messages', filter: `organization_id=eq.${orgId}` }, invalidate)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: `organization_id=eq.${orgId}` }, invalidate)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'channel_messages', filter: `organization_id=eq.${orgId}` },
+        (payload) => { invalidate(); notify('channel', payload.new as never) },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: `organization_id=eq.${orgId}` },
+        (payload) => { invalidate(); notify('dm', payload.new as never) },
+      )
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [orgId, qc])
+  }, [orgId, currentUserId, qc])
 }

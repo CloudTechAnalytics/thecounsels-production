@@ -9,9 +9,9 @@ export async function requestBrowserPushPermission(): Promise<NotificationPermis
 }
 
 /** Foreground/backgrounded-tab push only — no service worker in this app. */
-export function fireBrowserNotification(title: string, opts?: { tag?: string; onClick?: () => void }): void {
+export function fireBrowserNotification(title: string, opts?: { body?: string; tag?: string; onClick?: () => void }): void {
   if (!isBrowserPushSupported() || Notification.permission !== 'granted') return
-  const n = new Notification(title, { tag: opts?.tag, icon: '/scales.svg' })
+  const n = new Notification(title, { body: opts?.body, tag: opts?.tag, icon: '/scales.svg' })
   if (opts?.onClick) {
     n.onclick = () => {
       window.focus()

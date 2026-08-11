@@ -477,6 +477,8 @@ export interface Database {
           opened_on: string
           closed_on: string | null
           created_by: string | null
+          ai_summary: string | null
+          ai_summary_generated_at: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -495,6 +497,8 @@ export interface Database {
           opened_on?: string
           closed_on?: string | null
           created_by?: string | null
+          ai_summary?: string | null
+          ai_summary_generated_at?: string | null
         }
         Update: Partial<Database['public']['Tables']['matters']['Insert']>
         Relationships: [

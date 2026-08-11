@@ -12,6 +12,7 @@ import { MatterTimeline } from '@/features/matters/components/matter-timeline'
 import { MatterHearingsPanel } from '@/features/matters/components/matter-hearings-panel'
 import { MatterTasksPanel } from '@/features/matters/components/matter-tasks-panel'
 import { MatterSummaryCard } from '@/features/matters/components/matter-summary-card'
+import { MatterAiSummaryCard } from '@/features/matters/components/matter-ai-summary-card'
 import { MatterProgressCard } from '@/features/matters/components/matter-progress-card'
 import { MatterTeamCard } from '@/features/matters/components/matter-team-card'
 import { MATTER_STATUS_META } from '@/features/matters/types'
@@ -172,6 +173,9 @@ export function MatterDetailPage() {
                   <p className="mt-1 whitespace-pre-wrap text-sm">{matter.description}</p>
                 </div>
               )}
+              <div className="mt-6">
+                <MatterAiSummaryCard matter={matter} />
+              </div>
             </Card>
             <div className="space-y-6">
               <MatterSummaryCard matter={matter} onNavigateTab={setTab} />

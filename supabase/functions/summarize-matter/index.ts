@@ -62,9 +62,12 @@ Deno.serve(async (req: Request) => {
 
   const { data: matter, error: matterErr } = await caller
     .from('matters')
-    .select('id, organization_id, title, description, status, practice_area, court, judge, opposing_counsel, priority, opened_on, closed_on, client:clients(name)')
+    .select('id, organization_id, title, description, status, practice_area, court, judge, opposing_counsel, priority, opened_on, closed_on, client:clients(display_name)')
     .eq('id', matterId)
     .maybeSingle()
+  // Logged so a real query failure (bad column, ambiguous embed, etc.) is
+  // never indistinguishable from an actual access denial again.
+  if (matterErr) console.error('Matter lookup failed in summarize-matter:', matterErr)
   if (matterErr || !matter) return json({ error: 'Matter not found, or you do not have access to it' }, 404)
 
   if (!GEMINI_API_KEY) return json({ error: 'AI summarization is not configured yet — contact support.' }, 400)
@@ -99,11 +102,11 @@ Deno.serve(async (req: Request) => {
       .limit(10),
   ])
 
-  const client = (matter as unknown as { client: { name: string } | null }).client
+  const client = (matter as unknown as { client: { display_name: string } | null }).client
   const lines = [
     `Matter: ${matter.title}`,
     matter.description ? `Description: ${matter.description}` : null,
-    client?.name ? `Client: ${client.name}` : null,
+    client?.display_name ? `Client: ${client.display_name}` : null,
     `Status: ${matter.status}${matter.priority ? ` (priority: ${matter.priority})` : ''}`,
     matter.practice_area ? `Practice area: ${matter.practice_area}` : null,
     matter.court ? `Court: ${matter.court}` : null,

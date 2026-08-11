@@ -1,13 +1,21 @@
 // ============================================================================
 // Edge Function: summarize-matter
 // Generates an AI summary of a matter (status, client, key dates, open
-// tasks, hearings) via Anthropic's API. Business/Enterprise plans only —
-// enforced HERE, server-side, via the service-role client reading the org's
-// actual plan; the frontend's own gate only controls what's *shown*, same
-// principle as every other access check in this app (never trust the client).
+// tasks, hearings) via Google's Gemini API — chosen specifically because
+// its free tier requires no billing/credit card to start (Anthropic and
+// OpenAI both require a funded account, even at low volume). Business/
+// Enterprise plans only — enforced HERE, server-side, via the service-role
+// client reading the org's actual plan; the frontend's own gate only
+// controls what's *shown*, same principle as every other access check in
+// this app (never trust the client).
 //
 // Deploy:  supabase functions deploy summarize-matter
-// Secrets: supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+// Secrets: supabase secrets set GEMINI_API_KEY=...
+//   Get a free key at https://aistudio.google.com/apikey — no card needed.
+//   Free tier is rate-limited (requests/minute and /day); if generation
+//   starts failing under real load, that's the first thing to check.
+// If GEMINI_MODEL below is ever deprecated/renamed, update it to whatever
+// aistudio.google.com currently lists as its free-tier flash model.
 // ============================================================================
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.46.1'
 
@@ -21,7 +29,7 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 }
 
-const MODEL = 'claude-sonnet-5'
+const GEMINI_MODEL = 'gemini-2.0-flash'
 const MAX_TOKENS = 700
 
 Deno.serve(async (req: Request) => {
@@ -31,7 +39,7 @@ Deno.serve(async (req: Request) => {
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
   const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const ANON = Deno.env.get('SUPABASE_ANON_KEY')!
-  const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
+  const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
 
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return json({ error: 'Missing authorization' }, 401)
@@ -59,7 +67,7 @@ Deno.serve(async (req: Request) => {
     .maybeSingle()
   if (matterErr || !matter) return json({ error: 'Matter not found, or you do not have access to it' }, 404)
 
-  if (!ANTHROPIC_API_KEY) return json({ error: 'AI summarization is not configured yet — contact support.' }, 400)
+  if (!GEMINI_API_KEY) return json({ error: 'AI summarization is not configured yet — contact support.' }, 400)
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { autoRefreshToken: false, persistSession: false } })
 
@@ -122,28 +130,27 @@ Deno.serve(async (req: Request) => {
     lines.join('\n'),
   ].join('\n')
 
-  const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
+  const aiRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: MAX_TOKENS },
+      }),
     },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  })
+  )
 
   if (!aiRes.ok) {
     const errText = await aiRes.text().catch(() => '')
-    console.error('Anthropic API error:', aiRes.status, errText)
+    console.error('Gemini API error:', aiRes.status, errText)
     return json({ error: 'Could not generate a summary right now. Please try again.' }, 502)
   }
 
   const aiData = await aiRes.json()
-  const summary: string = (aiData.content ?? []).map((b: { text?: string }) => b.text ?? '').join('').trim()
+  const parts: { text?: string }[] = aiData.candidates?.[0]?.content?.parts ?? []
+  const summary: string = parts.map((p) => p.text ?? '').join('').trim()
   if (!summary) return json({ error: 'The AI did not return a summary. Please try again.' }, 502)
 
   const generatedAt = new Date().toISOString()

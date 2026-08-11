@@ -9,7 +9,7 @@ import { useDocuments, useDeleteOrgDocument, useDocumentCategories } from '@/fea
 import { DocumentUploadDialog } from '@/features/documents/components/document-upload-dialog'
 import { DocumentActionsMenu } from '@/features/documents/components/document-actions-menu'
 import { DocumentRenameDialog } from '@/features/documents/components/document-rename-dialog'
-import { DOCUMENT_CATEGORIES, type DocumentFilters, type DocumentWithMatter } from '@/features/documents/services/documents.service'
+import { documentsService, DOCUMENT_CATEGORIES, type DocumentFilters, type DocumentWithMatter } from '@/features/documents/services/documents.service'
 import { DocumentViewer } from '@/features/matters/components/document-viewer'
 import { PageHeader } from '@/shared/components/page-header'
 import { ExportButton } from '@/shared/components/export-button'
@@ -30,7 +30,7 @@ export function DocumentsPage() {
   const [search, setSearch] = React.useState('')
   const [category, setCategory] = React.useState<DocumentFilters['category']>('all')
   const [matterId, setMatterId] = React.useState<DocumentFilters['matterId']>('all')
-  const { data, isLoading } = useDocuments(activeOrgId, { search, category, matterId })
+  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useDocuments(activeOrgId, { search, category, matterId })
   const { data: matters } = useMatters(activeOrgId, {})
   const { data: usedCategories } = useDocumentCategories(activeOrgId)
   const categoryOptions = React.useMemo(() => {
@@ -58,16 +58,22 @@ export function DocumentsPage() {
             <ExportButton
               filename="documents"
               disabled={!data?.length}
-              sheets={() => [{
-                name: 'Documents',
-                rows: (data ?? []).map((d) => ({
-                  Name: d.display_name,
-                  Category: d.category ?? '',
-                  Matter: d.matter?.matter_number ?? 'General',
-                  Size: d.size_bytes != null ? formatStorage(d.size_bytes) : '',
-                  Uploaded: d.created_at.slice(0, 10),
-                })),
-              }]}
+              // Fetches every matching document fresh, regardless of how many
+              // pages are currently loaded on screen — "Export" should never
+              // silently only cover whatever's been scrolled into view.
+              sheets={async () => {
+                const all = await documentsService.listAll(activeOrgId!, { search, category, matterId })
+                return [{
+                  name: 'Documents',
+                  rows: all.map((d) => ({
+                    Name: d.display_name,
+                    Category: d.category ?? '',
+                    Matter: d.matter?.matter_number ?? 'General',
+                    Size: d.size_bytes != null ? formatStorage(d.size_bytes) : '',
+                    Uploaded: d.created_at.slice(0, 10),
+                  })),
+                }]
+              }}
             />
             {canUpload && <Button onClick={() => setUploadOpen(true)}><UploadCloud className="h-4 w-4" /> Upload</Button>}
           </div>
@@ -145,7 +151,15 @@ export function DocumentsPage() {
               ))}
             </TableBody>
           </Table>
-        ) : (
+        ) : null}
+        {data && data.length > 0 && hasNextPage && (
+          <div className="flex justify-center border-t border-border p-3">
+            <Button variant="outline" size="sm" loading={isFetchingNextPage} onClick={() => fetchNextPage()}>
+              Load more
+            </Button>
+          </div>
+        )}
+        {!isLoading && !(data && data.length > 0) && (
           <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/12 text-primary">
               <FolderOpen className="h-7 w-7" />

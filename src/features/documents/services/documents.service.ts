@@ -39,8 +39,14 @@ function stripExtension(filename: string): string {
   return i > 0 ? filename.slice(0, i) : filename
 }
 
+const PAGE_SIZE = 200
+
 export const documentsService = {
-  async list(organizationId: string, filters: DocumentFilters = {}): Promise<DocumentWithMatter[]> {
+  /** One page of documents, newest first. A firm migrating decades of
+   * records can easily clear Postgres/PostgREST's default row cap
+   * (~1000) — without paging, the list would silently show only a partial,
+   * arbitrary subset with no indication anything was cut off. */
+  async list(organizationId: string, filters: DocumentFilters = {}, page = 0): Promise<{ rows: DocumentWithMatter[]; hasMore: boolean }> {
     let q = supabase
       .from('documents')
       .select(SELECT)
@@ -49,9 +55,28 @@ export const documentsService = {
     if (filters.category && filters.category !== 'all') q = q.eq('category', filters.category)
     if (filters.matterId && filters.matterId !== 'all') q = q.eq('matter_id', filters.matterId)
     if (filters.search?.trim()) q = q.ilike('display_name', `%${filters.search.trim()}%`)
+    // One extra row beyond PAGE_SIZE to detect "more" without a second count query.
+    q = q.range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
     const { data, error } = await q
     if (error) throw error
-    return (data ?? []) as unknown as DocumentWithMatter[]
+    const rows = (data ?? []) as unknown as DocumentWithMatter[]
+    return { rows: rows.slice(0, PAGE_SIZE), hasMore: rows.length > PAGE_SIZE }
+  },
+
+  /** Every matching document, regardless of volume — pages through
+   * internally in batches so a large export never silently truncates at
+   * PostgREST's default row cap. Only for export/reporting, never for
+   * populating the on-screen list (that stays paginated via list() above). */
+  async listAll(organizationId: string, filters: DocumentFilters = {}): Promise<DocumentWithMatter[]> {
+    const all: DocumentWithMatter[] = []
+    let page = 0
+    for (;;) {
+      const { rows, hasMore } = await this.list(organizationId, filters, page)
+      all.push(...rows)
+      if (!hasMore) break
+      page += 1
+    }
+    return all
   },
 
   /** Every distinct category actually in use, so custom categories someone

@@ -1,13 +1,21 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import * as React from 'react'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { documentsService, type DocumentFilters } from '@/features/documents/services/documents.service'
 import type { DocumentRow } from '@/shared/types/database.types'
 
+/** Paginated (200/page) — a firm with decades of migrated records can
+ * easily exceed Postgres/PostgREST's default row cap, so this always pages
+ * rather than trusting one unbounded fetch to return everything. */
 export function useDocuments(organizationId: string | null, filters: DocumentFilters) {
-  return useQuery({
+  const query = useInfiniteQuery({
     queryKey: ['org-documents', organizationId, filters],
     enabled: Boolean(organizationId),
-    queryFn: () => documentsService.list(organizationId!, filters),
+    queryFn: ({ pageParam }) => documentsService.list(organizationId!, filters, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, pages) => (lastPage.hasMore ? pages.length : undefined),
   })
+  const data = React.useMemo(() => query.data?.pages.flatMap((p) => p.rows), [query.data])
+  return { ...query, data }
 }
 
 /** Custom categories the firm has actually typed in, so they resurface as

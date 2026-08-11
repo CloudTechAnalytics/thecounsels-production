@@ -1582,6 +1582,10 @@ export interface Database {
         Args: { p_slug: string }
         Returns: { id: string; name: string; slug: string; logo_url: string | null }[]
       }
+      email_is_registered: {
+        Args: { p_email: string }
+        Returns: boolean
+      }
       update_organization_slug: {
         Args: { p_org: string; p_slug: string }
         Returns: Database['public']['Tables']['organizations']['Row']

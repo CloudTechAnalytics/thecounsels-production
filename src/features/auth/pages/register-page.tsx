@@ -14,6 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { toast } from '@/shared/components/ui/sonner'
 import { env } from '@/shared/config/env'
 import { errorMessage } from '@/shared/lib/errors'
+import { supabase } from '@/shared/lib/supabase'
 
 /**
  * Public self-service registration — Step 1 (Create Account) of the
@@ -34,6 +35,20 @@ export function RegisterPage() {
 
   const onSubmit = async (values: SelfRegisterValues) => {
     try {
+      // Supabase's own signUp() deliberately doesn't reveal whether an
+      // already-confirmed email is already registered (anti-enumeration
+      // behavior) — it can silently no-op instead of erroring, leaving
+      // someone stuck waiting for a verification email that was never
+      // actually sent. Check our own side first so this is instant and
+      // unambiguous instead of a confusing indefinite wait.
+      const { data: alreadyRegistered } = await supabase.rpc('email_is_registered', { p_email: values.email })
+      if (alreadyRegistered) {
+        toast.error('Account already exists', {
+          description: 'An account with this email already exists. Please sign in instead.',
+        })
+        return
+      }
+
       // needsConfirmation is always true with this project's auth settings
       // (email confirmations are on). If it were ever false, the session
       // would already be live and RequireAuth would route on to /onboarding

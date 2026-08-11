@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { Search, UploadCloud, FileText, FolderOpen } from 'lucide-react'
+import { Search, UploadCloud, FileText, FolderOpen, FolderUp } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useMatters } from '@/features/matters/hooks/use-matters'
@@ -75,6 +75,11 @@ export function DocumentsPage() {
                 }]
               }}
             />
+            {canUpload && (
+              <Button variant="outline" asChild>
+                <Link to="/documents/import"><FolderUp className="h-4 w-4" /> Bulk Import</Link>
+              </Button>
+            )}
             {canUpload && <Button onClick={() => setUploadOpen(true)}><UploadCloud className="h-4 w-4" /> Upload</Button>}
           </div>
         }

@@ -36,6 +36,7 @@ import { MessagesPage } from '@/features/messaging/pages/messages-page'
 import { MattersPage } from '@/features/matters/pages/matters-page'
 import { MatterDetailPage } from '@/features/matters/pages/matter-detail-page'
 import { DocumentsPage } from '@/features/documents/pages/documents-page'
+import { BulkImportPage } from '@/features/documents/pages/bulk-import-page'
 import { HearingsPage } from '@/features/hearings/pages/hearings-page'
 import { CalendarPage } from '@/features/calendar/pages/calendar-page'
 import { TasksPage } from '@/features/tasks/pages/tasks-page'
@@ -174,6 +175,7 @@ export const router = createBrowserRouter([
                       { path: 'matters/:id', element: withPermission(<MatterDetailPage />, 'matters.view') },
                       { path: 'clients', element: withPermission(<ClientsPage />, 'clients.view') },
                       { path: 'documents', element: withPermission(<DocumentsPage />, 'documents.view') },
+                      { path: 'documents/import', element: withPermission(<BulkImportPage />, 'documents.upload') },
                       { path: 'hearings', element: withPermission(<HearingsPage />, 'hearings.view') },
                       { path: 'calendar', element: withPermission(<CalendarPage />, 'calendar.view') },
                       { path: 'tasks', element: withPermission(<TasksPage />, 'tasks.view') },

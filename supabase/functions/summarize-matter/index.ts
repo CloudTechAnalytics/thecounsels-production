@@ -29,7 +29,15 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 }
 
-const GEMINI_MODEL = 'gemini-2.0-flash'
+// gemini-2.0-flash was retired (confirmed via a live 404 from Google's API,
+// pointing at their "Interactions API" migration guide) — 2.5-flash is the
+// current stable "price-performance workhorse" tier per ai.google.dev/
+// gemini-api/docs/models as of Aug 2026, the positioning Google has
+// historically kept on the free tier (unlike a brand-new flagship release,
+// which sometimes launches paid-only before free-tier access follows). If
+// this one also gets retired, the error log will say so exactly the same
+// way — check aistudio.google.com's current model list and swap this string.
+const GEMINI_MODEL = 'gemini-2.5-flash'
 const MAX_TOKENS = 700
 
 Deno.serve(async (req: Request) => {

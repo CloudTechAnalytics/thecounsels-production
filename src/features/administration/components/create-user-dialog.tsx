@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { UserPlus } from 'lucide-react'
 import { useAssignableRoles } from '@/features/administration/hooks/use-administration'
 import { adminUsersService } from '@/shared/services/admin-users.service'
+import { errorMessage } from '@/shared/lib/errors'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import {
@@ -62,8 +63,9 @@ export function CreateUserDialog({ organizationId }: { organizationId: string })
       form.reset({ fullName: '', email: '', password: '', roleId: values.roleId })
       setOpen(false)
     } catch (err) {
+      console.error('Create user failed:', err)
       toast.error('Could not create user', {
-        description: err instanceof Error ? err.message : 'Please try again.',
+        description: errorMessage(err, 'Please try again.'),
       })
     }
   }

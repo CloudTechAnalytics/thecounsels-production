@@ -294,26 +294,96 @@ export function OrganizationsPage() {
             </p>
           </div>
         ) : filtered && filtered.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Organization</TableHead>
-                <TableHead>Owner</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Users</TableHead>
-                <TableHead>Storage</TableHead>
-                <TableHead>Renewal</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            {/* Desktop/tablet-landscape: full table. Below lg, a table this
+               wide forces sideways scrolling to see the rest of a row on a
+               phone — the card list below replaces it entirely rather than
+               just shrinking columns, so nothing is ever cut off or requires
+               horizontal scroll on iPhone/Android/tablet. */}
+            <div className="hidden lg:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Organization</TableHead>
+                    <TableHead>Owner</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Users</TableHead>
+                    <TableHead>Storage</TableHead>
+                    <TableHead>Renewal</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((org) => (
+                    <TableRow key={org.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-primary/12 text-xs font-semibold text-primary">
+                            {org.logo_url ? <img src={org.logo_url} alt="" className="h-full w-full object-cover" /> : initialsOf(org.name, 'OR')}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{org.name}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {org.industry ? `${org.industry} · ` : ''}/{org.slug}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {org.owner ? (
+                          <div className="min-w-0">
+                            <p className="truncate text-sm">{org.owner.full_name ?? '—'}</p>
+                            <p className="truncate text-xs text-muted-foreground">{org.owner.email}</p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {org.organization_type === 'customer' ? (
+                          <Badge variant="outline">{org.subscription?.plan?.name ?? titleCase(org.plan)}</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No billing</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          {org.organization_type !== 'customer' ? (
+                            <Badge variant="muted" className="capitalize">{org.organization_type}</Badge>
+                          ) : (
+                            <>
+                              <Badge variant={STATUS_VARIANT[org.status] ?? 'muted'}>{org.status}</Badge>
+                              <TrialBadge org={org} />
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">{org.member_count}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{formatStorage(org.storage_used_bytes)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {org.subscription?.current_period_end ? format(new Date(org.subscription.current_period_end), 'MMM d, yyyy') : '—'}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{format(new Date(org.created_at), 'MMM d, yyyy')}</TableCell>
+                      <TableCell className="text-right">
+                        {trash ? <TrashRowActions org={org} /> : <ActiveRowActions org={org} />}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Phone/tablet-portrait: stacked cards, everything visible with
+               no side-scrolling — same data, same actions menu, just laid
+               out vertically instead of in columns. */}
+            <ul className="divide-y divide-border lg:hidden">
               {filtered.map((org) => (
-                <TableRow key={org.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-primary/12 text-xs font-semibold text-primary">
+                <li key={org.id} className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/12 text-xs font-semibold text-primary">
                         {org.logo_url ? <img src={org.logo_url} alt="" className="h-full w-full object-cover" /> : initialsOf(org.name, 'OR')}
                       </span>
                       <div className="min-w-0">
@@ -323,49 +393,49 @@ export function OrganizationsPage() {
                         </p>
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    {org.owner ? (
-                      <div className="min-w-0">
-                        <p className="truncate text-sm">{org.owner.full_name ?? '—'}</p>
-                        <p className="truncate text-xs text-muted-foreground">{org.owner.email}</p>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {org.organization_type === 'customer' ? (
-                      <Badge variant="outline">{org.subscription?.plan?.name ?? titleCase(org.plan)}</Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">No billing</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      {org.organization_type !== 'customer' ? (
-                        <Badge variant="muted" className="capitalize">{org.organization_type}</Badge>
-                      ) : (
-                        <>
-                          <Badge variant={STATUS_VARIANT[org.status] ?? 'muted'}>{org.status}</Badge>
-                          <TrialBadge org={org} />
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm">{org.member_count}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatStorage(org.storage_used_bytes)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {org.subscription?.current_period_end ? format(new Date(org.subscription.current_period_end), 'MMM d, yyyy') : '—'}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{format(new Date(org.created_at), 'MMM d, yyyy')}</TableCell>
-                  <TableCell className="text-right">
                     {trash ? <TrashRowActions org={org} /> : <ActiveRowActions org={org} />}
-                  </TableCell>
-                </TableRow>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    {org.organization_type !== 'customer' ? (
+                      <Badge variant="muted" className="capitalize">{org.organization_type}</Badge>
+                    ) : (
+                      <>
+                        <Badge variant={STATUS_VARIANT[org.status] ?? 'muted'}>{org.status}</Badge>
+                        <TrialBadge org={org} />
+                      </>
+                    )}
+                    {org.organization_type === 'customer' && (
+                      <Badge variant="outline">{org.subscription?.plan?.name ?? titleCase(org.plan)}</Badge>
+                    )}
+                  </div>
+
+                  {org.owner && (
+                    <p className="mt-2 truncate text-xs text-muted-foreground">
+                      {org.owner.full_name ?? '—'} · {org.owner.email}
+                    </p>
+                  )}
+
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <p className="text-muted-foreground">Users</p>
+                      <p className="mt-0.5 font-medium">{org.member_count}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Storage</p>
+                      <p className="mt-0.5 font-medium">{formatStorage(org.storage_used_bytes)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Renewal</p>
+                      <p className="mt-0.5 font-medium">
+                        {org.subscription?.current_period_end ? format(new Date(org.subscription.current_period_end), 'MMM d') : '—'}
+                      </p>
+                    </div>
+                  </div>
+                </li>
               ))}
-            </TableBody>
-          </Table>
+            </ul>
+          </>
         ) : (
           <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/12 text-primary">

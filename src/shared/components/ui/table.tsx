@@ -32,7 +32,11 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
     <th
       ref={ref}
       className={cn(
-        'h-11 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wider text-muted-foreground',
+        // Tightened from px-4/h-11 — wide tables (9+ columns, e.g.
+        // Organizations) were forcing horizontal scroll even on ordinary
+        // laptop widths. This is a global density change (every table in
+        // the app shares this component) rather than a per-page fix.
+        'h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wider text-muted-foreground',
         className,
       )}
       {...props}
@@ -42,7 +46,7 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
 TableHead.displayName = 'TableHead'
 
 const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
-  ({ className, ...props }, ref) => <td ref={ref} className={cn('px-4 py-3 align-middle', className)} {...props} />,
+  ({ className, ...props }, ref) => <td ref={ref} className={cn('px-3 py-2.5 align-middle', className)} {...props} />,
 )
 TableCell.displayName = 'TableCell'
 

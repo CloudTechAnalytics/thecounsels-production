@@ -295,16 +295,12 @@ export function OrganizationsPage() {
           </div>
         ) : filtered && filtered.length > 0 ? (
           <>
-            {/* Desktop only (xl+, ~1280px) — even at ordinary laptop widths
-               (1280-1440px) an 8-column table with real content plus the
-               sidebar left almost no margin before triggering the table's
-               own internal horizontal scroll, so the cutoff is deliberately
-               conservative rather than a bare "fits on paper" pixel count.
-               Below xl, the card list further down replaces the table
-               entirely (not just shrunken columns), so nothing is ever cut
-               off or requires horizontal scroll on iPhone/Android/tablet —
-               "Created" is dropped from this compact view (still in the
-               View dialog) to keep the table itself narrower. */}
+            {/* Desktop only (xl+, ~1280px). Below xl, the card list further
+               down replaces the table entirely (not just shrunken columns),
+               so nothing is ever cut off or requires horizontal scroll on
+               iPhone/Android/tablet. Column density itself is controlled
+               globally in the shared Table component (ui/table.tsx), not
+               per-page — so every table in the app got narrower together. */}
             <div className="hidden xl:block">
               <Table>
                 <TableHeader>
@@ -316,6 +312,7 @@ export function OrganizationsPage() {
                     <TableHead>Users</TableHead>
                     <TableHead>Storage</TableHead>
                     <TableHead>Renewal</TableHead>
+                    <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -369,6 +366,7 @@ export function OrganizationsPage() {
                       <TableCell className="text-sm text-muted-foreground">
                         {org.subscription?.current_period_end ? format(new Date(org.subscription.current_period_end), 'MMM d, yyyy') : '—'}
                       </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{format(new Date(org.created_at), 'MMM d, yyyy')}</TableCell>
                       <TableCell className="text-right">
                         {trash ? <TrashRowActions org={org} /> : <ActiveRowActions org={org} />}
                       </TableCell>

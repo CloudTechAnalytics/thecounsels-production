@@ -295,12 +295,17 @@ export function OrganizationsPage() {
           </div>
         ) : filtered && filtered.length > 0 ? (
           <>
-            {/* Desktop/tablet-landscape: full table. Below lg, a table this
-               wide forces sideways scrolling to see the rest of a row on a
-               phone — the card list below replaces it entirely rather than
-               just shrinking columns, so nothing is ever cut off or requires
-               horizontal scroll on iPhone/Android/tablet. */}
-            <div className="hidden lg:block">
+            {/* Desktop only (xl+, ~1280px) — even at ordinary laptop widths
+               (1280-1440px) an 8-column table with real content plus the
+               sidebar left almost no margin before triggering the table's
+               own internal horizontal scroll, so the cutoff is deliberately
+               conservative rather than a bare "fits on paper" pixel count.
+               Below xl, the card list further down replaces the table
+               entirely (not just shrunken columns), so nothing is ever cut
+               off or requires horizontal scroll on iPhone/Android/tablet —
+               "Created" is dropped from this compact view (still in the
+               View dialog) to keep the table itself narrower. */}
+            <div className="hidden xl:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -311,7 +316,6 @@ export function OrganizationsPage() {
                     <TableHead>Users</TableHead>
                     <TableHead>Storage</TableHead>
                     <TableHead>Renewal</TableHead>
-                    <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -365,7 +369,6 @@ export function OrganizationsPage() {
                       <TableCell className="text-sm text-muted-foreground">
                         {org.subscription?.current_period_end ? format(new Date(org.subscription.current_period_end), 'MMM d, yyyy') : '—'}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{format(new Date(org.created_at), 'MMM d, yyyy')}</TableCell>
                       <TableCell className="text-right">
                         {trash ? <TrashRowActions org={org} /> : <ActiveRowActions org={org} />}
                       </TableCell>
@@ -378,7 +381,7 @@ export function OrganizationsPage() {
             {/* Phone/tablet-portrait: stacked cards, everything visible with
                no side-scrolling — same data, same actions menu, just laid
                out vertically instead of in columns. */}
-            <ul className="divide-y divide-border lg:hidden">
+            <ul className="divide-y divide-border xl:hidden">
               {filtered.map((org) => (
                 <li key={org.id} className="p-4">
                   <div className="flex items-start justify-between gap-2">

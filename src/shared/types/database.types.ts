@@ -1590,6 +1590,10 @@ export interface Database {
         Args: { p_email: string }
         Returns: boolean
       }
+      platform_storage_usage: {
+        Args: Record<PropertyKey, never>
+        Returns: { organization_id: string; total_bytes: number }[]
+      }
       update_organization_slug: {
         Args: { p_org: string; p_slug: string }
         Returns: Database['public']['Tables']['organizations']['Row']

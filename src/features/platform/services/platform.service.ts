@@ -66,7 +66,7 @@ export const platformService = {
     if (rows.length === 0) return []
 
     const ids = rows.map((o) => o.id)
-    const [subsRes, membersRes, ownersRes] = await Promise.all([
+    const [subsRes, membersRes, ownersRes, storageRes] = await Promise.all([
       // Explicit FK name required — subscriptions has two FKs into plans
       // (plan_id and scheduled_plan_id, 0053), so the bare `plan:plans(*)`
       // embed is ambiguous and PostgREST rejects it outright (HTTP 300).
@@ -77,10 +77,15 @@ export const platformService = {
         .select('organization_id, profile:profiles!memberships_user_id_fkey(full_name, email)')
         .eq('is_owner', true)
         .in('organization_id', ids),
+      // organizations.storage_used_bytes is never actually written to
+      // anywhere — computed live from documents.size_bytes instead so it
+      // reflects real usage rather than a permanently-stale 0.
+      supabase.rpc('platform_storage_usage'),
     ])
     if (subsRes.error) throw subsRes.error
     if (membersRes.error) throw membersRes.error
     if (ownersRes.error) throw ownersRes.error
+    if (storageRes.error) throw storageRes.error
 
     const subByOrg = new Map(
       ((subsRes.data ?? []) as unknown as SubscriptionWithPlan[]).map((s) => [s.organization_id, s]),
@@ -95,9 +100,11 @@ export const platformService = {
         r.profile as unknown as { full_name: string | null; email: string } | null,
       ]),
     )
+    const storageByOrg = new Map((storageRes.data ?? []).map((r) => [r.organization_id, r.total_bytes]))
 
     return rows.map((o) => ({
       ...o,
+      storage_used_bytes: storageByOrg.get(o.id) ?? 0,
       member_count: countByOrg.get(o.id) ?? 0,
       subscription: subByOrg.get(o.id) ?? null,
       owner: ownerByOrg.get(o.id) ?? null,

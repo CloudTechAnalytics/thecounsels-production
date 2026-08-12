@@ -145,6 +145,13 @@ Deno.serve(async (req: Request) => {
           last_payment_at: new Date().toISOString(),
         })
         .eq('organization_id', orgId)
+      // organizations.status is a separate column from subscriptions.status
+      // (only set once, at creation, to 'trial') — without this, the org
+      // stayed frozen showing 'trial' in the Platform Console forever, even
+      // with an active paid subscription and the correct plan already
+      // showing. See migration 0071 for the one-time backfill of orgs
+      // already stuck in this state.
+      await admin.from('organizations').update({ status: 'active' }).eq('id', orgId)
       await admin.rpc('log_audit', {
         p_org: orgId, p_action: 'subscription.activated', p_entity_type: 'subscription',
         p_summary: 'Subscription activated via Paystack', p_platform: false,
@@ -154,6 +161,12 @@ Deno.serve(async (req: Request) => {
     case 'invoice.payment_failed': {
       const orgId = await matchOrg()
       if (!orgId) break
+      // organizations.status deliberately NOT touched here — org_status has
+      // no 'past_due' equivalent, and other code (RLS, access checks) may
+      // treat organizations.status = 'suspended' as an actual access block.
+      // One failed payment attempt shouldn't unilaterally lock a firm out;
+      // that's a real grace-period/dunning policy decision, not something
+      // to silently decide here.
       await admin.from('subscriptions').update({ status: 'past_due' }).eq('organization_id', orgId)
       await admin.rpc('log_audit', {
         p_org: orgId, p_action: 'subscription.payment_failed', p_entity_type: 'subscription',
@@ -168,6 +181,7 @@ Deno.serve(async (req: Request) => {
         .from('subscriptions')
         .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
         .eq('organization_id', orgId)
+      await admin.from('organizations').update({ status: 'cancelled' }).eq('id', orgId)
       await admin.rpc('log_audit', {
         p_org: orgId, p_action: 'subscription.cancelled', p_entity_type: 'subscription',
         p_summary: 'Subscription cancelled via Paystack', p_platform: false,

@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Users, UserCheck, CalendarClock, Inbox } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useEmployees, useAllLeaveRequests, useAllHrRequests } from '@/features/hr/hooks/use-hr'
+import { HrListsSettings } from '@/features/hr/components/hr-lists-settings'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
@@ -51,6 +52,13 @@ export function HrOverviewPage() {
           icon={Inbox}
         />
       </div>
+
+      {(has('departments.manage') || has('leave.manage')) && (
+        <>
+          <h2 className="mb-4 mt-8 font-display text-lg font-semibold">Manage lists</h2>
+          <HrListsSettings />
+        </>
+      )}
     </div>
   )
 }

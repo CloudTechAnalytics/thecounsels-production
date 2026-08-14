@@ -306,8 +306,9 @@ export const hrService = {
     departmentId?: string
     userIds?: string[]
     branch?: string
+    roleKey?: string
   }): Promise<void> {
-    const { organizationId, title, body, audienceType, departmentId, userIds, branch } = params
+    const { organizationId, title, body, audienceType, departmentId, userIds, branch, roleKey } = params
     const { error } = await supabase.rpc('send_hr_announcement', {
       p_org: organizationId,
       p_title: title,
@@ -316,6 +317,7 @@ export const hrService = {
       p_department_id: departmentId ?? null,
       p_user_ids: userIds ?? null,
       p_branch: branch ?? null,
+      p_role_key: (roleKey as Database['public']['Functions']['send_hr_announcement']['Args']['p_role_key']) ?? null,
     })
     if (error) throw error
   },

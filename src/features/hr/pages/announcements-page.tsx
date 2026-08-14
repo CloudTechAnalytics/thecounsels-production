@@ -5,6 +5,12 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useAnnouncements, useSendAnnouncement, useDepartments, useEmployees } from '@/features/hr/hooks/use-hr'
 import { ANNOUNCEMENT_AUDIENCES } from '@/features/hr/types'
+import { ROLE_META } from '@/shared/lib/permissions'
+
+const ROLE_OPTIONS = Object.entries(ROLE_META)
+  .filter(([key]) => key !== 'platform_owner' && key !== 'platform_admin')
+  .sort(([, a], [, b]) => a.rank - b.rank)
+  .map(([key, meta]) => ({ key, label: meta.label }))
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -28,6 +34,7 @@ function ComposeDialog() {
   const [departmentId, setDepartmentId] = React.useState('')
   const [userIds, setUserIds] = React.useState<string[]>([])
   const [branch, setBranch] = React.useState('')
+  const [roleKey, setRoleKey] = React.useState('')
 
   const submit = async () => {
     if (!title.trim() || !body.trim()) {
@@ -35,10 +42,16 @@ function ComposeDialog() {
       return
     }
     try {
-      await send.mutateAsync({ title: title.trim(), body: body.trim(), audienceType, departmentId: departmentId || undefined, userIds: userIds.length > 0 ? userIds : undefined, branch: branch.trim() || undefined })
+      await send.mutateAsync({
+        title: title.trim(), body: body.trim(), audienceType,
+        departmentId: departmentId || undefined,
+        userIds: userIds.length > 0 ? userIds : undefined,
+        branch: branch.trim() || undefined,
+        roleKey: roleKey || undefined,
+      })
       toast.success('Announcement sent')
       setOpen(false)
-      setTitle(''); setBody(''); setUserIds([]); setDepartmentId(''); setBranch('')
+      setTitle(''); setBody(''); setUserIds([]); setDepartmentId(''); setBranch(''); setRoleKey('')
     } catch (err) {
       toast.error('Could not send', { description: errorMessage(err) })
     }
@@ -72,6 +85,17 @@ function ComposeDialog() {
               </SelectContent>
             </Select>
           </div>
+          {audienceType === 'role' && (
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <Select value={roleKey} onValueChange={setRoleKey}>
+                <SelectTrigger><SelectValue placeholder="Choose a role" /></SelectTrigger>
+                <SelectContent>
+                  {ROLE_OPTIONS.map((r) => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {audienceType === 'department' && (
             <div className="space-y-1.5">
               <Label>Department</Label>

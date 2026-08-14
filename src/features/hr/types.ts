@@ -89,6 +89,7 @@ export const HR_REQUEST_STATUS_META: Record<string, { label: string; variant: Ba
 
 export const ANNOUNCEMENT_AUDIENCES = [
   { value: 'organization', label: 'Entire organization' },
+  { value: 'role', label: 'Everyone with a specific role' },
   { value: 'department', label: 'A department' },
   { value: 'employees', label: 'Specific employees' },
   { value: 'branch', label: 'A branch/location' },

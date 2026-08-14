@@ -1018,6 +1018,7 @@ export interface Database {
           audience_department_id: string | null
           audience_user_ids: string[]
           audience_branch: string | null
+          audience_role_key: RoleKey | null
           created_by: string | null
           created_at: string
         }
@@ -1029,6 +1030,7 @@ export interface Database {
           audience_type?: string
           audience_department_id?: string | null
           audience_user_ids?: string[]
+          audience_role_key?: RoleKey | null
           audience_branch?: string | null
           created_by?: string | null
           created_at?: string
@@ -1863,6 +1865,7 @@ export interface Database {
           p_department_id?: string | null
           p_user_ids?: string[] | null
           p_branch?: string | null
+          p_role_key?: RoleKey | null
         }
         Returns: Database['public']['Tables']['hr_announcements']['Row']
       }

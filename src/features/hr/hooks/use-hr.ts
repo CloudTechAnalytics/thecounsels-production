@@ -268,7 +268,7 @@ export function useAnnouncements(organizationId: string | null) {
 export function useSendAnnouncement(organizationId: string | null) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (params: { title: string; body: string; audienceType: string; departmentId?: string; userIds?: string[]; branch?: string }) =>
+    mutationFn: (params: { title: string; body: string; audienceType: string; departmentId?: string; userIds?: string[]; branch?: string; roleKey?: string }) =>
       hrService.sendAnnouncement({ organizationId: organizationId!, ...params }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['hr', 'announcements', organizationId] }),
   })

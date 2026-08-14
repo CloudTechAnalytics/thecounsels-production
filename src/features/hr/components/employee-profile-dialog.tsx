@@ -1,11 +1,7 @@
 import * as React from 'react'
-import {
-  useDepartments, useJobTitles, useUpdateEmployeeProfile,
-  useOnboardingTemplates, useAssignOnboarding, useEmployeeOnboardingProgress,
-} from '@/features/hr/hooks/use-hr'
+import { useDepartments, useJobTitles, useUpdateEmployeeProfile } from '@/features/hr/hooks/use-hr'
 import { EMPLOYMENT_STATUSES, EMPLOYMENT_STATUS_META, EMPLOYMENT_TYPES, type Employee } from '@/features/hr/types'
 import { useAuth } from '@/features/auth/context/auth-provider'
-import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
@@ -14,59 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
 import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
-
-function OnboardingSection({ employee }: { employee: Employee }) {
-  const { activeOrgId } = useAuth()
-  const { has } = usePermissions()
-  const { data: templates } = useOnboardingTemplates(has('onboarding.manage') ? activeOrgId : null)
-  const { data: progress } = useEmployeeOnboardingProgress(activeOrgId, employee.userId)
-  const assign = useAssignOnboarding(activeOrgId)
-  const [templateId, setTemplateId] = React.useState('')
-
-  if (!has('onboarding.manage')) return null
-
-  const assignedTemplateIds = new Set((progress ?? []).map((p) => p.onboarding.template_id))
-  const availableTemplates = (templates ?? []).filter((t) => !assignedTemplateIds.has(t.id))
-
-  return (
-    <div className="border-t border-border pt-4">
-      <p className="text-sm font-medium">Onboarding</p>
-      {progress && progress.length > 0 && (
-        <ul className="mt-2 space-y-1.5">
-          {progress.map((p) => (
-            <li key={p.onboarding.id} className="text-xs text-muted-foreground">
-              {p.templateName}: <span className="font-medium text-foreground">{p.done}/{p.total} completed</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {availableTemplates.length > 0 && (
-        <div className="mt-2 flex gap-2">
-          <Select value={templateId} onValueChange={setTemplateId}>
-            <SelectTrigger className="h-8 flex-1"><SelectValue placeholder="Assign a checklist…" /></SelectTrigger>
-            <SelectContent>
-              {availableTemplates.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Button
-            size="sm" variant="outline" disabled={!templateId} loading={assign.isPending}
-            onClick={async () => {
-              try {
-                await assign.mutateAsync({ userId: employee.userId, templateId })
-                toast.success('Onboarding assigned')
-                setTemplateId('')
-              } catch (err) {
-                toast.error('Could not assign', { description: errorMessage(err) })
-              }
-            }}
-          >
-            Assign
-          </Button>
-        </div>
-      )}
-    </div>
-  )
-}
 
 const NONE = '__none__'
 
@@ -195,8 +138,6 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: { employ
             <Textarea rows={3} value={form.bio} onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))} />
           </div>
         </div>
-
-        <OnboardingSection employee={employee} />
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>

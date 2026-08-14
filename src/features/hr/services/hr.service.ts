@@ -320,6 +320,39 @@ export const hrService = {
       }
     })
   },
+  /** Every onboarding assignment across the whole firm, with employee name
+   * attached — the tracking view HR actually needs, not just a per-person
+   * fragment buried in one profile at a time. */
+  async listAllOnboarding(organizationId: string): Promise<(OnboardingProgress & { employeeName: string })[]> {
+    const { data: assignments, error } = await supabase
+      .from('employee_onboarding')
+      .select('*, template:onboarding_templates(name), employee:profiles!employee_onboarding_user_id_fkey(full_name, email)')
+      .eq('organization_id', organizationId)
+      .order('assigned_at', { ascending: false })
+    if (error) throw error
+    const list = (assignments ?? []) as unknown as Array<
+      { id: string; template: { name: string } | null; employee: { full_name: string | null; email: string } | null } & Record<string, unknown>
+    >
+    if (list.length === 0) return []
+
+    const { data: links, error: linksErr } = await supabase
+      .from('onboarding_task_links')
+      .select('employee_onboarding_id, task:tasks(status)')
+      .in('employee_onboarding_id', list.map((a) => a.id))
+    if (linksErr) throw linksErr
+    const linkRows = (links ?? []) as unknown as Array<{ employee_onboarding_id: string; task: { status: string } | null }>
+
+    return list.map((a) => {
+      const rows = linkRows.filter((l) => l.employee_onboarding_id === a.id)
+      return {
+        onboarding: a as unknown as OnboardingProgress['onboarding'],
+        templateName: a.template?.name ?? 'Onboarding',
+        employeeName: a.employee?.full_name ?? a.employee?.email ?? 'Someone',
+        total: rows.length,
+        done: rows.filter((r) => r.task?.status === 'done').length,
+      }
+    })
+  },
 
   // ---- Announcements ----
   async listAnnouncements(organizationId: string): Promise<HrAnnouncementRow[]> {

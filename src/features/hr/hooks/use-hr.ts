@@ -294,7 +294,10 @@ export function useAssignOnboarding(organizationId: string | null) {
   return useMutation({
     mutationFn: ({ userId, templateId }: { userId: string; templateId: string }) =>
       hrService.assignOnboarding(organizationId!, userId, templateId),
-    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['hr', 'onboarding-progress', organizationId, vars.userId] }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['hr', 'onboarding-progress', organizationId, vars.userId] })
+      qc.invalidateQueries({ queryKey: ['hr', 'all-onboarding', organizationId] })
+    },
   })
 }
 
@@ -303,6 +306,14 @@ export function useEmployeeOnboardingProgress(organizationId: string | null, use
     queryKey: ['hr', 'onboarding-progress', organizationId, userId],
     enabled: Boolean(organizationId && userId),
     queryFn: () => hrService.getEmployeeOnboardingProgress(organizationId!, userId!),
+  })
+}
+
+export function useAllOnboarding(organizationId: string | null) {
+  return useQuery({
+    queryKey: ['hr', 'all-onboarding', organizationId],
+    enabled: Boolean(organizationId),
+    queryFn: () => hrService.listAllOnboarding(organizationId!),
   })
 }
 

@@ -40,6 +40,7 @@ import { BulkImportPage } from '@/features/documents/pages/bulk-import-page'
 import { HrLayout } from '@/features/hr/components/hr-layout'
 import { HrOverviewPage } from '@/features/hr/pages/hr-overview-page'
 import { EmployeesPage } from '@/features/hr/pages/employees-page'
+import { OnboardingPage as HrOnboardingPage } from '@/features/hr/pages/onboarding-page'
 import { LeavePage } from '@/features/hr/pages/leave-page'
 import { HrRequestsPage } from '@/features/hr/pages/hr-requests-page'
 import { HrDocumentsPage } from '@/features/hr/pages/hr-documents-page'
@@ -208,6 +209,7 @@ export const router = createBrowserRouter([
                     children: [
                       { index: true, element: withPermission(<HrOverviewPage />, 'hr.view_reports') },
                       { path: 'employees', element: withPermission(<EmployeesPage />, 'staff.manage') },
+                      { path: 'onboarding', element: withPermission(<HrOnboardingPage />, 'onboarding.manage') },
                       { path: 'leave', element: withPermission(<LeavePage />, 'leave.request') },
                       { path: 'requests', element: withPermission(<HrRequestsPage />, 'hr_requests.submit') },
                       { path: 'documents', element: withPermission(<HrDocumentsPage />, 'hr_documents.view_own') },

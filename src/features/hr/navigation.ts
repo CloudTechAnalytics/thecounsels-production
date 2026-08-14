@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { LayoutGrid, UserSquare2, CalendarClock, FolderLock, Inbox, Megaphone, FileBarChart, type LucideIcon } from 'lucide-react'
+import { LayoutGrid, UserSquare2, CalendarClock, FolderLock, Inbox, Megaphone, FileBarChart, ClipboardCheck, type LucideIcon } from 'lucide-react'
 import type { PermissionKey } from '@/shared/lib/permissions'
 import { LeaveNavBadge } from '@/features/hr/components/leave-nav-badge'
 
@@ -27,6 +27,7 @@ export const HR_NAVIGATION: HrNavSection[] = [
     items: [
       { label: 'Dashboard', to: '/hr', icon: LayoutGrid, permission: 'hr.view_reports', end: true },
       { label: 'Employees', to: '/hr/employees', icon: UserSquare2, permission: 'staff.manage' },
+      { label: 'Onboarding', to: '/hr/onboarding', icon: ClipboardCheck, permission: 'onboarding.manage' },
       { label: 'Leave', to: '/hr/leave', icon: CalendarClock, permission: 'leave.request', badge: LeaveNavBadge },
       { label: 'Documents', to: '/hr/documents', icon: FolderLock, permission: 'hr_documents.view_own' },
       { label: 'HR Requests', to: '/hr/requests', icon: Inbox, permission: 'hr_requests.submit' },

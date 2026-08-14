@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { OrganizationLayout } from '@/shared/components/layout/organization-layout'
 import { PlatformLayout } from '@/shared/components/layout/platform-layout'
 import { useAuth } from '@/features/auth/context/auth-provider'
+import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
   RequireAuth,
   RedirectIfAuthenticated,
@@ -89,6 +90,20 @@ const withPermission = (
 function SettingsLayout() {
   const { isPlatformAdmin, supportOrgId } = useAuth()
   return isPlatformAdmin && !supportOrgId ? <PlatformLayout /> : <OrganizationLayout />
+}
+
+/**
+ * '/' has to resolve to *something* for every org member, but the practice
+ * Dashboard (matters/hearings/billing KPIs) is meaningless for a pure HR
+ * role — HR has its own dashboard at /hr. dashboard.view is what actually
+ * gates this rather than a role-name check, so it also self-corrects for
+ * any other role a firm configures the same way.
+ */
+function WorkspaceHome() {
+  const { has } = usePermissions()
+  if (has('dashboard.view')) return <DashboardPage />
+  if (has('hr.view_reports')) return <Navigate to="/hr" replace />
+  return <Navigate to="/notifications" replace />
 }
 
 export const router = createBrowserRouter([
@@ -179,7 +194,7 @@ export const router = createBrowserRouter([
                   {
                     element: <OrganizationLayout />,
                     children: [
-                      { index: true, element: <DashboardPage /> },
+                      { index: true, element: <WorkspaceHome /> },
                       { path: 'matters', element: withPermission(<MattersPage />, 'matters.view') },
                       { path: 'matters/:id', element: withPermission(<MatterDetailPage />, 'matters.view') },
                       { path: 'clients', element: withPermission(<ClientsPage />, 'clients.view') },

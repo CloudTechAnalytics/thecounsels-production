@@ -161,6 +161,27 @@ export const administrationService = {
     })
   },
 
+  /** Suspend blocks sign-in without deleting anything they authored (tasks,
+   * documents, audit history stay attached to their name) — the reversible
+   * option for "this person shouldn't have access right now," as opposed
+   * to removeMember's permanent removal. */
+  async setMembershipStatus(
+    membershipId: string,
+    organizationId: string,
+    status: 'active' | 'suspended',
+    name: string,
+  ): Promise<void> {
+    const { error } = await supabase.from('memberships').update({ status }).eq('id', membershipId)
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: status === 'suspended' ? 'member.suspended' : 'member.reactivated',
+      p_entity_type: 'membership',
+      p_entity_id: membershipId,
+      p_summary: `${status === 'suspended' ? 'Suspended' : 'Reactivated'} ${name}`,
+    })
+  },
+
   async listInvitations(organizationId: string): Promise<InvitationWithRelations[]> {
     const { data, error } = await supabase
       .from('invitations')

@@ -156,3 +156,15 @@ export function useRemoveMember(organizationId: string | null) {
     },
   })
 }
+
+export function useSetMembershipStatus(organizationId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ membershipId, status, name }: { membershipId: string; status: 'active' | 'suspended'; name: string }) =>
+      administrationService.setMembershipStatus(membershipId, organizationId!, status, name),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['administration', 'members', organizationId] })
+      qc.invalidateQueries({ queryKey: ['firm-members', organizationId] })
+    },
+  })
+}

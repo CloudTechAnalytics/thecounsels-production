@@ -12,13 +12,6 @@ import {
   Bell,
   MessageSquare,
   Settings,
-  LayoutGrid,
-  UserSquare2,
-  CalendarClock,
-  Inbox,
-  FolderLock,
-  Megaphone,
-  FileBarChart,
   type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey } from '@/shared/lib/permissions'
@@ -40,7 +33,9 @@ export interface NavSection {
   items: NavItem[]
 }
 
-/** Primary navigation. Items are filtered by the active org's permissions. */
+/** Primary navigation for the firm's practice workspace. HR lives in its
+ * own separate shell (see src/features/hr/navigation.ts + HrLayout),
+ * reached via "HR Workspace" in the profile menu — not listed here. */
 export const NAVIGATION: NavSection[] = [
   {
     items: [{ label: 'Dashboard', to: '/', icon: LayoutDashboard, permission: 'dashboard.view', end: true }],
@@ -64,18 +59,6 @@ export const NAVIGATION: NavSection[] = [
       { label: 'Reports', to: '/reports', icon: BarChart3, permission: 'reports.view' },
       { label: 'Notifications', to: '/notifications', icon: Bell, permission: 'notifications.view' },
       { label: 'Messages', to: '/messages', icon: MessageSquare, permission: 'messaging.view', badge: MessagesNavBadge },
-    ],
-  },
-  {
-    heading: 'HR',
-    items: [
-      { label: 'Overview', to: '/hr', icon: LayoutGrid, permission: 'hr.view_reports', end: true },
-      { label: 'Employees', to: '/hr/employees', icon: UserSquare2, permission: 'staff.view' },
-      { label: 'Leave', to: '/hr/leave', icon: CalendarClock, permission: 'leave.request' },
-      { label: 'Documents', to: '/hr/documents', icon: FolderLock, permission: 'hr_documents.view_own' },
-      { label: 'HR Requests', to: '/hr/requests', icon: Inbox, permission: 'hr_requests.submit' },
-      { label: 'Announcements', to: '/hr/announcements', icon: Megaphone, permission: 'hr_announcements.view' },
-      { label: 'HR Reports', to: '/hr/reports', icon: FileBarChart, permission: 'hr.view_reports' },
     ],
   },
   {

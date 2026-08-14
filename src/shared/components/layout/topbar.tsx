@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom'
-import { Check, LogOut, Menu, Settings, UserCircle } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { Check, LogOut, Menu, Settings, UserCircle, Users2, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { ROLE_META } from '@/shared/lib/permissions'
 import { initialsOf } from '@/shared/lib/format'
@@ -22,6 +22,8 @@ import {
 export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   const { profile, memberships, activeMembership, activeOrgId, setActiveOrg, signOut } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const inHrWorkspace = location.pathname.startsWith('/hr')
 
   const roleKey = activeMembership?.role.key
   const roleLabel = roleKey ? ROLE_META[roleKey]?.label : activeMembership?.role.name
@@ -79,6 +81,16 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
               </>
             )}
 
+            <DropdownMenuSeparator />
+            {inHrWorkspace ? (
+              <DropdownMenuItem onClick={() => navigate('/')}>
+                <ArrowLeft /> Back to Workspace
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={() => navigate('/hr')}>
+                <Users2 /> HR Workspace
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate('/settings')}>
               <UserCircle /> Profile & account

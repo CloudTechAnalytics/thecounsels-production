@@ -37,6 +37,7 @@ import { MattersPage } from '@/features/matters/pages/matters-page'
 import { MatterDetailPage } from '@/features/matters/pages/matter-detail-page'
 import { DocumentsPage } from '@/features/documents/pages/documents-page'
 import { BulkImportPage } from '@/features/documents/pages/bulk-import-page'
+import { HrLayout } from '@/features/hr/components/hr-layout'
 import { HrOverviewPage } from '@/features/hr/pages/hr-overview-page'
 import { EmployeesPage } from '@/features/hr/pages/employees-page'
 import { LeavePage } from '@/features/hr/pages/leave-page'
@@ -191,17 +192,27 @@ export const router = createBrowserRouter([
                       { path: 'reports', element: withPermission(<ReportsPage />, 'reports.view') },
                       { path: 'notifications', element: <NotificationsPage /> },
                       { path: 'messages', element: withPermission(<MessagesPage />, 'messaging.view') },
-                      { path: 'hr', element: withPermission(<HrOverviewPage />, 'hr.view_reports') },
-                      { path: 'hr/employees', element: withPermission(<EmployeesPage />, 'staff.view') },
-                      { path: 'hr/leave', element: withPermission(<LeavePage />, 'leave.request') },
-                      { path: 'hr/requests', element: withPermission(<HrRequestsPage />, 'hr_requests.submit') },
-                      { path: 'hr/documents', element: withPermission(<HrDocumentsPage />, 'hr_documents.view_own') },
-                      { path: 'hr/announcements', element: withPermission(<AnnouncementsPage />, 'hr_announcements.view') },
-                      { path: 'hr/reports', element: withPermission(<HrReportsPage />, 'hr.view_reports') },
                       {
                         path: 'administration',
                         element: withPermission(<AdministrationPage />, ['organization.view', 'members.view'], 'any'),
                       },
+                    ],
+                  },
+
+                  // ── HR workspace — entirely separate shell, reached via
+                  // "HR Workspace" in the profile menu, not the practice
+                  // sidebar. No Matters/Clients/Documents in this tree at all.
+                  {
+                    path: 'hr',
+                    element: <HrLayout />,
+                    children: [
+                      { index: true, element: withPermission(<HrOverviewPage />, 'hr.view_reports') },
+                      { path: 'employees', element: withPermission(<EmployeesPage />, 'staff.view') },
+                      { path: 'leave', element: withPermission(<LeavePage />, 'leave.request') },
+                      { path: 'requests', element: withPermission(<HrRequestsPage />, 'hr_requests.submit') },
+                      { path: 'documents', element: withPermission(<HrDocumentsPage />, 'hr_documents.view_own') },
+                      { path: 'announcements', element: withPermission(<AnnouncementsPage />, 'hr_announcements.view') },
+                      { path: 'reports', element: withPermission(<HrReportsPage />, 'hr.view_reports') },
                     ],
                   },
                 ],

@@ -6,7 +6,8 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
   useEmployees, useOnboardingTemplates, useAssignOnboarding, useAllOnboarding,
-  useDeleteOnboardingTemplate, useEmployeeOnboardingProgress,
+  useDeleteOnboardingTemplate, useEmployeeOnboardingProgress, useUnassignOnboarding,
+  useOnboardingTaskRealtime,
 } from '@/features/hr/hooks/use-hr'
 import { OnboardingTemplateDialog } from '@/features/hr/components/onboarding-template-dialog'
 import { PageHeader } from '@/shared/components/page-header'
@@ -184,6 +185,17 @@ export function OnboardingPage() {
   const { has } = usePermissions()
   const canManage = has('onboarding.manage')
   const { data: assignments, isLoading } = useAllOnboarding(canManage ? activeOrgId : null)
+  const unassign = useUnassignOnboarding(activeOrgId)
+  useOnboardingTaskRealtime(activeOrgId)
+
+  const remove = async (id: string) => {
+    try {
+      await unassign.mutateAsync(id)
+      toast.success('Checklist unassigned', { description: 'Its tasks were removed from their Tasks list too.' })
+    } catch (err) {
+      toast.error('Could not unassign', { description: errorMessage(err) })
+    }
+  }
 
   return (
     <div>
@@ -217,7 +229,17 @@ export function OnboardingPage() {
                             Assigned {formatDistanceToNow(new Date(a.onboarding.assigned_at), { addSuffix: true })}
                           </p>
                         </div>
-                        <Badge variant={complete ? 'success' : 'warning'}>{a.done}/{a.total} completed</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={complete ? 'success' : 'warning'}>{a.done}/{a.total} completed</Badge>
+                          <Button
+                            size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            loading={unassign.isPending}
+                            onClick={() => remove(a.onboarding.id)}
+                            aria-label={`Unassign ${a.templateName} from ${a.employeeName}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </li>
                     )
                   })}

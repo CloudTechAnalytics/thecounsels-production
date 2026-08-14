@@ -298,6 +298,13 @@ export const hrService = {
     const { error } = await supabase.rpc('assign_onboarding', { p_org: organizationId, p_user: userId, p_template: templateId })
     if (error) throw error
   },
+  /** Removes the assignment AND the real tasks it generated — leaving
+   * those tasks behind with no checklist to explain them would just be a
+   * new version of the same confusion this module keeps running into. */
+  async unassignOnboarding(onboardingId: string): Promise<void> {
+    const { error } = await supabase.rpc('unassign_onboarding', { p_onboarding_id: onboardingId })
+    if (error) throw error
+  },
   /** "6/9 completed" for whichever onboarding checklist(s) an employee has
    * been assigned — derived live from the real linked tasks, no separate
    * progress counter to keep in sync. */

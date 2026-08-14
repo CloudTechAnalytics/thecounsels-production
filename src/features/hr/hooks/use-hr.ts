@@ -309,6 +309,44 @@ export function useAssignOnboarding(organizationId: string | null) {
   })
 }
 
+export function useUnassignOnboarding(organizationId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (onboardingId: string) => hrService.unassignOnboarding(onboardingId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hr', 'all-onboarding', organizationId] })
+      // Broad prefix match (no userId) — clears every cached employee's
+      // progress, not just whichever one happened to be viewed last.
+      qc.invalidateQueries({ queryKey: ['hr', 'onboarding-progress'] })
+    },
+  })
+}
+
+/** Keeps onboarding progress live: completing a linked task in the Tasks
+ * module doesn't otherwise tell the Onboarding page anything happened
+ * (30s staleTime, no window-focus refetch) — this is what makes "3/5
+ * completed" actually update while the page is open. */
+export function useOnboardingTaskRealtime(organizationId: string | null) {
+  const qc = useQueryClient()
+  React.useEffect(() => {
+    if (!organizationId) return
+    const channel = supabase
+      .channel(`onboarding-tasks:${organizationId}:${Date.now()}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'tasks', filter: `organization_id=eq.${organizationId}` },
+        () => {
+          qc.invalidateQueries({ queryKey: ['hr', 'all-onboarding', organizationId] })
+          qc.invalidateQueries({ queryKey: ['hr', 'onboarding-progress'] })
+        },
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [organizationId, qc])
+}
+
 export function useEmployeeOnboardingProgress(organizationId: string | null, userId: string | null) {
   return useQuery({
     queryKey: ['hr', 'onboarding-progress', organizationId, userId],

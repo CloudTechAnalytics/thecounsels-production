@@ -1856,6 +1856,10 @@ export interface Database {
         Args: { p_org: string; p_user: string; p_template: string }
         Returns: Database['public']['Tables']['employee_onboarding']['Row']
       }
+      unassign_onboarding: {
+        Args: { p_onboarding_id: string }
+        Returns: undefined
+      }
       send_hr_announcement: {
         Args: {
           p_org: string

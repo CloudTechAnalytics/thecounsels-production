@@ -26,7 +26,7 @@ export const HR_NAVIGATION: HrNavSection[] = [
   {
     items: [
       { label: 'Dashboard', to: '/hr', icon: LayoutGrid, permission: 'hr.view_reports', end: true },
-      { label: 'Employees', to: '/hr/employees', icon: UserSquare2, permission: 'staff.view' },
+      { label: 'Employees', to: '/hr/employees', icon: UserSquare2, permission: 'staff.manage' },
       { label: 'Leave', to: '/hr/leave', icon: CalendarClock, permission: 'leave.request', badge: LeaveNavBadge },
       { label: 'Documents', to: '/hr/documents', icon: FolderLock, permission: 'hr_documents.view_own' },
       { label: 'HR Requests', to: '/hr/requests', icon: Inbox, permission: 'hr_requests.submit' },

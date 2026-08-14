@@ -164,20 +164,38 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // Firm user — seat in the organization.
+  // Firm user — seat in the organization. This must NEVER silently overwrite
+  // an existing membership: onConflict upsert here previously let "invite"
+  // double as an unintended, unconfirmed role change (or ownership strip) on
+  // whoever already held that email in this org — including the org's own
+  // owner, if their email was accidentally re-invited under a different
+  // role. Adding the same *existing* account to a *different* org they're
+  // not already in is still fine and goes through below.
+  const { data: existingMembership } = await admin
+    .from('memberships')
+    .select('id, role:roles(name)')
+    .eq('organization_id', organizationId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (existingMembership) {
+    await rollbackIfNew()
+    const existingRoleName = (existingMembership as unknown as { role: { name: string } | null }).role?.name ?? 'a member'
+    return json(
+      { error: `This person is already ${existingRoleName} in this organization. Use the Members list to change their role instead.` },
+      409,
+    )
+  }
+
   const isOwnerRole = role!.key === 'managing_partner'
-  const { error: memErr } = await admin.from('memberships').upsert(
-    {
-      organization_id: organizationId,
-      user_id: userId,
-      role_id: role!.id,
-      status: 'active',
-      is_owner: isOwnerRole,
-      title: title ?? null,
-      joined_at: new Date().toISOString(),
-    },
-    { onConflict: 'organization_id,user_id' },
-  )
+  const { error: memErr } = await admin.from('memberships').insert({
+    organization_id: organizationId,
+    user_id: userId,
+    role_id: role!.id,
+    status: 'active',
+    is_owner: isOwnerRole,
+    title: title ?? null,
+    joined_at: new Date().toISOString(),
+  })
   if (memErr) {
     await rollbackIfNew()
     return json({ error: memErr.message }, 400)

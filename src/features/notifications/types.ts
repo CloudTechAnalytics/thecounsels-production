@@ -21,6 +21,7 @@ export const NOTIFICATION_CATEGORY_META: Record<NotificationCategory, { label: s
   documents: { label: 'Documents' },
   notes: { label: 'Notes' },
   messaging: { label: 'Messages' },
+  hr: { label: 'HR' },
 }
 
 /** Every trigger wired so far links to the parent matter; category-based fallbacks
@@ -33,6 +34,11 @@ export function resolveNotificationHref(n: Pick<NotificationRow, 'entity_type' |
   // Direct-message notifications (notify_dm_message, migration 0061) — deep
   // link straight into that conversation.
   if (n.entity_type === 'conversation' && n.entity_id) return `/messages?dm=${n.entity_id}`
+  // HR module (0075+) — each event type routes to where you'd actually act on it.
+  if (n.entity_type === 'leave_request') return '/hr/leave'
+  if (n.entity_type === 'hr_request') return '/hr/requests'
+  if (n.entity_type === 'employee_onboarding') return '/hr/employees'
+  if (n.entity_type === 'hr_announcement') return '/hr/announcements'
   switch (n.category) {
     case 'clients': return '/clients'
     case 'hearings': return '/hearings'
@@ -41,6 +47,7 @@ export function resolveNotificationHref(n: Pick<NotificationRow, 'entity_type' |
     case 'billing': return '/billing'
     case 'notes': return '/matters'
     case 'messaging': return '/messages'
+    case 'hr': return '/hr'
     default: return '/notifications'
   }
 }

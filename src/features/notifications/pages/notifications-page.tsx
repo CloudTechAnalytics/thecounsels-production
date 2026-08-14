@@ -44,7 +44,7 @@ interface Reminder {
 }
 
 const ALL = 'all'
-const CATEGORY_ORDER: NotificationCategory[] = ['matters', 'clients', 'hearings', 'billing', 'tasks', 'documents', 'notes']
+const CATEGORY_ORDER: NotificationCategory[] = ['matters', 'clients', 'hearings', 'billing', 'tasks', 'documents', 'notes', 'messaging', 'hr']
 const TABS = ['Notifications', 'Preferences'] as const
 type Tab = (typeof TABS)[number]
 

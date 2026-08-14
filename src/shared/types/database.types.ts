@@ -38,7 +38,7 @@ export type TimeEntryStatus = 'draft' | 'submitted' | 'approved' | 'invoiced' | 
 export type TicketStatus = 'open' | 'in_progress' | 'waiting' | 'resolved' | 'closed'
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type NotificationPriority = 'info' | 'reminder' | 'warning' | 'urgent'
-export type NotificationCategory = 'matters' | 'clients' | 'hearings' | 'billing' | 'tasks' | 'documents' | 'notes' | 'messaging'
+export type NotificationCategory = 'matters' | 'clients' | 'hearings' | 'billing' | 'tasks' | 'documents' | 'notes' | 'messaging' | 'hr'
 export type RoleKey =
   | 'platform_owner'
   | 'platform_admin'

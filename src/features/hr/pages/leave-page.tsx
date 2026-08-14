@@ -4,7 +4,7 @@ import { CalendarClock } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
-  useMyLeaveRequests, useMyLeaveBalances, useCancelLeaveRequest,
+  useMyLeaveRequests, useMyLeaveSummary, useCancelLeaveRequest,
   useAllLeaveRequests, useReviewLeaveRequest, useLeaveTypes,
 } from '@/features/hr/hooks/use-hr'
 import { LEAVE_STATUS_META } from '@/features/hr/types'
@@ -18,31 +18,60 @@ import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
 import { cn } from '@/shared/lib/utils'
 
+/** Every configured leave type, always — not just ones you've already
+ * used — so a firm can see the full policy (Annual/Sick/Maternity/etc.)
+ * at a glance the way a paper leave register would, right beside where
+ * they'd actually request one. */
+function LeaveSummaryTable() {
+  const { activeOrgId, userId } = useAuth()
+  const { data: summary, isLoading } = useMyLeaveSummary(activeOrgId, userId)
+
+  return (
+    <Card className="overflow-hidden p-5">
+      <p className="font-display text-base font-semibold">My leave balance</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">{new Date().getFullYear()}</p>
+      <div className="mt-4 overflow-x-auto">
+        {isLoading ? (
+          <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</div>
+        ) : summary && summary.length > 0 ? (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <th className="pb-2 font-medium">Leave type</th>
+                <th className="pb-2 text-right font-medium">Limit</th>
+                <th className="pb-2 text-right font-medium">Taken</th>
+                <th className="pb-2 text-right font-medium">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.map((s) => (
+                <tr key={s.leaveTypeId} className="border-b border-border/60 last:border-0">
+                  <td className="py-2 pr-2">{s.name}</td>
+                  <td className="py-2 text-right tabular-nums text-muted-foreground">{s.limit}</td>
+                  <td className="py-2 text-right tabular-nums text-muted-foreground">{s.taken}</td>
+                  <td className="py-2 text-right tabular-nums font-medium">{s.balance}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="py-6 text-center text-sm text-muted-foreground">No leave types configured yet.</p>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 function MyLeaveTab() {
   const { activeOrgId, userId } = useAuth()
   const { data: requests, isLoading } = useMyLeaveRequests(activeOrgId, userId)
-  const { data: balances } = useMyLeaveBalances(activeOrgId, userId)
   const { data: leaveTypes } = useLeaveTypes(activeOrgId)
   const cancel = useCancelLeaveRequest(activeOrgId)
   const typeName = (id: string) => leaveTypes?.find((t) => t.id === id)?.name ?? 'Leave'
 
   return (
-    <div className="space-y-6">
-      {balances && balances.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-3">
-          {balances.map((b) => (
-            <Card key={b.id} className="p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{typeName(b.leave_type_id)}</p>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="font-display text-xl font-semibold">{b.entitlement_days - b.used_days}</span>
-                <span className="text-xs text-muted-foreground">days remaining of {b.entitlement_days}</span>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      <Card className="p-5">
+    <div className="grid gap-6 lg:grid-cols-3">
+      <Card className="p-5 lg:col-span-2">
         <div className="mb-4 flex items-center justify-between">
           <p className="font-display text-base font-semibold">My leave requests</p>
           <LeaveRequestDialog />
@@ -81,6 +110,8 @@ function MyLeaveTab() {
           <p className="py-8 text-center text-sm text-muted-foreground">No leave requests yet.</p>
         )}
       </Card>
+
+      <LeaveSummaryTable />
     </div>
   )
 }

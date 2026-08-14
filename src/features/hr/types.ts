@@ -18,6 +18,14 @@ export interface OnboardingItem {
   assignee: 'employee' | 'manager' | 'hr'
 }
 
+export interface LeaveSummaryRow {
+  leaveTypeId: string
+  name: string
+  limit: number
+  taken: number
+  balance: number
+}
+
 export interface OnboardingProgress {
   onboarding: EmployeeOnboardingRow
   templateName: string

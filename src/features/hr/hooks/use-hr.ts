@@ -115,12 +115,21 @@ export function useMyLeaveBalances(organizationId: string | null, userId: string
   })
 }
 
+export function useMyLeaveSummary(organizationId: string | null, userId: string | null) {
+  return useQuery({
+    queryKey: ['hr', 'leave-summary', organizationId, userId],
+    enabled: Boolean(organizationId && userId),
+    queryFn: () => hrService.myLeaveSummary(organizationId!, userId!),
+  })
+}
+
 function useInvalidateLeave(organizationId: string | null) {
   const qc = useQueryClient()
   return () => {
     qc.invalidateQueries({ queryKey: ['hr', 'my-leave', organizationId] })
     qc.invalidateQueries({ queryKey: ['hr', 'all-leave', organizationId] })
     qc.invalidateQueries({ queryKey: ['hr', 'leave-balances', organizationId] })
+    qc.invalidateQueries({ queryKey: ['hr', 'leave-summary', organizationId] })
   }
 }
 

@@ -3,7 +3,7 @@ import { administrationService } from '@/features/administration/services/admini
 import type { Database } from '@/shared/types/database.types'
 import type {
   Employee, Department, JobTitle, LeaveType, LeaveBalanceRow, LeaveRequestRow, HrRequestRow, HrDocumentRow, StaffProfileRow,
-  OnboardingTemplate, OnboardingItem, OnboardingProgress, HrAnnouncementRow,
+  OnboardingTemplate, OnboardingItem, OnboardingProgress, HrAnnouncementRow, LeaveSummaryRow,
 } from '@/features/hr/types'
 
 export const hrService = {
@@ -137,6 +137,25 @@ export const hrService = {
       .eq('year', year)
     if (error) throw error
     return data ?? []
+  },
+  /** Every configured leave type for the year, not just ones already
+   * touched by an approved request — a type with zero usage still needs
+   * to show its full Limit/Balance, not disappear from the picture. */
+  async myLeaveSummary(organizationId: string, userId: string): Promise<LeaveSummaryRow[]> {
+    const year = new Date().getFullYear()
+    const [{ data: types, error: typesErr }, { data: balances, error: balErr }] = await Promise.all([
+      supabase.from('leave_types').select('id, name, default_entitlement_days').eq('organization_id', organizationId).order('name'),
+      supabase.from('leave_balances').select('leave_type_id, entitlement_days, used_days').eq('organization_id', organizationId).eq('user_id', userId).eq('year', year),
+    ])
+    if (typesErr) throw typesErr
+    if (balErr) throw balErr
+    const balanceByType = new Map((balances ?? []).map((b) => [b.leave_type_id, b]))
+    return (types ?? []).map((t) => {
+      const b = balanceByType.get(t.id)
+      const limit = b?.entitlement_days ?? t.default_entitlement_days
+      const taken = b?.used_days ?? 0
+      return { leaveTypeId: t.id, name: t.name, limit, taken, balance: limit - taken }
+    })
   },
   async requestLeave(organizationId: string, leaveTypeId: string, start: string, end: string, reason?: string): Promise<void> {
     const { error } = await supabase.rpc('request_leave', {

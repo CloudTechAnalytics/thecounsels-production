@@ -1,0 +1,239 @@
+import { supabase } from '@/shared/lib/supabase'
+import { administrationService } from '@/features/administration/services/administration.service'
+import type { Employee, Department, JobTitle, LeaveType, LeaveBalanceRow, LeaveRequestRow, HrRequestRow, HrDocumentRow, StaffProfileRow } from '@/features/hr/types'
+
+export const hrService = {
+  /** Merges the firm's existing member list (memberships+profiles+roles,
+   * already used everywhere else in the app) with staff_profiles' HR
+   * fields — a member with no staff_profiles row yet still shows up, just
+   * without HR details filled in. */
+  async listEmployees(organizationId: string): Promise<Employee[]> {
+    const [members, { data: profiles, error: profErr }, { data: departments }, { data: jobTitles }] = await Promise.all([
+      administrationService.listMembers(organizationId),
+      supabase.from('staff_profiles').select('*').eq('organization_id', organizationId),
+      supabase.from('departments').select('id, name').eq('organization_id', organizationId),
+      supabase.from('job_titles').select('id, name').eq('organization_id', organizationId),
+    ])
+    if (profErr) throw profErr
+
+    const profileByUser = new Map((profiles ?? []).map((p) => [p.user_id, p as StaffProfileRow]))
+    const deptById = new Map((departments ?? []).map((d) => [d.id, d.name]))
+    const titleById = new Map((jobTitles ?? []).map((t) => [t.id, t.name]))
+    const nameByUser = new Map(members.map((m) => [m.user_id, m.profile?.full_name ?? m.profile?.email ?? null]))
+
+    return members
+      .filter((m) => m.status === 'active' || m.status === 'suspended')
+      .map((m) => {
+        const p = profileByUser.get(m.user_id) ?? null
+        return {
+          userId: m.user_id,
+          fullName: m.profile?.full_name ?? null,
+          email: m.profile?.email ?? '',
+          avatarUrl: m.profile?.avatar_url ?? null,
+          roleName: m.role?.name ?? null,
+          membershipStatus: m.status,
+          profile: p,
+          departmentName: p?.department_id ? deptById.get(p.department_id) ?? null : null,
+          jobTitleName: p?.job_title_id ? titleById.get(p.job_title_id) ?? null : null,
+          managerName: p?.manager_id ? nameByUser.get(p.manager_id) ?? null : null,
+        }
+      })
+  },
+
+  async updateEmployeeProfile(organizationId: string, userId: string, patch: Partial<StaffProfileRow>): Promise<void> {
+    const { error } = await supabase
+      .from('staff_profiles')
+      .upsert({ organization_id: organizationId, user_id: userId, ...patch }, { onConflict: 'organization_id,user_id' })
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'employee.updated',
+      p_entity_type: 'staff_profile',
+      p_entity_id: userId,
+      p_summary: 'Updated an employee profile',
+    })
+  },
+
+  // ---- Departments ----
+  async listDepartments(organizationId: string): Promise<Department[]> {
+    const { data, error } = await supabase.from('departments').select('*').eq('organization_id', organizationId).order('name')
+    if (error) throw error
+    return data ?? []
+  },
+  async createDepartment(organizationId: string, name: string): Promise<void> {
+    const { error } = await supabase.from('departments').insert({ organization_id: organizationId, name })
+    if (error) throw error
+  },
+  async deleteDepartment(id: string): Promise<void> {
+    const { error } = await supabase.from('departments').delete().eq('id', id)
+    if (error) throw error
+  },
+
+  // ---- Job titles ----
+  async listJobTitles(organizationId: string): Promise<JobTitle[]> {
+    const { data, error } = await supabase.from('job_titles').select('*').eq('organization_id', organizationId).order('name')
+    if (error) throw error
+    return data ?? []
+  },
+  async createJobTitle(organizationId: string, name: string): Promise<void> {
+    const { error } = await supabase.from('job_titles').insert({ organization_id: organizationId, name })
+    if (error) throw error
+  },
+  async deleteJobTitle(id: string): Promise<void> {
+    const { error } = await supabase.from('job_titles').delete().eq('id', id)
+    if (error) throw error
+  },
+
+  // ---- Leave ----
+  async listLeaveTypes(organizationId: string): Promise<LeaveType[]> {
+    const { data, error } = await supabase.from('leave_types').select('*').eq('organization_id', organizationId).order('name')
+    if (error) throw error
+    return data ?? []
+  },
+  async createLeaveType(organizationId: string, name: string, defaultEntitlementDays: number): Promise<void> {
+    const { error } = await supabase
+      .from('leave_types')
+      .insert({ organization_id: organizationId, name, default_entitlement_days: defaultEntitlementDays })
+    if (error) throw error
+  },
+  async listMyLeaveRequests(organizationId: string, userId: string): Promise<LeaveRequestRow[]> {
+    const { data, error } = await supabase
+      .from('leave_requests')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data ?? []
+  },
+  /** Every leave request in the org — for approvers (leave.manage). */
+  async listAllLeaveRequests(organizationId: string): Promise<(LeaveRequestRow & { requester_name: string | null })[]> {
+    const { data, error } = await supabase
+      .from('leave_requests')
+      .select('*, requester:profiles!leave_requests_user_id_fkey(full_name)')
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return ((data ?? []) as unknown as Array<LeaveRequestRow & { requester: { full_name: string | null } | null }>).map((r) => ({
+      ...r,
+      requester_name: r.requester?.full_name ?? null,
+    }))
+  },
+  async myLeaveBalances(organizationId: string, userId: string): Promise<LeaveBalanceRow[]> {
+    const year = new Date().getFullYear()
+    const { data, error } = await supabase
+      .from('leave_balances')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('year', year)
+    if (error) throw error
+    return data ?? []
+  },
+  async requestLeave(organizationId: string, leaveTypeId: string, start: string, end: string, reason?: string): Promise<void> {
+    const { error } = await supabase.rpc('request_leave', {
+      p_org: organizationId,
+      p_leave_type: leaveTypeId,
+      p_start: start,
+      p_end: end,
+      p_reason: reason ?? null,
+    })
+    if (error) throw error
+  },
+  async reviewLeaveRequest(requestId: string, approve: boolean, comment?: string): Promise<void> {
+    const { error } = await supabase.rpc('review_leave_request', { p_request: requestId, p_approve: approve, p_comment: comment ?? null })
+    if (error) throw error
+  },
+  async cancelLeaveRequest(requestId: string): Promise<void> {
+    const { error } = await supabase.rpc('cancel_leave_request', { p_request: requestId })
+    if (error) throw error
+  },
+
+  // ---- HR Requests ----
+  async listMyHrRequests(organizationId: string, userId: string): Promise<HrRequestRow[]> {
+    const { data, error } = await supabase
+      .from('hr_requests')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data ?? []
+  },
+  async listAllHrRequests(organizationId: string): Promise<(HrRequestRow & { requester_name: string | null })[]> {
+    const { data, error } = await supabase
+      .from('hr_requests')
+      .select('*, requester:profiles!hr_requests_user_id_fkey(full_name)')
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return ((data ?? []) as unknown as Array<HrRequestRow & { requester: { full_name: string | null } | null }>).map((r) => ({
+      ...r,
+      requester_name: r.requester?.full_name ?? null,
+    }))
+  },
+  async submitHrRequest(organizationId: string, userId: string, requestType: string, subject: string, details?: string): Promise<void> {
+    const { error } = await supabase
+      .from('hr_requests')
+      .insert({ organization_id: organizationId, user_id: userId, request_type: requestType, subject, details: details || null })
+    if (error) throw error
+  },
+  async updateHrRequestStatus(requestId: string, status: string, note?: string): Promise<void> {
+    const { error } = await supabase.rpc('update_hr_request_status', { p_request: requestId, p_status: status, p_note: note ?? null })
+    if (error) throw error
+  },
+
+  // ---- HR Documents ----
+  async listMyHrDocuments(organizationId: string, userId: string): Promise<HrDocumentRow[]> {
+    const { data, error } = await supabase
+      .from('hr_employee_documents')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data ?? []
+  },
+  async listEmployeeHrDocuments(organizationId: string, userId: string): Promise<HrDocumentRow[]> {
+    return this.listMyHrDocuments(organizationId, userId)
+  },
+  async uploadHrDocument(params: {
+    organizationId: string
+    userId: string
+    file: File
+    category: string
+    uploadedBy: string | null
+  }): Promise<void> {
+    const { organizationId, userId, file, category, uploadedBy } = params
+    const path = `${organizationId}/${userId}/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-]+/g, '_')}`
+    const { error: upErr } = await supabase.storage.from('hr-documents').upload(path, file, {
+      contentType: file.type || 'application/octet-stream',
+      upsert: false,
+    })
+    if (upErr) throw upErr
+    const { error } = await supabase.from('hr_employee_documents').insert({
+      organization_id: organizationId,
+      user_id: userId,
+      category,
+      display_name: file.name,
+      storage_path: path,
+      mime_type: file.type || null,
+      size_bytes: file.size,
+      uploaded_by: uploadedBy,
+    })
+    if (error) {
+      await supabase.storage.from('hr-documents').remove([path])
+      throw error
+    }
+  },
+  async getHrDocumentUrl(path: string): Promise<string> {
+    const { data, error } = await supabase.storage.from('hr-documents').createSignedUrl(path, 300)
+    if (error) throw error
+    return data.signedUrl
+  },
+  async deleteHrDocument(id: string, storagePath: string): Promise<void> {
+    await supabase.storage.from('hr-documents').remove([storagePath])
+    const { error } = await supabase.from('hr_employee_documents').delete().eq('id', id)
+    if (error) throw error
+  },
+}

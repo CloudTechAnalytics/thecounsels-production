@@ -64,6 +64,15 @@ export const PERMISSION_KEYS = [
   'messaging.send',
   'messaging.create_channels',
   'messaging.manage_channels',
+  'leave.request',
+  'leave.manage',
+  'hr_documents.view_own',
+  'hr_documents.manage',
+  'hr_requests.submit',
+  'hr_requests.manage',
+  'onboarding.manage',
+  'hr_announcements.manage',
+  'hr.view_reports',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]
@@ -79,8 +88,11 @@ export const ROLE_META: Record<RoleKey, { label: string; rank: number; group: st
   junior_associate: { label: 'Junior Associate', rank: 50, group: 'Fee Earners' },
   paralegal: { label: 'Paralegal', rank: 60, group: 'Support' },
   litigation_clerk: { label: 'Litigation Clerk', rank: 62, group: 'Support' },
+  hr_administrator: { label: 'HR Administrator', rank: 63, group: 'HR' },
+  hr_manager: { label: 'HR Manager', rank: 64, group: 'HR' },
   finance: { label: 'Finance', rank: 65, group: 'Operations' },
   hr: { label: 'HR', rank: 66, group: 'Operations' },
+  hr_officer: { label: 'HR Officer', rank: 67, group: 'HR' },
   secretary: { label: 'Secretary', rank: 70, group: 'Support' },
   receptionist: { label: 'Receptionist', rank: 80, group: 'Support' },
 }

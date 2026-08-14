@@ -53,6 +53,9 @@ export type RoleKey =
   | 'secretary'
   | 'receptionist'
   | 'litigation_clerk'
+  | 'hr_administrator'
+  | 'hr_manager'
+  | 'hr_officer'
 
 type Timestamps = {
   created_at: string
@@ -806,6 +809,20 @@ export interface Database {
           availability: string
           phone: string | null
           updated_at: string
+          employee_code: string | null
+          department_id: string | null
+          job_title_id: string | null
+          manager_id: string | null
+          employment_type: string
+          employment_status: string
+          start_date: string | null
+          end_date: string | null
+          office_branch: string | null
+          address: string | null
+          date_of_birth: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          work_email: string | null
         }
         Insert: {
           organization_id: string
@@ -819,8 +836,172 @@ export interface Database {
           availability?: string
           phone?: string | null
           updated_at?: string
+          employee_code?: string | null
+          department_id?: string | null
+          job_title_id?: string | null
+          manager_id?: string | null
+          employment_type?: string
+          employment_status?: string
+          start_date?: string | null
+          end_date?: string | null
+          office_branch?: string | null
+          address?: string | null
+          date_of_birth?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          work_email?: string | null
         }
         Update: Partial<Database['public']['Tables']['staff_profiles']['Insert']>
+        Relationships: []
+      }
+      departments: {
+        Row: { id: string; organization_id: string; name: string; created_at: string }
+        Insert: { id?: string; organization_id: string; name: string; created_at?: string }
+        Update: Partial<Database['public']['Tables']['departments']['Insert']>
+        Relationships: []
+      }
+      job_titles: {
+        Row: { id: string; organization_id: string; name: string; created_at: string }
+        Insert: { id?: string; organization_id: string; name: string; created_at?: string }
+        Update: Partial<Database['public']['Tables']['job_titles']['Insert']>
+        Relationships: []
+      }
+      leave_types: {
+        Row: {
+          id: string
+          organization_id: string
+          name: string
+          default_entitlement_days: number
+          requires_approval: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          name: string
+          default_entitlement_days?: number
+          requires_approval?: boolean
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['leave_types']['Insert']>
+        Relationships: []
+      }
+      leave_balances: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          leave_type_id: string
+          year: number
+          entitlement_days: number
+          used_days: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          leave_type_id: string
+          year: number
+          entitlement_days?: number
+          used_days?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['leave_balances']['Insert']>
+        Relationships: []
+      }
+      leave_requests: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          leave_type_id: string
+          start_date: string
+          end_date: string
+          days: number
+          reason: string | null
+          status: string
+          reviewed_by: string | null
+          reviewed_at: string | null
+          review_comment: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          leave_type_id: string
+          start_date: string
+          end_date: string
+          days: number
+          reason?: string | null
+          status?: string
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          review_comment?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['leave_requests']['Insert']>
+        Relationships: []
+      }
+      hr_requests: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          request_type: string
+          subject: string
+          details: string | null
+          status: string
+          handled_by: string | null
+          handled_at: string | null
+          resolution_note: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          request_type: string
+          subject: string
+          details?: string | null
+          status?: string
+          handled_by?: string | null
+          handled_at?: string | null
+          resolution_note?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['hr_requests']['Insert']>
+        Relationships: []
+      }
+      hr_employee_documents: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          category: string
+          display_name: string
+          storage_path: string
+          mime_type: string | null
+          size_bytes: number | null
+          uploaded_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          category: string
+          display_name: string
+          storage_path: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['hr_employee_documents']['Insert']>
         Relationships: []
       }
       hearings: {
@@ -1592,6 +1773,22 @@ export interface Database {
       email_is_registered: {
         Args: { p_email: string }
         Returns: boolean
+      }
+      request_leave: {
+        Args: { p_org: string; p_leave_type: string; p_start: string; p_end: string; p_reason?: string | null }
+        Returns: Database['public']['Tables']['leave_requests']['Row']
+      }
+      review_leave_request: {
+        Args: { p_request: string; p_approve: boolean; p_comment?: string | null }
+        Returns: Database['public']['Tables']['leave_requests']['Row']
+      }
+      cancel_leave_request: {
+        Args: { p_request: string }
+        Returns: undefined
+      }
+      update_hr_request_status: {
+        Args: { p_request: string; p_status: string; p_note?: string | null }
+        Returns: Database['public']['Tables']['hr_requests']['Row']
       }
       platform_storage_usage: {
         Args: Record<PropertyKey, never>

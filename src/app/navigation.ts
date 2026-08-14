@@ -12,6 +12,10 @@ import {
   Bell,
   MessageSquare,
   Settings,
+  LayoutGrid,
+  UserSquare2,
+  CalendarClock,
+  Inbox,
   type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey } from '@/shared/lib/permissions'
@@ -57,6 +61,15 @@ export const NAVIGATION: NavSection[] = [
       { label: 'Reports', to: '/reports', icon: BarChart3, permission: 'reports.view' },
       { label: 'Notifications', to: '/notifications', icon: Bell, permission: 'notifications.view' },
       { label: 'Messages', to: '/messages', icon: MessageSquare, permission: 'messaging.view', badge: MessagesNavBadge },
+    ],
+  },
+  {
+    heading: 'HR',
+    items: [
+      { label: 'Overview', to: '/hr', icon: LayoutGrid, permission: 'hr.view_reports', end: true },
+      { label: 'Employees', to: '/hr/employees', icon: UserSquare2, permission: 'staff.view' },
+      { label: 'Leave', to: '/hr/leave', icon: CalendarClock, permission: 'leave.request' },
+      { label: 'HR Requests', to: '/hr/requests', icon: Inbox, permission: 'hr_requests.submit' },
     ],
   },
   {

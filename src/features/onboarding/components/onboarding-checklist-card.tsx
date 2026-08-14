@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { Check, Circle, X } from 'lucide-react'
 import { useOnboardingChecklist } from '@/features/onboarding/hooks/use-onboarding'
+import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { Card } from '@/shared/components/ui/card'
 import { cn } from '@/shared/lib/utils'
 
@@ -11,21 +12,26 @@ const DISMISS_KEY = 'counsel.onboarding_checklist_dismissed'
  * Lightweight, skippable "getting started" checklist (§11) — no forced
  * completion, no schema of its own. Every item is derived live from
  * existing counts, so it's always accurate and needs no state to maintain.
+ * Each step is only shown to a user who could actually perform it — a role
+ * without clients.create seeing "Add your first client" as a to-do is just
+ * a dead end, not a real next step for them.
  */
 export function OnboardingChecklistCard({ organizationId }: { organizationId: string | null }) {
   const { data } = useOnboardingChecklist(organizationId)
+  const { has } = usePermissions()
   const [dismissed, setDismissed] = React.useState(() => localStorage.getItem(DISMISS_KEY) === '1')
 
   if (dismissed || !data) return null
 
   const items = [
-    { label: 'Create your firm', done: true, to: null },
-    { label: 'Invite your team', done: data.teamInvited, to: '/administration' },
-    { label: 'Add your first client', done: data.hasClient, to: '/clients' },
-    { label: 'Create your first matter', done: data.hasMatter, to: '/matters' },
-    { label: 'Create your first task', done: data.hasTask, to: '/tasks' },
-  ]
-  const allDone = items.every((i) => i.done)
+    { label: 'Create your firm', done: true, to: null, visible: true },
+    { label: 'Invite your team', done: data.teamInvited, to: '/administration', visible: has('members.manage') },
+    { label: 'Add your first client', done: data.hasClient, to: '/clients', visible: has('clients.create') },
+    { label: 'Create your first matter', done: data.hasMatter, to: '/matters', visible: has('matters.create') },
+    { label: 'Create your first task', done: data.hasTask, to: '/tasks', visible: has('tasks.create') },
+  ].filter((i) => i.visible)
+
+  const allDone = items.length === 0 || items.every((i) => i.done)
   if (allDone) return null
 
   const dismiss = () => {

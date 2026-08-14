@@ -1,10 +1,12 @@
 import * as React from 'react'
+import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
-import { ClipboardCheck, Trash2 } from 'lucide-react'
+import { ClipboardCheck, Trash2, ArrowRight } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
+import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
   useEmployees, useOnboardingTemplates, useAssignOnboarding, useAllOnboarding,
-  useDeleteOnboardingTemplate,
+  useDeleteOnboardingTemplate, useEmployeeOnboardingProgress,
 } from '@/features/hr/hooks/use-hr'
 import { OnboardingTemplateDialog } from '@/features/hr/components/onboarding-template-dialog'
 import { PageHeader } from '@/shared/components/page-header'
@@ -126,50 +128,109 @@ function AssignCard() {
   )
 }
 
+/** Every checklist item becomes a real task (public.tasks, via
+ * assign_onboarding()) assigned to the employee, their manager, or HR —
+ * so "completing" an item just means completing that task. This card is
+ * what a regular employee (or manager/HR item-holder) sees: their own
+ * checklist(s) and a direct link to where the items actually live. */
+function MyOnboardingCard({ showEmptyState }: { showEmptyState: boolean }) {
+  const { activeOrgId, userId } = useAuth()
+  const { data: progress, isLoading } = useEmployeeOnboardingProgress(activeOrgId, userId)
+
+  if (isLoading) return <Card className="p-5"><Skeleton className="h-16 w-full" /></Card>
+  if (!progress || progress.length === 0) {
+    if (!showEmptyState) return null
+    return (
+      <Card className="flex flex-col items-center gap-2 px-6 py-16 text-center">
+        <ClipboardCheck className="h-7 w-7 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">No onboarding checklist has been assigned to you yet.</p>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="p-5">
+      <p className="font-display text-base font-semibold">My onboarding</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        Each item below is a task assigned to you (or your manager/HR) — open Tasks to check items off as you complete them.
+      </p>
+      <ul className="mt-3 divide-y divide-border">
+        {progress.map((p) => {
+          const complete = p.total > 0 && p.done === p.total
+          return (
+            <li key={p.onboarding.id} className="flex items-center justify-between gap-3 py-2.5">
+              <p className="text-sm font-medium">{p.templateName}</p>
+              <Badge variant={complete ? 'success' : 'warning'}>{p.done}/{p.total} completed</Badge>
+            </li>
+          )
+        })}
+      </ul>
+      <Button asChild variant="outline" size="sm" className="mt-3">
+        <Link to="/tasks">Open my tasks <ArrowRight className="ml-1.5 h-3.5 w-3.5" /></Link>
+      </Button>
+    </Card>
+  )
+}
+
 /** The real, findable home for onboarding — previously this only lived
  * buried inside one employee's profile dialog at a time, with no way to
- * see everyone's progress in one place. */
+ * see everyone's progress in one place. Management (create/assign/delete
+ * checklists, see everyone's progress) is onboarding.manage-gated; every
+ * employee can still see this page for their own checklist, via the
+ * baseline onboarding.view_own permission the route/nav item actually
+ * require. */
 export function OnboardingPage() {
   const { activeOrgId } = useAuth()
-  const { data: assignments, isLoading } = useAllOnboarding(activeOrgId)
+  const { has } = usePermissions()
+  const canManage = has('onboarding.manage')
+  const { data: assignments, isLoading } = useAllOnboarding(canManage ? activeOrgId : null)
 
   return (
     <div>
-      <PageHeader title="Onboarding" description="Assign checklists to new hires and track their progress." />
+      <PageHeader
+        title="Onboarding"
+        description={canManage ? 'Assign checklists to new hires and track their progress.' : 'Your onboarding checklist and progress.'}
+      />
       <div className="space-y-6">
-        <ChecklistsCard />
-        <AssignCard />
+        <MyOnboardingCard showEmptyState={!canManage} />
 
-        <Card className="overflow-hidden">
-          <div className="border-b border-border p-4">
-            <p className="font-display text-base font-semibold">In progress</p>
-          </div>
-          {isLoading ? (
-            <div className="space-y-2 p-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
-          ) : assignments && assignments.length > 0 ? (
-            <ul className="divide-y divide-border">
-              {assignments.map((a) => {
-                const complete = a.total > 0 && a.done === a.total
-                return (
-                  <li key={a.onboarding.id} className="flex items-center justify-between gap-3 p-4">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">{a.employeeName} — {a.templateName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Assigned {formatDistanceToNow(new Date(a.onboarding.assigned_at), { addSuffix: true })}
-                      </p>
-                    </div>
-                    <Badge variant={complete ? 'success' : 'warning'}>{a.done}/{a.total} completed</Badge>
-                  </li>
-                )
-              })}
-            </ul>
-          ) : (
-            <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
-              <ClipboardCheck className="h-7 w-7 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">No onboarding assigned yet.</p>
-            </div>
-          )}
-        </Card>
+        {canManage && (
+          <>
+            <ChecklistsCard />
+            <AssignCard />
+
+            <Card className="overflow-hidden">
+              <div className="border-b border-border p-4">
+                <p className="font-display text-base font-semibold">In progress</p>
+              </div>
+              {isLoading ? (
+                <div className="space-y-2 p-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
+              ) : assignments && assignments.length > 0 ? (
+                <ul className="divide-y divide-border">
+                  {assignments.map((a) => {
+                    const complete = a.total > 0 && a.done === a.total
+                    return (
+                      <li key={a.onboarding.id} className="flex items-center justify-between gap-3 p-4">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{a.employeeName} — {a.templateName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Assigned {formatDistanceToNow(new Date(a.onboarding.assigned_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                        <Badge variant={complete ? 'success' : 'warning'}>{a.done}/{a.total} completed</Badge>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : (
+                <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
+                  <ClipboardCheck className="h-7 w-7 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">No onboarding assigned yet.</p>
+                </div>
+              )}
+            </Card>
+          </>
+        )}
       </div>
     </div>
   )

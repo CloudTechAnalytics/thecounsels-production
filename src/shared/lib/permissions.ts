@@ -71,6 +71,7 @@ export const PERMISSION_KEYS = [
   'hr_requests.submit',
   'hr_requests.manage',
   'onboarding.manage',
+  'onboarding.view_own',
   'hr_announcements.manage',
   'hr_announcements.view',
   'hr.view_reports',

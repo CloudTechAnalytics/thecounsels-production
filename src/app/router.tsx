@@ -209,7 +209,7 @@ export const router = createBrowserRouter([
                     children: [
                       { index: true, element: withPermission(<HrOverviewPage />, 'hr.view_reports') },
                       { path: 'employees', element: withPermission(<EmployeesPage />, 'staff.manage') },
-                      { path: 'onboarding', element: withPermission(<HrOnboardingPage />, 'onboarding.manage') },
+                      { path: 'onboarding', element: withPermission(<HrOnboardingPage />, 'onboarding.view_own') },
                       { path: 'leave', element: withPermission(<LeavePage />, 'leave.request') },
                       { path: 'requests', element: withPermission(<HrRequestsPage />, 'hr_requests.submit') },
                       { path: 'documents', element: withPermission(<HrDocumentsPage />, 'hr_documents.view_own') },

@@ -3,7 +3,7 @@ import { Plus, X } from 'lucide-react'
 import {
   useDepartments, useCreateDepartment, useDeleteDepartment,
   useJobTitles, useCreateJobTitle, useDeleteJobTitle,
-  useLeaveTypes, useCreateLeaveType,
+  useLeaveTypes, useCreateLeaveType, useUpdateLeaveTypeLimit,
 } from '@/features/hr/hooks/use-hr'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { Card } from '@/shared/components/ui/card'
@@ -67,9 +67,86 @@ function SimpleListCard({
   )
 }
 
-/** Departments, job titles and leave types are all org-configurable —
- * seeded with sensible defaults (0084) but never fixed. This is the only
- * place to add/remove them, so HR isn't stuck with only what shipped. */
+/** Leave types get their own card, not the generic list — the entitlement
+ * (Limit) is set to 0 by default (0085 — never assumed on your behalf) and
+ * is the one thing here that actually needs editing per type, not just
+ * adding/removing. */
+function LeaveTypesCard() {
+  const { activeOrgId } = useAuth()
+  const { data: leaveTypes } = useLeaveTypes(activeOrgId)
+  const create = useCreateLeaveType(activeOrgId)
+  const updateLimit = useUpdateLeaveTypeLimit(activeOrgId)
+  const [drafts, setDrafts] = React.useState<Record<string, string>>({})
+  const [newName, setNewName] = React.useState('')
+  const [newDays, setNewDays] = React.useState('')
+
+  const saveLimit = async (id: string, current: number) => {
+    const raw = drafts[id]
+    if (raw === undefined) return
+    const days = Number(raw)
+    if (!Number.isFinite(days) || days < 0 || days === current) return
+    try {
+      await updateLimit.mutateAsync({ id, days })
+    } catch (err) {
+      toast.error('Could not update limit', { description: errorMessage(err) })
+    }
+  }
+
+  const addType = async () => {
+    if (!newName.trim()) return
+    try {
+      await create.mutateAsync({ name: newName.trim(), days: Number(newDays) || 0 })
+      setNewName(''); setNewDays('')
+    } catch (err) {
+      toast.error('Could not add', { description: errorMessage(err) })
+    }
+  }
+
+  return (
+    <Card className="p-5">
+      <p className="font-display text-sm font-semibold">Leave types</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">Limit is days per year — set to 0 until you decide otherwise, nothing assumed.</p>
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="pb-2 font-medium">Leave type</th>
+              <th className="w-24 pb-2 font-medium">Limit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leaveTypes?.map((t) => (
+              <tr key={t.id} className="border-t border-border">
+                <td className="py-1.5 pr-2">{t.name}</td>
+                <td className="py-1.5">
+                  <Input
+                    type="number"
+                    min={0}
+                    className="h-7 w-20"
+                    value={drafts[t.id] ?? String(t.default_entitlement_days)}
+                    onChange={(e) => setDrafts((d) => ({ ...d, [t.id]: e.target.value }))}
+                    onBlur={() => saveLimit(t.id, t.default_entitlement_days)}
+                    onKeyDown={(e) => e.key === 'Enter' && saveLimit(t.id, t.default_entitlement_days)}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-3 flex gap-2">
+        <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="New leave type…" className="h-8" />
+        <Input type="number" min={0} value={newDays} onChange={(e) => setNewDays(e.target.value)} placeholder="Limit" className="h-8 w-20" />
+        <Button size="sm" variant="outline" loading={create.isPending} onClick={addType}><Plus className="h-3.5 w-3.5" /></Button>
+      </div>
+    </Card>
+  )
+}
+
+/** Departments and job titles are simple add/remove lists; leave types
+ * need their own editable-limit card above. Seeded with sensible names
+ * (0084/0085) but never fixed — this is the only place to change any of
+ * them, so HR isn't stuck with only what shipped. */
 export function HrListsSettings() {
   const { activeOrgId } = useAuth()
   const { data: departments } = useDepartments(activeOrgId)
@@ -78,11 +155,9 @@ export function HrListsSettings() {
   const { data: jobTitles } = useJobTitles(activeOrgId)
   const createTitle = useCreateJobTitle(activeOrgId)
   const deleteTitle = useDeleteJobTitle(activeOrgId)
-  const { data: leaveTypes } = useLeaveTypes(activeOrgId)
-  const createLeaveType = useCreateLeaveType(activeOrgId)
 
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <SimpleListCard
         title="Departments"
         items={departments}
@@ -97,12 +172,7 @@ export function HrListsSettings() {
         onAdd={(name) => createTitle.mutateAsync(name)}
         onDelete={(id) => deleteTitle.mutateAsync(id)}
       />
-      <SimpleListCard
-        title="Leave types"
-        items={leaveTypes}
-        adding={createLeaveType.isPending}
-        onAdd={(name) => createLeaveType.mutateAsync({ name, days: 10 })}
-      />
+      <LeaveTypesCard />
     </div>
   )
 }

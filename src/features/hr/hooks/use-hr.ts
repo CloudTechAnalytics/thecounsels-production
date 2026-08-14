@@ -83,6 +83,14 @@ export function useCreateLeaveType(organizationId: string | null) {
   })
 }
 
+export function useUpdateLeaveTypeLimit(organizationId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, days }: { id: string; days: number }) => hrService.updateLeaveTypeLimit(id, days),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hr', 'leave-types', organizationId] }),
+  })
+}
+
 export function useMyLeaveRequests(organizationId: string | null, userId: string | null) {
   return useQuery({
     queryKey: ['hr', 'my-leave', organizationId, userId],

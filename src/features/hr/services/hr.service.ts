@@ -100,6 +100,10 @@ export const hrService = {
       .insert({ organization_id: organizationId, name, default_entitlement_days: defaultEntitlementDays })
     if (error) throw error
   },
+  async updateLeaveTypeLimit(id: string, defaultEntitlementDays: number): Promise<void> {
+    const { error } = await supabase.from('leave_types').update({ default_entitlement_days: defaultEntitlementDays }).eq('id', id)
+    if (error) throw error
+  },
   async listMyLeaveRequests(organizationId: string, userId: string): Promise<LeaveRequestRow[]> {
     const { data, error } = await supabase
       .from('leave_requests')

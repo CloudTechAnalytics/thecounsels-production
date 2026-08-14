@@ -1,6 +1,8 @@
 import { useAuth } from '@/features/auth/context/auth-provider'
+import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useEmployees, useAllLeaveRequests } from '@/features/hr/hooks/use-hr'
 import { EMPLOYMENT_STATUS_META, LEAVE_STATUS_META } from '@/features/hr/types'
+import { HrListsSettings } from '@/features/hr/components/hr-lists-settings'
 import { PageHeader } from '@/shared/components/page-header'
 import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
@@ -33,6 +35,7 @@ function CountList({ title, counts }: { title: string; counts: Record<string, nu
  * recruitment/turnover reports arrive with those modules (Phase 2). */
 export function HrReportsPage() {
   const { activeOrgId } = useAuth()
+  const { has } = usePermissions()
   const { data: employees } = useEmployees(activeOrgId)
   const { data: leaveRequests } = useAllLeaveRequests(activeOrgId)
 
@@ -88,6 +91,13 @@ export function HrReportsPage() {
           {employees && employees.length > 30 && <Badge variant="muted">+{employees.length - 30} more</Badge>}
         </div>
       </Card>
+
+      {(has('departments.manage') || has('leave.manage')) && (
+        <>
+          <h2 className="mb-4 mt-8 font-display text-lg font-semibold">Manage lists</h2>
+          <HrListsSettings />
+        </>
+      )}
     </div>
   )
 }

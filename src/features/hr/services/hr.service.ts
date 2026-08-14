@@ -1,6 +1,10 @@
 import { supabase } from '@/shared/lib/supabase'
 import { administrationService } from '@/features/administration/services/administration.service'
-import type { Employee, Department, JobTitle, LeaveType, LeaveBalanceRow, LeaveRequestRow, HrRequestRow, HrDocumentRow, StaffProfileRow } from '@/features/hr/types'
+import type { Database } from '@/shared/types/database.types'
+import type {
+  Employee, Department, JobTitle, LeaveType, LeaveBalanceRow, LeaveRequestRow, HrRequestRow, HrDocumentRow, StaffProfileRow,
+  OnboardingTemplate, OnboardingItem, OnboardingProgress, HrAnnouncementRow,
+} from '@/features/hr/types'
 
 export const hrService = {
   /** Merges the firm's existing member list (memberships+profiles+roles,
@@ -234,6 +238,85 @@ export const hrService = {
   async deleteHrDocument(id: string, storagePath: string): Promise<void> {
     await supabase.storage.from('hr-documents').remove([storagePath])
     const { error } = await supabase.from('hr_employee_documents').delete().eq('id', id)
+    if (error) throw error
+  },
+
+  // ---- Onboarding ----
+  async listOnboardingTemplates(organizationId: string): Promise<OnboardingTemplate[]> {
+    const { data, error } = await supabase.from('onboarding_templates').select('*').eq('organization_id', organizationId).order('name')
+    if (error) throw error
+    return data ?? []
+  },
+  async createOnboardingTemplate(organizationId: string, name: string, items: OnboardingItem[]): Promise<void> {
+    const { error } = await supabase
+      .from('onboarding_templates')
+      .insert({ organization_id: organizationId, name, items: items as unknown as Database['public']['Tables']['onboarding_templates']['Insert']['items'] })
+    if (error) throw error
+  },
+  async assignOnboarding(organizationId: string, userId: string, templateId: string): Promise<void> {
+    const { error } = await supabase.rpc('assign_onboarding', { p_org: organizationId, p_user: userId, p_template: templateId })
+    if (error) throw error
+  },
+  /** "6/9 completed" for whichever onboarding checklist(s) an employee has
+   * been assigned — derived live from the real linked tasks, no separate
+   * progress counter to keep in sync. */
+  async getEmployeeOnboardingProgress(organizationId: string, userId: string): Promise<OnboardingProgress[]> {
+    const { data: assignments, error } = await supabase
+      .from('employee_onboarding')
+      .select('*, template:onboarding_templates(name)')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+    if (error) throw error
+    const list = (assignments ?? []) as unknown as Array<{ id: string; template: { name: string } | null } & Record<string, unknown>>
+    if (list.length === 0) return []
+
+    const { data: links, error: linksErr } = await supabase
+      .from('onboarding_task_links')
+      .select('employee_onboarding_id, task:tasks(status)')
+      .in('employee_onboarding_id', list.map((a) => a.id))
+    if (linksErr) throw linksErr
+    const linkRows = (links ?? []) as unknown as Array<{ employee_onboarding_id: string; task: { status: string } | null }>
+
+    return list.map((a) => {
+      const rows = linkRows.filter((l) => l.employee_onboarding_id === a.id)
+      return {
+        onboarding: a as unknown as OnboardingProgress['onboarding'],
+        templateName: a.template?.name ?? 'Onboarding',
+        total: rows.length,
+        done: rows.filter((r) => r.task?.status === 'done').length,
+      }
+    })
+  },
+
+  // ---- Announcements ----
+  async listAnnouncements(organizationId: string): Promise<HrAnnouncementRow[]> {
+    const { data, error } = await supabase
+      .from('hr_announcements')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data ?? []
+  },
+  async sendAnnouncement(params: {
+    organizationId: string
+    title: string
+    body: string
+    audienceType: string
+    departmentId?: string
+    userIds?: string[]
+    branch?: string
+  }): Promise<void> {
+    const { organizationId, title, body, audienceType, departmentId, userIds, branch } = params
+    const { error } = await supabase.rpc('send_hr_announcement', {
+      p_org: organizationId,
+      p_title: title,
+      p_body: body,
+      p_audience_type: audienceType,
+      p_department_id: departmentId ?? null,
+      p_user_ids: userIds ?? null,
+      p_branch: branch ?? null,
+    })
     if (error) throw error
   },
 }

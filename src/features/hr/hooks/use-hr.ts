@@ -222,3 +222,54 @@ export function useDeleteHrDocument(organizationId: string | null) {
     },
   })
 }
+
+export function useOnboardingTemplates(organizationId: string | null) {
+  return useQuery({
+    queryKey: ['hr', 'onboarding-templates', organizationId],
+    enabled: Boolean(organizationId),
+    queryFn: () => hrService.listOnboardingTemplates(organizationId!),
+  })
+}
+
+export function useCreateOnboardingTemplate(organizationId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ name, items }: { name: string; items: import('@/features/hr/types').OnboardingItem[] }) =>
+      hrService.createOnboardingTemplate(organizationId!, name, items),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hr', 'onboarding-templates', organizationId] }),
+  })
+}
+
+export function useAssignOnboarding(organizationId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ userId, templateId }: { userId: string; templateId: string }) =>
+      hrService.assignOnboarding(organizationId!, userId, templateId),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['hr', 'onboarding-progress', organizationId, vars.userId] }),
+  })
+}
+
+export function useEmployeeOnboardingProgress(organizationId: string | null, userId: string | null) {
+  return useQuery({
+    queryKey: ['hr', 'onboarding-progress', organizationId, userId],
+    enabled: Boolean(organizationId && userId),
+    queryFn: () => hrService.getEmployeeOnboardingProgress(organizationId!, userId!),
+  })
+}
+
+export function useAnnouncements(organizationId: string | null) {
+  return useQuery({
+    queryKey: ['hr', 'announcements', organizationId],
+    enabled: Boolean(organizationId),
+    queryFn: () => hrService.listAnnouncements(organizationId!),
+  })
+}
+
+export function useSendAnnouncement(organizationId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (params: { title: string; body: string; audienceType: string; departmentId?: string; userIds?: string[]; branch?: string }) =>
+      hrService.sendAnnouncement({ organizationId: organizationId!, ...params }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hr', 'announcements', organizationId] }),
+  })
+}

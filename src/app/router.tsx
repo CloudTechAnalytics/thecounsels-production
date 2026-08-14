@@ -41,6 +41,9 @@ import { HrOverviewPage } from '@/features/hr/pages/hr-overview-page'
 import { EmployeesPage } from '@/features/hr/pages/employees-page'
 import { LeavePage } from '@/features/hr/pages/leave-page'
 import { HrRequestsPage } from '@/features/hr/pages/hr-requests-page'
+import { HrDocumentsPage } from '@/features/hr/pages/hr-documents-page'
+import { AnnouncementsPage } from '@/features/hr/pages/announcements-page'
+import { HrReportsPage } from '@/features/hr/pages/hr-reports-page'
 import { HearingsPage } from '@/features/hearings/pages/hearings-page'
 import { CalendarPage } from '@/features/calendar/pages/calendar-page'
 import { TasksPage } from '@/features/tasks/pages/tasks-page'
@@ -192,6 +195,9 @@ export const router = createBrowserRouter([
                       { path: 'hr/employees', element: withPermission(<EmployeesPage />, 'staff.view') },
                       { path: 'hr/leave', element: withPermission(<LeavePage />, 'leave.request') },
                       { path: 'hr/requests', element: withPermission(<HrRequestsPage />, 'hr_requests.submit') },
+                      { path: 'hr/documents', element: withPermission(<HrDocumentsPage />, 'hr_documents.view_own') },
+                      { path: 'hr/announcements', element: withPermission(<AnnouncementsPage />, 'hr_announcements.view') },
+                      { path: 'hr/reports', element: withPermission(<HrReportsPage />, 'hr.view_reports') },
                       {
                         path: 'administration',
                         element: withPermission(<AdministrationPage />, ['organization.view', 'members.view'], 'any'),

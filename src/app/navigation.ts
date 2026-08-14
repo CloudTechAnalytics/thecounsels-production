@@ -16,6 +16,9 @@ import {
   UserSquare2,
   CalendarClock,
   Inbox,
+  FolderLock,
+  Megaphone,
+  FileBarChart,
   type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey } from '@/shared/lib/permissions'
@@ -69,7 +72,10 @@ export const NAVIGATION: NavSection[] = [
       { label: 'Overview', to: '/hr', icon: LayoutGrid, permission: 'hr.view_reports', end: true },
       { label: 'Employees', to: '/hr/employees', icon: UserSquare2, permission: 'staff.view' },
       { label: 'Leave', to: '/hr/leave', icon: CalendarClock, permission: 'leave.request' },
+      { label: 'Documents', to: '/hr/documents', icon: FolderLock, permission: 'hr_documents.view_own' },
       { label: 'HR Requests', to: '/hr/requests', icon: Inbox, permission: 'hr_requests.submit' },
+      { label: 'Announcements', to: '/hr/announcements', icon: Megaphone, permission: 'hr_announcements.view' },
+      { label: 'HR Reports', to: '/hr/reports', icon: FileBarChart, permission: 'hr.view_reports' },
     ],
   },
   {

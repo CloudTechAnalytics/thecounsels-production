@@ -976,6 +976,66 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['hr_requests']['Insert']>
         Relationships: []
       }
+      onboarding_templates: {
+        Row: { id: string; organization_id: string; name: string; items: Json; created_at: string }
+        Insert: { id?: string; organization_id: string; name: string; items?: Json; created_at?: string }
+        Update: Partial<Database['public']['Tables']['onboarding_templates']['Insert']>
+        Relationships: []
+      }
+      employee_onboarding: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          template_id: string
+          assigned_by: string | null
+          assigned_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          template_id: string
+          assigned_by?: string | null
+          assigned_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['employee_onboarding']['Insert']>
+        Relationships: []
+      }
+      onboarding_task_links: {
+        Row: { id: string; organization_id: string; employee_onboarding_id: string; task_id: string }
+        Insert: { id?: string; organization_id: string; employee_onboarding_id: string; task_id: string }
+        Update: Partial<Database['public']['Tables']['onboarding_task_links']['Insert']>
+        Relationships: []
+      }
+      hr_announcements: {
+        Row: {
+          id: string
+          organization_id: string
+          title: string
+          body: string
+          audience_type: string
+          audience_department_id: string | null
+          audience_user_ids: string[]
+          audience_branch: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          title: string
+          body: string
+          audience_type?: string
+          audience_department_id?: string | null
+          audience_user_ids?: string[]
+          audience_branch?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['hr_announcements']['Insert']>
+        Relationships: []
+      }
       hr_employee_documents: {
         Row: {
           id: string
@@ -1789,6 +1849,22 @@ export interface Database {
       update_hr_request_status: {
         Args: { p_request: string; p_status: string; p_note?: string | null }
         Returns: Database['public']['Tables']['hr_requests']['Row']
+      }
+      assign_onboarding: {
+        Args: { p_org: string; p_user: string; p_template: string }
+        Returns: Database['public']['Tables']['employee_onboarding']['Row']
+      }
+      send_hr_announcement: {
+        Args: {
+          p_org: string
+          p_title: string
+          p_body: string
+          p_audience_type: string
+          p_department_id?: string | null
+          p_user_ids?: string[] | null
+          p_branch?: string | null
+        }
+        Returns: Database['public']['Tables']['hr_announcements']['Row']
       }
       platform_storage_usage: {
         Args: Record<PropertyKey, never>

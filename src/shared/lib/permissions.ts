@@ -72,6 +72,7 @@ export const PERMISSION_KEYS = [
   'hr_requests.manage',
   'onboarding.manage',
   'hr_announcements.manage',
+  'hr_announcements.view',
   'hr.view_reports',
 ] as const
 

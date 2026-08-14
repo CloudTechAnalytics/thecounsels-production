@@ -9,6 +9,21 @@ export type LeaveBalanceRow = Database['public']['Tables']['leave_balances']['Ro
 export type LeaveRequestRow = Database['public']['Tables']['leave_requests']['Row']
 export type HrRequestRow = Database['public']['Tables']['hr_requests']['Row']
 export type HrDocumentRow = Database['public']['Tables']['hr_employee_documents']['Row']
+export type OnboardingTemplate = Database['public']['Tables']['onboarding_templates']['Row']
+export type EmployeeOnboardingRow = Database['public']['Tables']['employee_onboarding']['Row']
+export type HrAnnouncementRow = Database['public']['Tables']['hr_announcements']['Row']
+
+export interface OnboardingItem {
+  label: string
+  assignee: 'employee' | 'manager' | 'hr'
+}
+
+export interface OnboardingProgress {
+  onboarding: EmployeeOnboardingRow
+  templateName: string
+  total: number
+  done: number
+}
 
 /** One row per active member — merges the membership/profile/role data
  * every firm already has with the HR fields on staff_profiles (which may
@@ -71,6 +86,13 @@ export const HR_REQUEST_STATUS_META: Record<string, { label: string; variant: Ba
   rejected: { label: 'Rejected', variant: 'destructive' },
   completed: { label: 'Completed', variant: 'success' },
 }
+
+export const ANNOUNCEMENT_AUDIENCES = [
+  { value: 'organization', label: 'Entire organization' },
+  { value: 'department', label: 'A department' },
+  { value: 'employees', label: 'Specific employees' },
+  { value: 'branch', label: 'A branch/location' },
+]
 
 export const HR_DOCUMENT_CATEGORIES = [
   { value: 'employment_contract', label: 'Employment Contract' },

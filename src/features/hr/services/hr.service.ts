@@ -104,27 +104,33 @@ export const hrService = {
     const { error } = await supabase.from('leave_types').update({ default_entitlement_days: defaultEntitlementDays }).eq('id', id)
     if (error) throw error
   },
-  async listMyLeaveRequests(organizationId: string, userId: string): Promise<LeaveRequestRow[]> {
+  async listMyLeaveRequests(organizationId: string, userId: string): Promise<(LeaveRequestRow & { reviewer_name: string | null })[]> {
     const { data, error } = await supabase
       .from('leave_requests')
-      .select('*')
+      .select('*, reviewer:profiles!leave_requests_reviewed_by_fkey(full_name)')
       .eq('organization_id', organizationId)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
     if (error) throw error
-    return data ?? []
+    return ((data ?? []) as unknown as Array<LeaveRequestRow & { reviewer: { full_name: string | null } | null }>).map((r) => ({
+      ...r,
+      reviewer_name: r.reviewer?.full_name ?? null,
+    }))
   },
   /** Every leave request in the org — for approvers (leave.manage). */
-  async listAllLeaveRequests(organizationId: string): Promise<(LeaveRequestRow & { requester_name: string | null })[]> {
+  async listAllLeaveRequests(organizationId: string): Promise<(LeaveRequestRow & { requester_name: string | null; reviewer_name: string | null })[]> {
     const { data, error } = await supabase
       .from('leave_requests')
-      .select('*, requester:profiles!leave_requests_user_id_fkey(full_name)')
+      .select('*, requester:profiles!leave_requests_user_id_fkey(full_name), reviewer:profiles!leave_requests_reviewed_by_fkey(full_name)')
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: false })
     if (error) throw error
-    return ((data ?? []) as unknown as Array<LeaveRequestRow & { requester: { full_name: string | null } | null }>).map((r) => ({
+    return ((data ?? []) as unknown as Array<
+      LeaveRequestRow & { requester: { full_name: string | null } | null; reviewer: { full_name: string | null } | null }
+    >).map((r) => ({
       ...r,
       requester_name: r.requester?.full_name ?? null,
+      reviewer_name: r.reviewer?.full_name ?? null,
     }))
   },
   /** Cheap count-only query for the sidebar badge — no rows fetched. */

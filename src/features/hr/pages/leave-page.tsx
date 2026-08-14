@@ -89,7 +89,14 @@ function MyLeaveTab() {
                     <p className="text-xs text-muted-foreground">{format(new Date(r.start_date), 'MMM d')} – {format(new Date(r.end_date), 'MMM d, yyyy')}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={meta.variant}>{meta.label}</Badge>
+                    <div className="text-right">
+                      <Badge variant={meta.variant}>{meta.label}</Badge>
+                      {r.reviewer_name && r.reviewed_at && (
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          by {r.reviewer_name} · {format(new Date(r.reviewed_at), 'MMM d, yyyy')}
+                        </p>
+                      )}
+                    </div>
                     {r.status === 'pending' && (
                       <Button
                         variant="ghost" size="sm"
@@ -156,7 +163,14 @@ function TeamLeaveTab() {
                       <Button size="sm" onClick={() => act(r.id, true)}>Approve</Button>
                     </>
                   ) : (
-                    <Badge variant={meta.variant}>{meta.label}</Badge>
+                    <div className="text-right">
+                      <Badge variant={meta.variant}>{meta.label}</Badge>
+                      {r.reviewer_name && r.reviewed_at && (
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          by {r.reviewer_name} · {format(new Date(r.reviewed_at), 'MMM d, yyyy')}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               </li>

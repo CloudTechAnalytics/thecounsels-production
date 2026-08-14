@@ -10,6 +10,11 @@
 -- grants, same shape as every other role in 0003.
 -- ============================================================================
 
+-- roles.key is a Postgres enum (public.role_key, defined in 0001), not free
+-- text — the new value has to be added to the enum itself before any row
+-- can use it.
+alter type public.role_key add value if not exists 'litigation_clerk';
+
 insert into public.roles (key, name, description, rank, is_system, organization_id) values
   ('litigation_clerk', 'Litigation Clerk', 'Court filings, service of process and hearing logistics', 62, true, null)
 on conflict (key) do nothing;

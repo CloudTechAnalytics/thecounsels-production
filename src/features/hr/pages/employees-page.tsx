@@ -5,7 +5,6 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useEmployees } from '@/features/hr/hooks/use-hr'
 import { EMPLOYMENT_STATUS_META, type Employee } from '@/features/hr/types'
 import { EmployeeProfileDialog } from '@/features/hr/components/employee-profile-dialog'
-import { OnboardingTemplateDialog } from '@/features/hr/components/onboarding-template-dialog'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Input } from '@/shared/components/ui/input'
@@ -34,7 +33,6 @@ export function EmployeesPage() {
       <PageHeader
         title="Employees"
         description="Every person at the firm — department, title, employment status."
-        actions={has('onboarding.manage') ? <OnboardingTemplateDialog /> : undefined}
       />
 
       <div className="relative mb-4 max-w-sm">

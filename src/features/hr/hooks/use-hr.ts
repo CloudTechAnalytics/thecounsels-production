@@ -289,6 +289,14 @@ export function useCreateOnboardingTemplate(organizationId: string | null) {
   })
 }
 
+export function useDeleteOnboardingTemplate(organizationId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => hrService.deleteOnboardingTemplate(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hr', 'onboarding-templates', organizationId] }),
+  })
+}
+
 export function useAssignOnboarding(organizationId: string | null) {
   const qc = useQueryClient()
   return useMutation({

@@ -286,6 +286,14 @@ export const hrService = {
       .insert({ organization_id: organizationId, name, items: items as unknown as Database['public']['Tables']['onboarding_templates']['Insert']['items'] })
     if (error) throw error
   },
+  /** Blocked by the FK (`employee_onboarding.template_id ... on delete
+   * restrict`) once a template has actually been assigned to someone —
+   * that's deliberate, so history stays intact; the caller surfaces a
+   * friendly message for that case instead of a raw DB error. */
+  async deleteOnboardingTemplate(id: string): Promise<void> {
+    const { error } = await supabase.from('onboarding_templates').delete().eq('id', id)
+    if (error) throw error
+  },
   async assignOnboarding(organizationId: string, userId: string, templateId: string): Promise<void> {
     const { error } = await supabase.rpc('assign_onboarding', { p_org: organizationId, p_user: userId, p_template: templateId })
     if (error) throw error

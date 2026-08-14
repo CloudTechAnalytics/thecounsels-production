@@ -172,6 +172,9 @@ Deno.serve(async (req: Request) => {
     p_entity_type: 'matter',
     p_entity_id: matterId,
     p_summary: `AI summary generated for ${matter.title}`,
+    // Same service-role-client gap as admin-create-user — pass the real
+    // caller through so this doesn't show up as "Someone".
+    p_actor_id: userData.user.id,
   })
 
   return json({ summary, generatedAt })

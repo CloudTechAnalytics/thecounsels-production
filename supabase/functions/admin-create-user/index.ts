@@ -208,6 +208,11 @@ Deno.serve(async (req: Request) => {
     p_entity_type: 'membership',
     p_summary: `Created ${email} as ${role!.key}`,
     p_platform: platformSeed === true,
+    // Logged via the service-role client (needed for the privileged writes
+    // above), where auth.uid() is always null — pass the real caller
+    // through explicitly so this doesn't show up as "Someone" in Recent
+    // Activity even though the function already knows exactly who invited this person.
+    p_actor_id: userData.user.id,
   })
 
   return json({ userId, email }, 201)

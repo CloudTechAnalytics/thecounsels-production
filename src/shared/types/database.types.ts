@@ -1525,6 +1525,8 @@ export interface Database {
           p_entity_id?: string | null
           p_summary?: string | null
           p_metadata?: Json
+          p_platform?: boolean
+          p_actor_id?: string | null
         }
         Returns: Database['public']['Tables']['audit_logs']['Row']
       }

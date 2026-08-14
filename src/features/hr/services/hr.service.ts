@@ -127,6 +127,16 @@ export const hrService = {
       requester_name: r.requester?.full_name ?? null,
     }))
   },
+  /** Cheap count-only query for the sidebar badge — no rows fetched. */
+  async pendingLeaveCount(organizationId: string): Promise<number> {
+    const { count, error } = await supabase
+      .from('leave_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .eq('status', 'pending')
+    if (error) throw error
+    return count ?? 0
+  },
   async myLeaveBalances(organizationId: string, userId: string): Promise<LeaveBalanceRow[]> {
     const year = new Date().getFullYear()
     const { data, error } = await supabase

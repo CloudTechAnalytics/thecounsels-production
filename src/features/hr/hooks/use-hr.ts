@@ -1,5 +1,7 @@
+import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { hrService } from '@/features/hr/services/hr.service'
+import { supabase } from '@/shared/lib/supabase'
 import type { StaffProfileRow } from '@/features/hr/types'
 
 export function useEmployees(organizationId: string | null) {
@@ -130,7 +132,37 @@ function useInvalidateLeave(organizationId: string | null) {
     qc.invalidateQueries({ queryKey: ['hr', 'all-leave', organizationId] })
     qc.invalidateQueries({ queryKey: ['hr', 'leave-balances', organizationId] })
     qc.invalidateQueries({ queryKey: ['hr', 'leave-summary', organizationId] })
+    qc.invalidateQueries({ queryKey: ['hr', 'pending-leave-count', organizationId] })
   }
+}
+
+export function usePendingLeaveCount(organizationId: string | null) {
+  return useQuery({
+    queryKey: ['hr', 'pending-leave-count', organizationId],
+    enabled: Boolean(organizationId),
+    queryFn: () => hrService.pendingLeaveCount(organizationId!),
+  })
+}
+
+/** Keeps the sidebar's Leave badge live regardless of which page is open —
+ * mount once, high in the HR shell (HrLayout), same relationship
+ * useMessagingBadgeRealtime has with OrganizationLayout. */
+export function useLeaveBadgeRealtime(organizationId: string | null) {
+  const qc = useQueryClient()
+  React.useEffect(() => {
+    if (!organizationId) return
+    const channel = supabase
+      .channel(`leave-badge:${organizationId}:${Date.now()}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'leave_requests', filter: `organization_id=eq.${organizationId}` },
+        () => qc.invalidateQueries({ queryKey: ['hr', 'pending-leave-count', organizationId] }),
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [organizationId, qc])
 }
 
 export function useRequestLeave(organizationId: string | null) {

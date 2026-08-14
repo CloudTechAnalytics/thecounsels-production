@@ -77,6 +77,7 @@ export function HrSidebar({ onNavigate }: { onNavigate?: () => void }) {
                             )}
                           />
                           <span className="flex-1 truncate">{item.label}</span>
+                          {item.badge && <item.badge />}
                         </>
                       )}
                     </NavLink>

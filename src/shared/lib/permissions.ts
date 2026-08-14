@@ -78,6 +78,7 @@ export const ROLE_META: Record<RoleKey, { label: string; rank: number; group: st
   associate: { label: 'Associate', rank: 40, group: 'Fee Earners' },
   junior_associate: { label: 'Junior Associate', rank: 50, group: 'Fee Earners' },
   paralegal: { label: 'Paralegal', rank: 60, group: 'Support' },
+  litigation_clerk: { label: 'Litigation Clerk', rank: 62, group: 'Support' },
   finance: { label: 'Finance', rank: 65, group: 'Operations' },
   hr: { label: 'HR', rank: 66, group: 'Operations' },
   secretary: { label: 'Secretary', rank: 70, group: 'Support' },

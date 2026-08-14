@@ -52,6 +52,7 @@ export type RoleKey =
   | 'hr'
   | 'secretary'
   | 'receptionist'
+  | 'litigation_clerk'
 
 type Timestamps = {
   created_at: string

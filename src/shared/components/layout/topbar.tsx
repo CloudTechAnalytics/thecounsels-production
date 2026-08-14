@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Check, LogOut, Menu, Settings, UserCircle, Users2, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
+import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { ROLE_META } from '@/shared/lib/permissions'
 import { initialsOf } from '@/shared/lib/format'
 import { Button } from '@/shared/components/ui/button'
@@ -21,9 +22,16 @@ import {
 
 export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   const { profile, memberships, activeMembership, activeOrgId, setActiveOrg, signOut } = useAuth()
+  const { has } = usePermissions()
   const navigate = useNavigate()
   const location = useLocation()
   const inHrWorkspace = location.pathname.startsWith('/hr')
+  // '/' redirects anyone without dashboard.view straight back into /hr
+  // (see WorkspaceHome in router.tsx) — sending "Back to Workspace" there
+  // for an HR-only user would just bounce them right back where they
+  // started. Land them on the first Firm-section page they actually have
+  // instead.
+  const backToWorkspaceTarget = has('dashboard.view') ? '/' : has('staff.view') ? '/staff' : '/notifications'
 
   const roleKey = activeMembership?.role.key
   const roleLabel = roleKey ? ROLE_META[roleKey]?.label : activeMembership?.role.name
@@ -83,7 +91,7 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
 
             <DropdownMenuSeparator />
             {inHrWorkspace ? (
-              <DropdownMenuItem onClick={() => navigate('/')}>
+              <DropdownMenuItem onClick={() => navigate(backToWorkspaceTarget)}>
                 <ArrowLeft /> Back to Workspace
               </DropdownMenuItem>
             ) : (

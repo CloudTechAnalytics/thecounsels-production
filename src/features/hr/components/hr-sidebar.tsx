@@ -3,6 +3,7 @@ import { Users2, ArrowLeft } from 'lucide-react'
 import { HR_NAVIGATION, type HrNavItem } from '@/features/hr/navigation'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
+import { useBackToWorkspaceTarget } from '@/shared/hooks/use-back-to-workspace-target'
 import { cn } from '@/shared/lib/utils'
 
 function useVisible() {
@@ -19,6 +20,7 @@ export function HrSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { activeMembership } = useAuth()
   const navigate = useNavigate()
   const org = activeMembership?.organization
+  const backToWorkspaceTarget = useBackToWorkspaceTarget()
 
   return (
     <aside className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground">
@@ -34,7 +36,7 @@ export function HrSidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="px-3 pt-1">
         <button
-          onClick={() => { navigate('/'); onNavigate?.() }}
+          onClick={() => { navigate(backToWorkspaceTarget); onNavigate?.() }}
           className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-foreground"
         >
           <ArrowLeft className="h-4 w-4" /> Back to Workspace

@@ -92,20 +92,16 @@ export function platformRoleLabel(key: string | null): string {
   return PLATFORM_ROLES.find((r) => r.key === key)?.label ?? 'Administrator'
 }
 
-/** Canonical plan feature flags (used by the Plans editor). */
+/** Canonical plan feature flags (used by the Plans editor). Replaces a
+ * stale list from the original 2023-era seed (case_management, sso,
+ * api_access, custom_branding, advanced_security, document_versioning,
+ * ai_features) — none of those were ever built or checked anywhere in the
+ * app. These four are the only features actually enforced (migration
+ * 0100/0101, org_has_feature()) — every key here corresponds to real,
+ * live gating, not aspirational roadmap items. */
 export const PLAN_FEATURES: { key: string; label: string }[] = [
-  { key: 'case_management', label: 'Case Management' },
-  { key: 'calendar', label: 'Calendar' },
-  { key: 'tasks', label: 'Tasks' },
-  { key: 'reports_basic', label: 'Basic Reports' },
-  { key: 'reports_advanced', label: 'Advanced Reports' },
-  { key: 'billing', label: 'Billing' },
-  { key: 'invoices', label: 'Invoices' },
-  { key: 'document_versioning', label: 'Document Versioning' },
-  { key: 'ai_features', label: 'AI Features' },
-  { key: 'custom_branding', label: 'Custom Branding' },
-  { key: 'sso', label: 'SSO' },
-  { key: 'audit_logs', label: 'Audit Logs' },
-  { key: 'api_access', label: 'API Access' },
-  { key: 'advanced_security', label: 'Advanced Security' },
+  { key: 'messaging', label: 'Messaging (channels + DMs)' },
+  { key: 'whatsapp_reminders', label: 'WhatsApp reminders' },
+  { key: 'hr_module', label: 'HR & People Management' },
+  { key: 'ai_summarization', label: 'AI matter summaries' },
 ]

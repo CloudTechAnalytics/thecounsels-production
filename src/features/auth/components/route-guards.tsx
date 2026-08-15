@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react'
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom'
+import { Lock } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useSubscription } from '@/features/administration/hooks/use-administration'
+import { useSubscription, usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { LoadingScreen } from '@/shared/components/loading-screen'
+import { Button } from '@/shared/components/ui/button'
 import type { PermissionKey } from '@/shared/lib/permissions'
+import type { PlanFeatureKey } from '@/features/administration/lib/plan-features'
 
 /** Gate an entire route subtree behind an authenticated session. */
 export function RequireAuth() {
@@ -104,6 +107,42 @@ export function RequirePermission({
           You don't have permission to view this area. Contact your firm administrator if you believe
           this is a mistake.
         </p>
+      </div>
+    )
+  }
+  return <>{children}</>
+}
+
+const PLAN_FEATURE_COPY: Record<PlanFeatureKey, { label: string; plan: string }> = {
+  messaging: { label: 'Messaging', plan: 'Professional' },
+  whatsapp_reminders: { label: 'WhatsApp reminders', plan: 'Professional' },
+  hr_module: { label: 'HR & People Management', plan: 'Business' },
+  ai_summarization: { label: 'AI matter summaries', plan: 'Business' },
+}
+
+/** Guard a route by subscription plan; same in-place "restricted" panel
+ * pattern RequirePermission uses (not a redirect), with upgrade-specific
+ * copy and a link to Firm Settings' Plan & Billing tab. */
+export function RequirePlanFeature({ feature, children }: { feature: PlanFeatureKey; children: ReactNode }) {
+  const { activeOrgId } = useAuth()
+  const { has, isLoading } = usePlanFeature(activeOrgId)
+  const copy = PLAN_FEATURE_COPY[feature]
+
+  if (isLoading) return <LoadingScreen />
+
+  if (!has(feature)) {
+    return (
+      <div className="flex h-[60vh] flex-col items-center justify-center text-center">
+        <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+          <Lock className="h-6 w-6" />
+        </span>
+        <p className="font-display text-2xl font-semibold">Upgrade to unlock {copy.label}</p>
+        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+          {copy.label} is available on the {copy.plan} plan and above.
+        </p>
+        <Button asChild className="mt-4">
+          <Link to="/administration">View plans</Link>
+        </Button>
       </div>
     )
   }

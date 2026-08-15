@@ -7,12 +7,14 @@ import {
   RequireAuth,
   RedirectIfAuthenticated,
   RequirePermission,
+  RequirePlanFeature,
   RequirePlatform,
   RequireOrganization,
   RequireNoOrganization,
   RequirePasswordChange,
   RequireActiveSubscription,
 } from '@/features/auth/components/route-guards'
+import type { PlanFeatureKey } from '@/features/administration/lib/plan-features'
 import { LandingPage } from '@/features/landing/pages/landing-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { RegisterPage } from '@/features/auth/pages/register-page'
@@ -75,6 +77,10 @@ const withPermission = (
   <RequirePermission permission={permission} mode={mode}>
     {node}
   </RequirePermission>
+)
+
+const withPlanFeature = (node: React.ReactNode, feature: PlanFeatureKey) => (
+  <RequirePlanFeature feature={feature}>{node}</RequirePlanFeature>
 )
 
 /**
@@ -207,7 +213,7 @@ export const router = createBrowserRouter([
                       { path: 'billing', element: withPermission(<BillingPage />, 'billing.view') },
                       { path: 'reports', element: withPermission(<ReportsPage />, 'reports.view') },
                       { path: 'notifications', element: <NotificationsPage /> },
-                      { path: 'messages', element: withPermission(<MessagesPage />, 'messaging.view') },
+                      { path: 'messages', element: withPlanFeature(withPermission(<MessagesPage />, 'messaging.view'), 'messaging') },
                       {
                         path: 'administration',
                         element: withPermission(<AdministrationPage />, ['organization.view', 'members.view'], 'any'),
@@ -220,7 +226,7 @@ export const router = createBrowserRouter([
                   // sidebar. No Matters/Clients/Documents in this tree at all.
                   {
                     path: 'hr',
-                    element: <HrLayout />,
+                    element: withPlanFeature(<HrLayout />, 'hr_module'),
                     children: [
                       { index: true, element: withPermission(<HrOverviewPage />, 'hr.view_reports') },
                       { path: 'employees', element: withPermission(<EmployeesPage />, 'staff.manage') },

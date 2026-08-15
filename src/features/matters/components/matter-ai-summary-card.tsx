@@ -3,26 +3,23 @@ import { formatDistanceToNow } from 'date-fns'
 import { Sparkles, RotateCcw, Lock } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useSubscription } from '@/features/administration/hooks/use-administration'
+import { planHasFeature } from '@/features/administration/lib/plan-features'
 import { useSummarizeMatter } from '@/features/matters/hooks/use-matter-ai'
 import type { MatterRow } from '@/features/matters/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { toast } from '@/shared/components/ui/sonner'
 
-/** Business/Enterprise only — this only controls what's *shown*; the real
- * enforcement is server-side in the summarize-matter Edge Function, which
- * checks the org's actual plan independently and would reject the request
- * regardless of what this renders. */
-function planHasAiSummarization(features: unknown): boolean {
-  return Boolean(features && typeof features === 'object' && (features as Record<string, unknown>).ai_summarization === true)
-}
-
 export function MatterAiSummaryCard({ matter }: { matter: MatterRow }) {
   const { activeOrgId } = useAuth()
   const { data: subscription } = useSubscription(activeOrgId)
   const summarize = useSummarizeMatter(matter.id)
 
-  const enabled = planHasAiSummarization(subscription?.plan?.features)
+  // This only controls what's *shown*; the real enforcement is
+  // server-side in the summarize-matter Edge Function, which checks the
+  // org's actual plan independently and would reject the request
+  // regardless of what this renders.
+  const enabled = planHasFeature(subscription?.plan?.features, 'ai_summarization')
 
   const generate = async () => {
     try {

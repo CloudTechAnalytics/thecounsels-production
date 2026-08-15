@@ -3,14 +3,21 @@ import { Scale } from 'lucide-react'
 import { NAVIGATION, type NavItem } from '@/app/navigation'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
+import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { initialsOf } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
 
 function useVisible() {
   const { has, hasAny } = usePermissions()
+  const { activeOrgId } = useAuth()
+  const { has: hasFeature } = usePlanFeature(activeOrgId)
   return (item: NavItem) => {
-    if (!item.permission) return true
-    return Array.isArray(item.permission) ? hasAny(item.permission) : has(item.permission)
+    if (item.permission) {
+      const ok = Array.isArray(item.permission) ? hasAny(item.permission) : has(item.permission)
+      if (!ok) return false
+    }
+    if (item.planFeature && !hasFeature(item.planFeature)) return false
+    return true
   }
 }
 

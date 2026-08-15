@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey } from '@/shared/lib/permissions'
+import type { PlanFeatureKey } from '@/features/administration/lib/plan-features'
 import { MessagesNavBadge } from '@/features/messaging/components/messages-nav-badge'
 
 export interface NavItem {
@@ -23,6 +24,8 @@ export interface NavItem {
   icon: LucideIcon
   /** Any of these permissions grants visibility. */
   permission?: PermissionKey | PermissionKey[]
+  /** Additionally requires the org's plan to include this feature. */
+  planFeature?: PlanFeatureKey
   end?: boolean
   /** Rendered inline after the label, e.g. an unread-count pill. */
   badge?: ComponentType
@@ -58,7 +61,7 @@ export const NAVIGATION: NavSection[] = [
       { label: 'Billing', to: '/billing', icon: Receipt, permission: 'billing.view' },
       { label: 'Reports', to: '/reports', icon: BarChart3, permission: 'reports.view' },
       { label: 'Notifications', to: '/notifications', icon: Bell, permission: 'notifications.view' },
-      { label: 'Messages', to: '/messages', icon: MessageSquare, permission: 'messaging.view', badge: MessagesNavBadge },
+      { label: 'Messages', to: '/messages', icon: MessageSquare, permission: 'messaging.view', planFeature: 'messaging', badge: MessagesNavBadge },
     ],
   },
   {

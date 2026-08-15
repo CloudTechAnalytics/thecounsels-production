@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { administrationService } from '@/features/administration/services/administration.service'
+import { planHasFeature, type PlanFeatureKey } from '@/features/administration/lib/plan-features'
 
 const keys = {
   organizations: ['administration', 'organizations'] as const,
@@ -79,6 +80,18 @@ export function useSubscription(organizationId: string | null) {
     enabled: Boolean(organizationId),
     queryFn: () => administrationService.getSubscription(organizationId!),
   })
+}
+
+/** Mirrors usePermissions()'s shape — `{ has }` — but for plan features
+ * instead of role permissions. Backed by the same useSubscription() query
+ * every other plan-aware component already calls (react-query dedupes by
+ * key, so this doesn't add a second fetch). */
+export function usePlanFeature(organizationId: string | null) {
+  const { data: subscription, isLoading } = useSubscription(organizationId)
+  return {
+    has: (key: PlanFeatureKey) => planHasFeature(subscription?.plan?.features, key),
+    isLoading,
+  }
 }
 
 function useInvalidateSubscription(organizationId: string | null) {

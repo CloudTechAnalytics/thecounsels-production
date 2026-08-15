@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Check, LogOut, Menu, Settings, UserCircle, Users2, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
+import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { useBackToWorkspaceTarget } from '@/shared/hooks/use-back-to-workspace-target'
 import { ROLE_META } from '@/shared/lib/permissions'
 import { initialsOf } from '@/shared/lib/format'
@@ -26,6 +27,7 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   const location = useLocation()
   const inHrWorkspace = location.pathname.startsWith('/hr')
   const backToWorkspaceTarget = useBackToWorkspaceTarget()
+  const { has: hasFeature } = usePlanFeature(activeOrgId)
 
   const roleKey = activeMembership?.role.key
   const roleLabel = roleKey ? ROLE_META[roleKey]?.label : activeMembership?.role.name
@@ -83,15 +85,19 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
               </>
             )}
 
-            <DropdownMenuSeparator />
-            {inHrWorkspace ? (
-              <DropdownMenuItem onClick={() => navigate(backToWorkspaceTarget)}>
-                <ArrowLeft /> Back to Workspace
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem onClick={() => navigate('/hr')}>
-                <Users2 /> HR Workspace
-              </DropdownMenuItem>
+            {(inHrWorkspace || hasFeature('hr_module')) && (
+              <>
+                <DropdownMenuSeparator />
+                {inHrWorkspace ? (
+                  <DropdownMenuItem onClick={() => navigate(backToWorkspaceTarget)}>
+                    <ArrowLeft /> Back to Workspace
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => navigate('/hr')}>
+                    <Users2 /> HR Workspace
+                  </DropdownMenuItem>
+                )}
+              </>
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate('/settings')}>

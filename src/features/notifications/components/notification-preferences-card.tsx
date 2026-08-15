@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Bell, Mail, MessageSquare, MessageCircle, Smartphone } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
+import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { useNotificationPreferences, useUpdateNotificationPreferences } from '@/features/notifications/hooks/use-notifications'
 import { isBrowserPushSupported, requestBrowserPushPermission } from '@/features/notifications/lib/browser-push'
 import { DEFAULT_TASK_CHANNEL_PREFS } from '@/features/notifications/services/notifications.service'
@@ -92,10 +93,12 @@ export function NotificationPreferencesCard({
   title?: string
   description?: string
 }) {
-  const { profile } = useAuth()
+  const { profile, activeOrgId } = useAuth()
   const userId = profile?.id ?? null
   const { data: prefs, isLoading } = useNotificationPreferences(userId)
   const update = useUpdateNotificationPreferences(userId)
+  const { has: hasFeature } = usePlanFeature(activeOrgId)
+  const whatsappInPlan = hasFeature('whatsapp_reminders')
 
   const [whatsappNumber, setWhatsappNumber] = React.useState('')
   React.useEffect(() => {
@@ -155,8 +158,13 @@ export function NotificationPreferencesCard({
           <ToggleSwitch
             icon={MessageCircle}
             label="WhatsApp"
-            hint="Delivery requires your firm to configure a WhatsApp provider — until then, messages won't send even if enabled here."
+            hint={
+              !whatsappInPlan
+                ? 'Available on the Professional plan and above — upgrade in Firm Settings to unlock it.'
+                : "Delivery requires your firm to configure a WhatsApp provider — until then, messages won't send even if enabled here."
+            }
             checked={prefs.whatsapp_enabled}
+            disabled={!whatsappInPlan}
             onChange={(v) => update.mutate({ whatsapp_enabled: v })}
           />
           {prefs.whatsapp_enabled && (

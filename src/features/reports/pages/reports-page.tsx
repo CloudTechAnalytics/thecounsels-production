@@ -7,9 +7,9 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useReportData, useReportKpis } from '@/features/reports/hooks/use-reports'
 import type { ReportData, ReportFilters } from '@/features/reports/services/reports.service'
-import { useMatters, useFirmMembers } from '@/features/matters/hooks/use-matters'
+import { useFirmMembers } from '@/features/matters/hooks/use-matters'
 import { useClients } from '@/features/clients/hooks/use-clients'
-import { PRACTICE_AREAS, MATTER_STATUS_META } from '@/features/matters/types'
+import { PRACTICE_AREAS } from '@/features/matters/types'
 import { StatTile } from '@/features/dashboard/components/stat-tile'
 import { PageHeader } from '@/shared/components/page-header'
 import { ExportButton } from '@/shared/components/export-button'
@@ -146,55 +146,38 @@ const ALL = 'all'
 
 function FiltersBar({ filters, set }: { filters: ReportFilters; set: <K extends keyof ReportFilters>(key: K, value: ReportFilters[K]) => void }) {
   const { activeOrgId } = useAuth()
-  const { data: matters } = useMatters(activeOrgId, {})
   const { data: members } = useFirmMembers(activeOrgId)
   const { data: clients } = useClients(activeOrgId, {})
 
   return (
-    <div className="mb-6 flex flex-nowrap items-center gap-3 overflow-x-auto pb-1">
-      <div className="flex flex-[1.4] min-w-[200px] items-center gap-1.5">
+    <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="flex items-center gap-1.5">
         <span className="shrink-0 text-xs text-muted-foreground">From</span>
         <Input type="date" value={filters.dateFrom ?? ''} onChange={(e) => set('dateFrom', e.target.value || undefined)} className="w-full min-w-0" aria-label="From date" />
       </div>
-      <div className="flex flex-[1.4] min-w-[200px] items-center gap-1.5">
+      <div className="flex items-center gap-1.5">
         <span className="shrink-0 text-xs text-muted-foreground">To</span>
         <Input type="date" value={filters.dateTo ?? ''} onChange={(e) => set('dateTo', e.target.value || undefined)} className="w-full min-w-0" aria-label="To date" />
       </div>
       <Select value={filters.lawyerId ?? ALL} onValueChange={(v) => set('lawyerId', v)}>
-        <SelectTrigger className="flex-1 min-w-[150px]"><SelectValue placeholder="All lawyers" /></SelectTrigger>
+        <SelectTrigger><SelectValue placeholder="All lawyers" /></SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>All lawyers</SelectItem>
           {members?.map((m) => <SelectItem key={m.user_id} value={m.user_id}>{m.profile?.full_name ?? m.profile?.email}</SelectItem>)}
         </SelectContent>
       </Select>
       <Select value={filters.clientId ?? ALL} onValueChange={(v) => set('clientId', v)}>
-        <SelectTrigger className="flex-1 min-w-[150px]"><SelectValue placeholder="All clients" /></SelectTrigger>
+        <SelectTrigger><SelectValue placeholder="All clients" /></SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>All clients</SelectItem>
           {clients?.map((c) => <SelectItem key={c.id} value={c.id}>{c.display_name}</SelectItem>)}
         </SelectContent>
       </Select>
-      <Select value={filters.matterId ?? ALL} onValueChange={(v) => set('matterId', v)}>
-        <SelectTrigger className="flex-1 min-w-[160px]"><SelectValue placeholder="All matters" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL}>All matters</SelectItem>
-          {matters?.map((m) => <SelectItem key={m.id} value={m.id}>{m.matter_number} — {m.title}</SelectItem>)}
-        </SelectContent>
-      </Select>
       <Select value={filters.practiceArea ?? ALL} onValueChange={(v) => set('practiceArea', v)}>
-        <SelectTrigger className="flex-1 min-w-[160px]"><SelectValue placeholder="All practice areas" /></SelectTrigger>
+        <SelectTrigger><SelectValue placeholder="All practice areas" /></SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>All practice areas</SelectItem>
           {PRACTICE_AREAS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={filters.status ?? ALL} onValueChange={(v) => set('status', v as ReportFilters['status'])}>
-        <SelectTrigger className="flex-1 min-w-[150px]"><SelectValue placeholder="All statuses" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL}>All statuses</SelectItem>
-          {Object.entries(MATTER_STATUS_META).map(([v, meta]) => (
-            <SelectItem key={v} value={v}>{meta.label}</SelectItem>
-          ))}
         </SelectContent>
       </Select>
     </div>

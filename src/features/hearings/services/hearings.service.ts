@@ -3,7 +3,7 @@ import type { HearingStatus } from '@/shared/types/database.types'
 import type { HearingFormValues } from '@/features/hearings/schemas'
 import type { HearingRow } from '@/features/hearings/types'
 
-const SELECT = '*, matter:matters(id, title, matter_number)'
+const SELECT = '*, matter:matters(id, title, matter_number, status)'
 
 export interface HearingFilters {
   search?: string

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { MoreHorizontal, Pencil, Trash2, MapPin, Scale } from 'lucide-react'
 import { HEARING_STATUS_META, type HearingRow } from '@/features/hearings/types'
+import { isMatterClosed } from '@/features/matters/types'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
@@ -28,6 +29,13 @@ export function HearingCard({
   showMatter?: boolean
 }) {
   const meta = HEARING_STATUS_META[h.status]
+  // A closed matter's hearings have no leadership bypass, unlike the
+  // matter itself — hearings_update/_delete RLS blocks everyone once
+  // matter_is_open() is false, no exceptions. Hide the menu to match,
+  // rather than let anyone open it and hit a blocked save.
+  const matterClosed = h.matter ? isMatterClosed(h.matter.status) : false
+  const showEdit = canEdit && !matterClosed
+  const showDelete = canDelete && !matterClosed
   return (
     <Card className="flex items-start gap-4 p-4">
       <div className="flex w-16 shrink-0 flex-col items-center rounded-lg bg-primary/10 py-2 text-primary">
@@ -53,7 +61,7 @@ export function HearingCard({
         </div>
         {h.outcome && <p className="mt-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">Outcome:</span> {h.outcome}</p>}
       </div>
-      {(canEdit || canDelete) && (
+      {(showEdit || showDelete) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Actions">
@@ -61,8 +69,8 @@ export function HearingCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {canEdit && <DropdownMenuItem onClick={onEdit}><Pencil /> Edit / record outcome</DropdownMenuItem>}
-            {canDelete && (
+            {showEdit && <DropdownMenuItem onClick={onEdit}><Pencil /> Edit / record outcome</DropdownMenuItem>}
+            {showDelete && (
               <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onDelete}>
                 <Trash2 /> Delete
               </DropdownMenuItem>

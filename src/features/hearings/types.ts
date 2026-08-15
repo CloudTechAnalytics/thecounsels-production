@@ -2,7 +2,7 @@ import type { BadgeProps } from '@/shared/components/ui/badge'
 import type { Hearing, HearingStatus, HearingType, Matter } from '@/shared/types/database.types'
 
 export interface HearingRow extends Hearing {
-  matter: Pick<Matter, 'id' | 'title' | 'matter_number'> | null
+  matter: Pick<Matter, 'id' | 'title' | 'matter_number' | 'status'> | null
 }
 
 export const HEARING_TYPES: HearingType[] = ['mention', 'hearing', 'trial', 'ruling', 'motion', 'conference', 'other']

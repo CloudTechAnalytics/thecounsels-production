@@ -17,12 +17,14 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useHearings } from '@/features/hearings/hooks/use-hearings'
 import { HearingFormDialog } from '@/features/hearings/components/hearing-form-dialog'
 import { HEARING_STATUS_META, type HearingRow } from '@/features/hearings/types'
+import { isMatterClosed } from '@/features/matters/types'
 import { useTasks } from '@/features/tasks/hooks/use-tasks'
 import { TASK_STATUS_META, type TaskRow } from '@/features/tasks/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
+import { toast } from '@/shared/components/ui/sonner'
 import { cn } from '@/shared/lib/utils'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -74,6 +76,13 @@ export function CalendarPage() {
   }, [data, taskData])
 
   const openHearing = (h: HearingRow) => {
+    // No leadership bypass on hearings once the matter is closed (unlike
+    // the matter itself) — RLS blocks the save for everyone, so don't
+    // even offer the edit form.
+    if (h.matter && isMatterClosed(h.matter.status)) {
+      toast.info('This hearing is on a closed matter and can no longer be edited.')
+      return
+    }
     setEditing(h)
     setPresetDate(undefined)
     setFormOpen(true)

@@ -22,6 +22,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { toast } from '@/shared/components/ui/sonner'
+import { errorMessage } from '@/shared/lib/errors'
 
 const NONE = '__none__'
 
@@ -79,7 +80,7 @@ export function HearingFormDialog({
       toast.success(hearing ? 'Hearing updated' : 'Hearing scheduled')
       onOpenChange(false)
     } catch (err) {
-      toast.error('Could not save hearing', { description: err instanceof Error ? err.message : undefined })
+      toast.error('Could not save hearing', { description: errorMessage(err) })
     }
   }
 

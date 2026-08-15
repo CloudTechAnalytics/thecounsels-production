@@ -7,6 +7,7 @@ import { useUpsertStaffProfile, useUploadAvatar } from '@/features/staff/hooks/u
 import { useRemoveMember } from '@/features/administration/hooks/use-administration'
 import { staffProfileSchema, type StaffProfileFormValues } from '@/features/staff/schemas'
 import { AVAILABILITY_OPTIONS, AVAILABILITY_META } from '@/features/staff/types'
+import { ROLE_META } from '@/shared/lib/permissions'
 import type { MemberWithRelations } from '@/features/administration/types'
 import type { MatterRow } from '@/features/matters/types'
 import type { StaffProfile } from '@/shared/types/database.types'
@@ -29,6 +30,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/shared/components/ui/form'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { initialsOf } from '@/shared/lib/format'
+import { cn } from '@/shared/lib/utils'
 import { toast } from '@/shared/components/ui/sonner'
 
 function toDefaults(profile?: StaffProfile | null): StaffProfileFormValues {
@@ -66,6 +68,12 @@ export function StaffProfileDialog({
   const isSelf = member.user_id === me?.id
   const canEdit = canManage || isSelf
   const canRemove = canManage && !isSelf && !member.is_owner
+  // Bar number/year admitted only mean something for people who can
+  // actually be admitted to the bar — Leadership and Fee Earners.
+  // Paralegal/Litigation Clerk aren't bar-admitted, and it's meaningless
+  // noise on a Finance/HR/Secretary/Receptionist profile.
+  const roleGroup = member.role?.key ? ROLE_META[member.role.key]?.group : undefined
+  const isLawyer = roleGroup === 'Leadership' || roleGroup === 'Fee Earners'
 
   const fileRef = React.useRef<HTMLInputElement>(null)
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(member.profile?.avatar_url ?? null)
@@ -152,13 +160,17 @@ export function StaffProfileDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <fieldset disabled={!canEdit} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <FormField control={form.control} name="barNumber" render={({ field }) => (
-                  <FormItem><FormLabel>Bar number</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                )} />
-                <FormField control={form.control} name="yearAdmitted" render={({ field }) => (
-                  <FormItem><FormLabel>Year admitted</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
-                )} />
+              <div className={cn('grid gap-4', isLawyer ? 'sm:grid-cols-3' : 'sm:grid-cols-1')}>
+                {isLawyer && (
+                  <>
+                    <FormField control={form.control} name="barNumber" render={({ field }) => (
+                      <FormItem><FormLabel>Bar number</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                    )} />
+                    <FormField control={form.control} name="yearAdmitted" render={({ field }) => (
+                      <FormItem><FormLabel>Year admitted</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
+                    )} />
+                  </>
+                )}
                 <FormField control={form.control} name="availability" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Availability</FormLabel>

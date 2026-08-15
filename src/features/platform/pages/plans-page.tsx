@@ -41,7 +41,12 @@ export function PlansPage() {
         </div>
       ) : (
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {data?.map((plan) => {
+          {/* Retired plans (e.g. the old single-tier "Early Access" trial,
+              0053) stay in the database — any historical org's
+              subscriptions.plan_id still points at one, and deleting the
+              row would break that reference — they just don't belong in
+              this "what we currently offer" management view. */}
+          {data?.filter((plan) => plan.is_active).map((plan) => {
             const features = (plan.features as Record<string, boolean>) ?? {}
             return (
               <Card key={plan.id} className="flex flex-col p-6">
@@ -50,7 +55,6 @@ export function PlansPage() {
                     <div className="flex items-center gap-2">
                       <h3 className="font-display text-xl font-semibold">{plan.name}</h3>
                       {plan.is_custom && <Badge variant="secondary">Custom</Badge>}
-                      {!plan.is_active && <Badge variant="muted">Inactive</Badge>}
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
                   </div>

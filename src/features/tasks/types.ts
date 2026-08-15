@@ -2,7 +2,7 @@ import type { BadgeProps } from '@/shared/components/ui/badge'
 import type { Matter, Profile, Task, TaskPriority, TaskStatus } from '@/shared/types/database.types'
 
 export interface TaskRow extends Task {
-  matter: Pick<Matter, 'id' | 'title' | 'matter_number'> | null
+  matter: Pick<Matter, 'id' | 'title' | 'matter_number' | 'status'> | null
   assignee: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
 }
 

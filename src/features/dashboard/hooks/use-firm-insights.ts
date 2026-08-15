@@ -36,9 +36,12 @@ export function useFirmInsights(organizationId: string | null, includeFinancial 
         reportsService.getReportData(organizationId!),
         supabase
           .from('hearings')
-          .select('id, title, hearing_at, matter_id, status')
+          // Only still-pending hearings are "imminent" — 'held' already
+          // happened (even if hearing_at technically still matches a
+          // >= now filter at the boundary) and 'cancelled' never will.
+          .select('id, title, hearing_at, matter_id, status, matter:matters(status)')
           .eq('organization_id', organizationId!)
-          .neq('status', 'cancelled')
+          .in('status', ['scheduled', 'adjourned'])
           .gte('hearing_at', nowIso)
           .order('hearing_at', { ascending: true }),
         supabase
@@ -49,7 +52,12 @@ export function useFirmInsights(organizationId: string | null, includeFinancial 
       ])
       if (hearingsRes.error) throw hearingsRes.error
       if (docsTodayRes.error) throw docsTodayRes.error
-      const hearings = hearingsRes.data ?? []
+      // A hearing on a matter that's since closed is history, not
+      // something to surface as upcoming/urgent.
+      const hearings = (hearingsRes.data ?? []).filter((h) => {
+        const status = (h.matter as { status?: string } | null)?.status
+        return !status || !['closed', 'won', 'lost'].includes(status)
+      })
 
       const insights: FirmInsight[] = []
       const now = new Date()

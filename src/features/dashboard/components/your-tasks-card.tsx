@@ -5,6 +5,7 @@ import { CheckSquare, ListChecks } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useTasks } from '@/features/tasks/hooks/use-tasks'
 import { TASK_PRIORITY_META, type TaskRow } from '@/features/tasks/types'
+import { isMatterClosed } from '@/features/matters/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
@@ -30,7 +31,12 @@ function bucketTasks(tasks: TaskRow[]): Buckets {
   const weekEnd = new Date(today)
   weekEnd.setDate(today.getDate() + 7)
 
-  const incomplete = tasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled' && t.due_date)
+  // A task on a matter that's since closed can't be completed anymore
+  // (RLS blocks it, same as editing/deleting) — listing it under Overdue/
+  // Due today implies it's still actionable when it no longer is.
+  const incomplete = tasks.filter(
+    (t) => t.status !== 'done' && t.status !== 'cancelled' && t.due_date && !(t.matter && isMatterClosed(t.matter.status)),
+  )
   const completed = tasks
     .filter((t) => t.status === 'done')
     .sort((a, b) => new Date(b.completed_at ?? b.updated_at).getTime() - new Date(a.completed_at ?? a.updated_at).getTime())

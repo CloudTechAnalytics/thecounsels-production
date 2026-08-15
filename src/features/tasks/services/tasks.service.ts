@@ -4,7 +4,7 @@ import type { TaskFormValues } from '@/features/tasks/schemas'
 import type { TaskRow } from '@/features/tasks/types'
 
 const SELECT =
-  '*, matter:matters(id, title, matter_number), assignee:profiles!tasks_assignee_id_fkey(id, full_name, avatar_url)'
+  '*, matter:matters(id, title, matter_number, status), assignee:profiles!tasks_assignee_id_fkey(id, full_name, avatar_url)'
 
 export interface TaskFilters {
   search?: string

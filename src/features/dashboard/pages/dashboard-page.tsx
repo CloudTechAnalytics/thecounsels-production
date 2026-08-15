@@ -68,8 +68,10 @@ export function DashboardPage() {
 
       <OnboardingChecklistCard organizationId={activeOrgId} />
 
-      {/* KPIs — role-aware, wraps onto multiple rows like the Platform Console's KPI grid, never scrolls horizontally */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      {/* KPIs — role-aware. 10 tiles (financial) and 6 (personal) need
+          different column counts to land evenly instead of leaving a
+          lone tile stranded on its own row (6 in a 5-col grid = 5+1). */}
+      <div className={cn('grid grid-cols-2 gap-4 sm:grid-cols-3', canFinancials ? 'lg:grid-cols-5' : 'lg:grid-cols-6')}>
         {canFinancials ? (
           <>
             <StatTile label="Active matters" countTo={kpis?.activeMatters ?? 0} value={String(kpis?.activeMatters ?? 0)} hint="Open, pending or in court" icon={Briefcase} loading={kpisLoading} />

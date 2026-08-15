@@ -117,7 +117,7 @@ const PLAN_FEATURE_COPY: Record<PlanFeatureKey, { label: string; plan: string }>
   messaging: { label: 'Messaging', plan: 'Professional' },
   whatsapp_reminders: { label: 'WhatsApp reminders', plan: 'Professional' },
   hr_module: { label: 'HR & People Management', plan: 'Business' },
-  ai_summarization: { label: 'AI matter summaries', plan: 'Business' },
+  ai_summarization: { label: 'AI matter summaries & chat', plan: 'Business' },
 }
 
 /** Guard a route by subscription plan; same in-place "restricted" panel

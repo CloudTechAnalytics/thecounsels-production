@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
-import { Sparkles, RotateCcw, Lock } from 'lucide-react'
+import { Sparkles, RotateCcw, Lock, MessageCircle } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useSubscription } from '@/features/administration/hooks/use-administration'
 import { planHasFeature } from '@/features/administration/lib/plan-features'
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { Button } from '@/shared/components/ui/button'
 import { toast } from '@/shared/components/ui/sonner'
 
-export function MatterAiSummaryCard({ matter }: { matter: MatterRow }) {
+export function MatterAiSummaryCard({ matter, onNavigateTab }: { matter: MatterRow; onNavigateTab: (tab: 'ai-chat') => void }) {
   const { activeOrgId } = useAuth()
   const { data: subscription } = useSubscription(activeOrgId)
   const summarize = useSummarizeMatter(matter.id)
@@ -56,15 +56,20 @@ export function MatterAiSummaryCard({ matter }: { matter: MatterRow }) {
         <CardTitle className="flex items-center gap-2 text-base">
           <Sparkles className="h-4 w-4 text-primary" /> AI Matter Summary
         </CardTitle>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={generate}
-          loading={summarize.isPending}
-          disabled={summarize.isPending}
-        >
-          <RotateCcw className="h-3.5 w-3.5" /> {matter.ai_summary ? 'Regenerate' : 'Generate'}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={() => onNavigateTab('ai-chat')}>
+            <MessageCircle className="h-3.5 w-3.5" /> Chat
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={generate}
+            loading={summarize.isPending}
+            disabled={summarize.isPending}
+          >
+            <RotateCcw className="h-3.5 w-3.5" /> {matter.ai_summary ? 'Regenerate' : 'Generate'}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {matter.ai_summary ? (

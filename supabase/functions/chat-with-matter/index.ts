@@ -1,22 +1,22 @@
 // ============================================================================
-// Edge Function: summarize-matter
-// Generates an AI summary of a matter (status, client, key dates, open
-// tasks, hearings) via Google's Gemini API — chosen specifically because
-// its free tier requires no billing/credit card to start (Anthropic and
-// OpenAI both require a funded account, even at low volume). Business/
-// Enterprise plans only — enforced HERE, server-side, via the service-role
-// client reading the org's actual plan; the frontend's own gate only
-// controls what's *shown*, same principle as every other access check in
-// this app (never trust the client).
+// Edge Function: chat-with-matter
+// Conversational follow-up on a matter, building on summarize-matter's
+// one-shot summary — same Gemini setup, same matter/tasks/hearings
+// grounding logic, but multi-turn and persisted per (matter, user) in
+// matter_ai_chat_messages. Business/Enterprise plans only (ai_summarization
+// — this is "more AI on a matter," not a separate capability tier),
+// enforced HERE server-side, same posture as summarize-matter.
 //
-// Deploy:  supabase functions deploy summarize-matter
-// Secrets: supabase secrets set GEMINI_API_KEY=...
-//   Get a free key at https://aistudio.google.com/apikey — no card needed.
-//   Free tier is rate-limited (requests/minute and /day); if generation
-//   starts failing under real load, that's the first thing to check.
-// GEMINI_MODEL uses the "-latest" alias (see its own comment below) so a
-// retired dated model string shouldn't cause this again — if generation
-// still fails, it's most likely the API key or a rate limit, not the model.
+// No client-direct writes to matter_ai_chat_messages at all (see its own
+// migration, 0102) — this function is the only writer, for both the
+// user's message and the AI's reply, inserted together in one call.
+//
+// Deploy:  supabase functions deploy chat-with-matter
+//   (no --no-verify-jwt — this is called directly from the browser with
+//   the signed-in user's own session, same as summarize-matter; unlike
+//   send-task-notification, which pg_net calls with a service-role token.)
+// Secrets: none new — GEMINI_API_KEY is already project-scoped from
+//   summarize-matter's setup, resolves automatically here too.
 // ============================================================================
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.46.1'
 
@@ -30,25 +30,12 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 }
 
-// gemini-2.0-flash, then gemini-2.5-flash, were each retired for new users
-// in turn (both confirmed via a live 404 from Google's API) — pinning an
-// exact dated model string here has now broken this feature twice in one
-// session. Switched to the "-latest" alias instead: Google hot-swaps it to
-// whatever the current non-deprecated Flash model is, with a 2-week email
-// notice before any breaking change — it stays on the Flash tier (the
-// free-tier-friendly one this integration was chosen for) rather than ever
-// silently resolving to a paid Pro model. If generation ever starts
-// failing again, it's no longer "which model string is current" — check
-// GEMINI_API_KEY/quota first.
+// See summarize-matter/index.ts's own comment for why this is the
+// "-latest" alias rather than a pinned dated model string (two prior
+// outages from Google retiring a dated model for new users).
 const GEMINI_MODEL = 'gemini-flash-latest'
-// 2.5+/3.x Flash models "think" before answering by default, and those
-// reasoning tokens are drawn from this same maxOutputTokens budget — a low
-// limit can get fully consumed by invisible thinking before a single
-// visible token is written, producing exactly what looks like a truncated
-// response cut off after a couple of words. thinkingBudget: 0 below turns
-// that off (plain, fast completion, no hidden token cost); this is kept
-// generous anyway as headroom for a genuine 3-5 paragraph brief.
 const MAX_TOKENS = 1536
+const HISTORY_LIMIT = 20
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -62,14 +49,16 @@ Deno.serve(async (req: Request) => {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return json({ error: 'Missing authorization' }, 401)
 
-  let body: { matterId?: string }
+  let body: { matterId?: string; message?: string }
   try {
     body = await req.json()
   } catch {
     return json({ error: 'Invalid JSON body' }, 400)
   }
   const { matterId } = body
+  const message = body.message?.trim()
   if (!matterId) return json({ error: 'matterId is required' }, 400)
+  if (!message) return json({ error: 'message is required' }, 400)
 
   // Caller-scoped client — RLS does the real access check. If this can read
   // the matter at all, the caller is genuinely allowed to see it; no
@@ -83,24 +72,27 @@ Deno.serve(async (req: Request) => {
     .select('id, organization_id, title, description, status, practice_area, court, judge, opposing_counsel, priority, opened_on, closed_on, client:clients(display_name)')
     .eq('id', matterId)
     .maybeSingle()
-  // Logged so a real query failure (bad column, ambiguous embed, etc.) is
-  // never indistinguishable from an actual access denial again.
-  if (matterErr) console.error('Matter lookup failed in summarize-matter:', matterErr)
+  if (matterErr) console.error('Matter lookup failed in chat-with-matter:', matterErr)
   if (matterErr || !matter) return json({ error: 'Matter not found, or you do not have access to it' }, 404)
 
-  if (!GEMINI_API_KEY) return json({ error: 'AI summarization is not configured yet — contact support.' }, 400)
+  if (matter.status === 'closed' || matter.status === 'won' || matter.status === 'lost') {
+    return json({ error: 'This matter is closed — AI chat is read-only. Historical messages still show.' }, 403)
+  }
+
+  if (!GEMINI_API_KEY) return json({ error: 'AI chat is not configured yet — contact support.' }, 400)
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { autoRefreshToken: false, persistSession: false } })
 
   // Server-side plan enforcement — the actual gate, not the frontend's own
-  // (which only controls visibility). org_has_feature() (0100) is the
-  // current, shared convention — chat-with-matter uses the same call.
+  // (which only controls visibility). Uses org_has_feature() (0100), the
+  // current convention — summarize-matter still hand-rolls the equivalent
+  // subscriptions->plans.features lookup inline; both check the same key.
   const { data: hasFeature } = await admin.rpc('org_has_feature', { p_org: matter.organization_id, p_feature: 'ai_summarization' })
   if (!hasFeature) {
-    return json({ error: 'AI summarization is available on the Business plan and above. Upgrade to use it.' }, 403)
+    return json({ error: 'AI chat is available on the Business plan and above. Upgrade to use it.' }, 403)
   }
 
-  const [{ data: tasks }, { data: hearings }] = await Promise.all([
+  const [{ data: tasks }, { data: hearings }, { data: history }] = await Promise.all([
     admin
       .from('tasks')
       .select('title, status, priority, due_date')
@@ -114,6 +106,13 @@ Deno.serve(async (req: Request) => {
       .eq('matter_id', matterId)
       .order('hearing_at', { ascending: false })
       .limit(10),
+    admin
+      .from('matter_ai_chat_messages')
+      .select('role, content, created_at')
+      .eq('matter_id', matterId)
+      .eq('user_id', userData.user.id)
+      .order('created_at', { ascending: false })
+      .limit(HISTORY_LIMIT),
   ])
 
   const client = (matter as unknown as { client: { display_name: string } | null }).client
@@ -139,14 +138,21 @@ Deno.serve(async (req: Request) => {
       : ['- none']),
   ].filter((l): l is string => l !== null)
 
-  const prompt = [
-    'You are a legal practice assistant. Summarize the following matter for a lawyer who needs a quick, accurate refresher before a call or hearing.',
-    'Write 3-5 short paragraphs: current status, what has happened, what is outstanding/due next, and anything risky or time-sensitive.',
-    'Plain text only — this is displayed as-is with no markdown rendering. No **bold**, no # headings, no * or - bullet symbols. Separate points with a plain line break instead.',
-    'Be factual and concise. Do not invent facts not present below.',
+  const systemInstruction = [
+    'You are a legal practice assistant answering questions about a specific matter for the lawyer working on it.',
+    'Plain text only — this is displayed as-is with no markdown rendering. No **bold**, no # headings, no * or - bullet symbols.',
+    'Be factual and concise. Only use the matter details below and the conversation so far — do not invent facts.',
     '',
     lines.join('\n'),
   ].join('\n')
+
+  // History was fetched newest-first (for the LIMIT to keep the most
+  // recent turns); Gemini needs it oldest-first.
+  const orderedHistory = (history ?? []).slice().reverse()
+  const contents = [
+    ...orderedHistory.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+    { role: 'user', parts: [{ text: message }] },
+  ]
 
   const aiRes = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
@@ -154,7 +160,8 @@ Deno.serve(async (req: Request) => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents,
         generationConfig: { maxOutputTokens: MAX_TOKENS, thinkingConfig: { thinkingBudget: 0 } },
       }),
     },
@@ -163,26 +170,19 @@ Deno.serve(async (req: Request) => {
   if (!aiRes.ok) {
     const errText = await aiRes.text().catch(() => '')
     console.error('Gemini API error:', aiRes.status, errText)
-    return json({ error: 'Could not generate a summary right now. Please try again.' }, 502)
+    return json({ error: 'Could not get a reply right now. Please try again.' }, 502)
   }
 
   const aiData = await aiRes.json()
   const parts: { text?: string }[] = aiData.candidates?.[0]?.content?.parts ?? []
-  const summary: string = parts.map((p) => p.text ?? '').join('').trim()
-  if (!summary) return json({ error: 'The AI did not return a summary. Please try again.' }, 502)
+  const reply: string = parts.map((p) => p.text ?? '').join('').trim()
+  if (!reply) return json({ error: 'The AI did not return a reply. Please try again.' }, 502)
 
-  const generatedAt = new Date().toISOString()
-  await admin.from('matters').update({ ai_summary: summary, ai_summary_generated_at: generatedAt }).eq('id', matterId)
-  await admin.rpc('log_audit', {
-    p_org: matter.organization_id,
-    p_action: 'matter.ai_summary_generated',
-    p_entity_type: 'matter',
-    p_entity_id: matterId,
-    p_summary: `AI summary generated for ${matter.title}`,
-    // Same service-role-client gap as admin-create-user — pass the real
-    // caller through so this doesn't show up as "Someone".
-    p_actor_id: userData.user.id,
-  })
+  const { error: insertErr } = await admin.from('matter_ai_chat_messages').insert([
+    { organization_id: matter.organization_id, matter_id: matterId, user_id: userData.user.id, role: 'user', content: message },
+    { organization_id: matter.organization_id, matter_id: matterId, user_id: userData.user.id, role: 'assistant', content: reply },
+  ])
+  if (insertErr) console.error('Could not save chat messages:', insertErr)
 
-  return json({ summary, generatedAt })
+  return json({ reply })
 })

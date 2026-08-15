@@ -103,5 +103,5 @@ export const PLAN_FEATURES: { key: string; label: string }[] = [
   { key: 'messaging', label: 'Messaging (channels + DMs)' },
   { key: 'whatsapp_reminders', label: 'WhatsApp reminders' },
   { key: 'hr_module', label: 'HR & People Management' },
-  { key: 'ai_summarization', label: 'AI matter summaries' },
+  { key: 'ai_summarization', label: 'AI matter summaries & chat' },
 ]

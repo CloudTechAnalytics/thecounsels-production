@@ -1,9 +1,10 @@
 import * as React from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { ArrowLeft, Pencil, Trash2, LockOpen, FileText, StickyNote, LayoutGrid, Activity, Gavel, CheckSquare } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, LockOpen, FileText, StickyNote, LayoutGrid, Activity, Gavel, CheckSquare, Sparkles } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
+import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { useMatter, useDeleteMatter, useReopenMatter } from '@/features/matters/hooks/use-matters'
 import { MatterFormDialog } from '@/features/matters/components/matter-form-dialog'
 import { DocumentsPanel } from '@/features/matters/components/documents-panel'
@@ -13,6 +14,7 @@ import { MatterHearingsPanel } from '@/features/matters/components/matter-hearin
 import { MatterTasksPanel } from '@/features/matters/components/matter-tasks-panel'
 import { MatterSummaryCard } from '@/features/matters/components/matter-summary-card'
 import { MatterAiSummaryCard } from '@/features/matters/components/matter-ai-summary-card'
+import { MatterAiChatPanel } from '@/features/matters/components/matter-ai-chat-panel'
 import { MatterProgressCard } from '@/features/matters/components/matter-progress-card'
 import { MatterTeamCard } from '@/features/matters/components/matter-team-card'
 import { MATTER_STATUS_META } from '@/features/matters/types'
@@ -34,6 +36,7 @@ const TABS = [
   { key: 'tasks', label: 'Tasks', icon: CheckSquare },
   { key: 'documents', label: 'Documents', icon: FileText },
   { key: 'notes', label: 'Notes', icon: StickyNote },
+  { key: 'ai-chat', label: 'AI Chat', icon: Sparkles },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 
@@ -51,6 +54,8 @@ export function MatterDetailPage() {
   const navigate = useNavigate()
   const { activeOrgId } = useAuth()
   const { has } = usePermissions()
+  const { has: hasFeature } = usePlanFeature(activeOrgId)
+  const hasAiChat = hasFeature('ai_summarization')
   const { data: matter, isLoading, isError } = useMatter(id)
   const del = useDeleteMatter(activeOrgId)
   const reopen = useReopenMatter(activeOrgId)
@@ -125,7 +130,7 @@ export function MatterDetailPage() {
 
       {/* Tabs */}
       <div className="mt-6 flex gap-1 border-b border-border">
-        {TABS.map((t) => (
+        {TABS.filter((t) => t.key !== 'ai-chat' || hasAiChat).map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
@@ -174,7 +179,7 @@ export function MatterDetailPage() {
                 </div>
               )}
               <div className="mt-6">
-                <MatterAiSummaryCard matter={matter} />
+                <MatterAiSummaryCard matter={matter} onNavigateTab={setTab} />
               </div>
             </Card>
             <div className="space-y-6">
@@ -189,6 +194,7 @@ export function MatterDetailPage() {
         {tab === 'tasks' && <MatterTasksPanel matterId={matter.id} readOnly={isClosed} />}
         {tab === 'documents' && <DocumentsPanel matterId={matter.id} readOnly={isClosed} />}
         {tab === 'notes' && <NotesPanel matterId={matter.id} readOnly={isClosed} />}
+        {tab === 'ai-chat' && hasAiChat && <MatterAiChatPanel matterId={matter.id} readOnly={isClosed} />}
       </div>
 
       <MatterFormDialog matter={matter} open={editOpen} onOpenChange={setEditOpen} />

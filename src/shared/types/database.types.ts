@@ -1008,6 +1008,28 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['onboarding_task_links']['Insert']>
         Relationships: []
       }
+      matter_ai_chat_messages: {
+        Row: {
+          id: string
+          organization_id: string
+          matter_id: string
+          user_id: string
+          role: string
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          matter_id: string
+          user_id: string
+          role: string
+          content: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['matter_ai_chat_messages']['Insert']>
+        Relationships: []
+      }
       hr_announcements: {
         Row: {
           id: string

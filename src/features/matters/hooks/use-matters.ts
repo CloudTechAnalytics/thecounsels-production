@@ -80,6 +80,14 @@ export function useDeleteMatter(organizationId: string | null) {
 }
 
 // Team assignments ------------------------------------------------------------
+export function useAllMatterAssignments(organizationId: string | null) {
+  return useQuery({
+    queryKey: ['matter-assignments-all', organizationId],
+    enabled: Boolean(organizationId),
+    queryFn: () => mattersService.listAllAssignments(organizationId!),
+  })
+}
+
 export function useMatterAssignments(matterId: string | undefined) {
   return useQuery({
     queryKey: ['matter-assignments', matterId],
@@ -92,6 +100,7 @@ function useInvalidateAssignments(matterId: string | undefined) {
   const qc = useQueryClient()
   return () => {
     qc.invalidateQueries({ queryKey: ['matter-assignments', matterId] })
+    qc.invalidateQueries({ queryKey: ['matter-assignments-all'] })
     qc.invalidateQueries({ queryKey: ['matter', matterId] })
     qc.invalidateQueries({ queryKey: ['matter-events', matterId] })
     qc.invalidateQueries({ queryKey: ['matters'] })

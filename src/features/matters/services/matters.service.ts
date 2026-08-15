@@ -194,6 +194,20 @@ export const mattersService = {
     return (data ?? []) as unknown as MatterAssignmentRow[]
   },
 
+  /** Every team-assignment row across the whole org, in one query — powers
+   * "active matters" on the Lawyers & Staff roster, which used to only
+   * count matters someone LED (lead_lawyer_id), always 0 for support
+   * staff (paralegals, litigation clerks, secretaries) who are genuinely
+   * assigned to a matter's team but never its lead. */
+  async listAllAssignments(organizationId: string): Promise<{ matter_id: string; user_id: string }[]> {
+    const { data, error } = await supabase
+      .from('matter_assignments')
+      .select('matter_id, user_id')
+      .eq('organization_id', organizationId)
+    if (error) throw error
+    return data ?? []
+  },
+
   async assignMember(organizationId: string, matterId: string, userId: string, assignedBy: string | null): Promise<void> {
     const { error } = await supabase
       .from('matter_assignments')

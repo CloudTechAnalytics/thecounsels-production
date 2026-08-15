@@ -2,11 +2,12 @@ import * as React from 'react'
 import { Search, Users, Scale, Briefcase } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useFirmMembers } from '@/features/matters/hooks/use-matters'
+import { useFirmMembers, useAllMatterAssignments } from '@/features/matters/hooks/use-matters'
 import { useMatters } from '@/features/matters/hooks/use-matters'
 import { useStaffProfiles } from '@/features/staff/hooks/use-staff'
 import { StaffProfileDialog } from '@/features/staff/components/staff-profile-dialog'
 import { AVAILABILITY_META, type StaffMember } from '@/features/staff/types'
+import { isMatterClosed } from '@/features/matters/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
@@ -22,20 +23,46 @@ export function StaffPage() {
   const { data: members, isLoading } = useFirmMembers(activeOrgId)
   const { data: profiles } = useStaffProfiles(activeOrgId)
   const { data: matters } = useMatters(activeOrgId, {})
+  const { data: assignments } = useAllMatterAssignments(activeOrgId)
   const [search, setSearch] = React.useState('')
   const [selected, setSelected] = React.useState<StaffMember | null>(null)
 
   const canManage = has('staff.manage')
   const profileByUser = React.useMemo(() => new Map((profiles ?? []).map((p) => [p.user_id, p])), [profiles])
-  const activeCountByUser = React.useMemo(() => {
-    const map = new Map<string, number>()
+
+  // "Active matters" used to only count matters someone LED (lead_lawyer_id)
+  // — always 0 for support staff (paralegals, litigation clerks,
+  // secretaries) genuinely working a matter as a team member, never its
+  // lead. Now counts both, deduped so leading AND being on the team of
+  // the same matter isn't double-counted.
+  const mattersByUser = React.useMemo(() => {
+    const map = new Map<string, Set<string>>()
+    const add = (userId: string, matterId: string) => {
+      if (!map.has(userId)) map.set(userId, new Set())
+      map.get(userId)!.add(matterId)
+    }
     for (const m of matters ?? []) {
-      if (m.lead_lawyer_id && !['closed', 'won', 'lost'].includes(m.status)) {
-        map.set(m.lead_lawyer_id, (map.get(m.lead_lawyer_id) ?? 0) + 1)
-      }
+      if (m.lead_lawyer_id) add(m.lead_lawyer_id, m.id)
+    }
+    for (const a of assignments ?? []) {
+      add(a.user_id, a.matter_id)
     }
     return map
-  }, [matters])
+  }, [matters, assignments])
+
+  const matterById = React.useMemo(() => new Map((matters ?? []).map((m) => [m.id, m])), [matters])
+  const activeCountByUser = React.useMemo(() => {
+    const map = new Map<string, number>()
+    for (const [userId, matterIds] of mattersByUser) {
+      let count = 0
+      for (const id of matterIds) {
+        const m = matterById.get(id)
+        if (m && !isMatterClosed(m.status)) count++
+      }
+      map.set(userId, count)
+    }
+    return map
+  }, [mattersByUser, matterById])
 
   const roster: StaffMember[] = (members ?? [])
     .filter((m) => {
@@ -49,7 +76,7 @@ export function StaffPage() {
     }))
 
   const assignedMattersFor = (userId: string) =>
-    (matters ?? []).filter((m) => m.lead_lawyer_id === userId)
+    [...(mattersByUser.get(userId) ?? [])].map((id) => matterById.get(id)).filter((m): m is NonNullable<typeof m> => Boolean(m))
 
   return (
     <div>

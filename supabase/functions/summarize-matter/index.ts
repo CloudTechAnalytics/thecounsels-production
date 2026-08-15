@@ -41,7 +41,14 @@ function json(body: unknown, status = 200) {
 // failing again, it's no longer "which model string is current" — check
 // GEMINI_API_KEY/quota first.
 const GEMINI_MODEL = 'gemini-flash-latest'
-const MAX_TOKENS = 700
+// 2.5+/3.x Flash models "think" before answering by default, and those
+// reasoning tokens are drawn from this same maxOutputTokens budget — a low
+// limit can get fully consumed by invisible thinking before a single
+// visible token is written, producing exactly what looks like a truncated
+// response cut off after a couple of words. thinkingBudget: 0 below turns
+// that off (plain, fast completion, no hidden token cost); this is kept
+// generous anyway as headroom for a genuine 3-5 paragraph brief.
+const MAX_TOKENS = 1536
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -138,7 +145,8 @@ Deno.serve(async (req: Request) => {
 
   const prompt = [
     'You are a legal practice assistant. Summarize the following matter for a lawyer who needs a quick, accurate refresher before a call or hearing.',
-    'Write 3-5 short paragraphs or a tight bulleted brief: current status, what has happened, what is outstanding/due next, and anything risky or time-sensitive.',
+    'Write 3-5 short paragraphs: current status, what has happened, what is outstanding/due next, and anything risky or time-sensitive.',
+    'Plain text only — this is displayed as-is with no markdown rendering. No **bold**, no # headings, no * or - bullet symbols. Separate points with a plain line break instead.',
     'Be factual and concise. Do not invent facts not present below.',
     '',
     lines.join('\n'),
@@ -151,7 +159,7 @@ Deno.serve(async (req: Request) => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: MAX_TOKENS },
+        generationConfig: { maxOutputTokens: MAX_TOKENS, thinkingConfig: { thinkingBudget: 0 } },
       }),
     },
   )

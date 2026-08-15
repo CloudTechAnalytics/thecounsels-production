@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import { LayoutGrid, UserSquare2, CalendarClock, FolderLock, Inbox, Megaphone, FileBarChart, ClipboardCheck, type LucideIcon } from 'lucide-react'
 import type { PermissionKey } from '@/shared/lib/permissions'
 import { LeaveNavBadge } from '@/features/hr/components/leave-nav-badge'
+import { AnnouncementsNavBadge } from '@/features/hr/components/announcements-nav-badge'
 
 export interface HrNavItem {
   label: string
@@ -31,7 +32,7 @@ export const HR_NAVIGATION: HrNavSection[] = [
       { label: 'Leave', to: '/hr/leave', icon: CalendarClock, permission: 'leave.request', badge: LeaveNavBadge },
       { label: 'Documents', to: '/hr/documents', icon: FolderLock, permission: 'hr_documents.view_own' },
       { label: 'HR Requests', to: '/hr/requests', icon: Inbox, permission: 'hr_requests.submit' },
-      { label: 'Announcements', to: '/hr/announcements', icon: Megaphone, permission: 'hr_announcements.view' },
+      { label: 'Announcements', to: '/hr/announcements', icon: Megaphone, permission: 'hr_announcements.view', badge: AnnouncementsNavBadge },
       { label: 'HR Reports', to: '/hr/reports', icon: FileBarChart, permission: 'hr.view_reports' },
     ],
   },

@@ -144,6 +144,36 @@ export function usePendingLeaveCount(organizationId: string | null) {
   })
 }
 
+export function useUnreadAnnouncementCount(organizationId: string | null) {
+  return useQuery({
+    queryKey: ['hr', 'unread-announcement-count', organizationId],
+    enabled: Boolean(organizationId),
+    queryFn: () => hrService.unreadAnnouncementCount(organizationId!),
+  })
+}
+
+/** Keeps the sidebar's Announcements badge live — mount once, high in the
+ * HR shell, same relationship useLeaveBadgeRealtime has with HrLayout.
+ * Unlike Leave (approvers only), announcements go to everyone, so this
+ * isn't permission-gated. */
+export function useAnnouncementBadgeRealtime(organizationId: string | null) {
+  const qc = useQueryClient()
+  React.useEffect(() => {
+    if (!organizationId) return
+    const channel = supabase
+      .channel(`announcement-badge:${organizationId}:${Date.now()}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `organization_id=eq.${organizationId}` },
+        () => qc.invalidateQueries({ queryKey: ['hr', 'unread-announcement-count', organizationId] }),
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [organizationId, qc])
+}
+
 /** Keeps the sidebar's Leave badge live regardless of which page is open —
  * mount once, high in the HR shell (HrLayout), same relationship
  * useMessagingBadgeRealtime has with OrganizationLayout. */

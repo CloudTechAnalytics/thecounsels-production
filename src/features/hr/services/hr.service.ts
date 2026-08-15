@@ -143,6 +143,19 @@ export const hrService = {
     if (error) throw error
     return count ?? 0
   },
+  /** Unread HR announcement notifications for the calling user — RLS on
+   * notifications already scopes to user_id = auth.uid(), so this is
+   * naturally "my unread announcements", no explicit user filter needed. */
+  async unreadAnnouncementCount(organizationId: string): Promise<number> {
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .eq('entity_type', 'hr_announcement')
+      .eq('is_read', false)
+    if (error) throw error
+    return count ?? 0
+  },
   async myLeaveBalances(organizationId: string, userId: string): Promise<LeaveBalanceRow[]> {
     const year = new Date().getFullYear()
     const { data, error } = await supabase

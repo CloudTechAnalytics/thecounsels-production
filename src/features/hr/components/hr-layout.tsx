@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { HrSidebar } from '@/features/hr/components/hr-sidebar'
 import { Topbar } from '@/shared/components/layout/topbar'
 import { useAuth } from '@/features/auth/context/auth-provider'
-import { useLeaveBadgeRealtime } from '@/features/hr/hooks/use-hr'
+import { useLeaveBadgeRealtime, useAnnouncementBadgeRealtime } from '@/features/hr/hooks/use-hr'
 
 /** HR workspace shell — a separate space behind the same login, same
  * pattern this app already uses for the Platform Console (PlatformLayout).
@@ -16,6 +16,7 @@ export function HrLayout() {
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const { activeOrgId } = useAuth()
   useLeaveBadgeRealtime(activeOrgId)
+  useAnnouncementBadgeRealtime(activeOrgId)
 
   return (
     <div className="flex h-full min-h-screen bg-background">

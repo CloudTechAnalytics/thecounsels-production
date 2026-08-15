@@ -28,7 +28,10 @@ export function useDashboardKpis(organizationId: string | null) {
           .from('hearings')
           .select('id', { count: 'exact', head: true })
           .eq('organization_id', organizationId!)
-          .neq('status', 'cancelled')
+          // Only still-pending hearings count as "this week" — a 'held'
+          // one already happened, even if its timestamp still falls
+          // inside the rolling window.
+          .in('status', ['scheduled', 'adjourned'])
           .gte('hearing_at', weekStart.toISOString())
           .lt('hearing_at', weekEnd.toISOString()),
         supabase

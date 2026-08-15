@@ -39,6 +39,12 @@ function useInvalidate(organizationId: string | null) {
     qc.invalidateQueries({ queryKey: ['matters', organizationId] })
     qc.invalidateQueries({ queryKey: ['matter'] })
     qc.invalidateQueries({ queryKey: ['reports'] })
+    // Prefix match catches all three dashboard caches (kpis, my-kpis,
+    // insights) — a status change (e.g. closing a matter) used to never
+    // touch these at all, so tiles like "Matters in court" kept showing
+    // whatever they last were until something else happened to trigger
+    // a refetch.
+    qc.invalidateQueries({ queryKey: ['dashboard'] })
   }
 }
 

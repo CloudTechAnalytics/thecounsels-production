@@ -37,6 +37,8 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { toast } from '@/shared/components/ui/sonner'
+import { friendlyErrorMessage } from '@/shared/lib/errors'
+import { isMatterClosed } from '@/features/matters/types'
 
 const RECEIPT_ACCEPT = '.pdf,.jpg,.jpeg,.png'
 const RECEIPT_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
@@ -45,9 +47,17 @@ const MAX_RECEIPT_BYTES = 10 * 1024 * 1024
 const NONE = '__none__'
 const today = () => new Date().toISOString().slice(0, 10)
 
-function MatterSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+/** currentMatterId keeps an already-linked-but-since-closed matter visible
+ * when editing, without offering closed matters for a fresh pick — a
+ * closed matter is read-only, so logging new time/expense against one
+ * would always fail. */
+function MatterSelect({ value, onChange, currentMatterId }: { value: string; onChange: (v: string) => void; currentMatterId?: string | null }) {
   const { activeOrgId } = useAuth()
-  const { data: matters } = useMatters(activeOrgId, {})
+  const { data: allMatters } = useMatters(activeOrgId, {})
+  const matters = React.useMemo(
+    () => (allMatters ?? []).filter((m) => !isMatterClosed(m.status) || m.id === currentMatterId),
+    [allMatters, currentMatterId],
+  )
   return (
     <Select value={value || NONE} onValueChange={onChange}>
       <SelectTrigger><SelectValue placeholder="No matter" /></SelectTrigger>
@@ -120,7 +130,7 @@ export function TimeEntryDialog({
       toast.success(entry ? 'Time entry updated' : 'Time logged')
       onOpenChange(false)
     } catch (err) {
-      toast.error('Could not save time entry', { description: err instanceof Error ? err.message : undefined })
+      toast.error('Could not save time entry', { description: friendlyErrorMessage(err) })
     }
   }
 
@@ -151,7 +161,7 @@ export function TimeEntryDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Matter</FormLabel>
-                    <MatterSelect value={field.value ?? ''} onChange={field.onChange} />
+                    <MatterSelect value={field.value ?? ''} onChange={field.onChange} currentMatterId={entry?.matter_id} />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -309,7 +319,7 @@ export function ExpenseDialog({
       onOpenChange(false)
     } catch (err) {
       toast.error(expense ? 'Could not update expense' : 'Could not log expense', {
-        description: err instanceof Error ? err.message : undefined,
+        description: friendlyErrorMessage(err),
       })
     }
   }
@@ -327,7 +337,7 @@ export function ExpenseDialog({
         a.click()
       }
     } catch (err) {
-      toast.error('Could not open receipt', { description: err instanceof Error ? err.message : undefined })
+      toast.error('Could not open receipt', { description: friendlyErrorMessage(err) })
     }
   }
 
@@ -350,7 +360,7 @@ export function ExpenseDialog({
         toast.success('Receipt uploaded')
       }
     } catch (err) {
-      toast.error('Could not save receipt', { description: err instanceof Error ? err.message : undefined })
+      toast.error('Could not save receipt', { description: friendlyErrorMessage(err) })
     }
   }
 
@@ -360,7 +370,7 @@ export function ExpenseDialog({
       await removeReceipt.mutateAsync(receipt)
       toast.success('Receipt removed')
     } catch (err) {
-      toast.error('Could not remove receipt', { description: err instanceof Error ? err.message : undefined })
+      toast.error('Could not remove receipt', { description: friendlyErrorMessage(err) })
     }
   }
 
@@ -382,7 +392,7 @@ export function ExpenseDialog({
         <fieldset disabled={invoiced} className="space-y-4 disabled:opacity-60">
           <div className="space-y-1.5">
             <Label>Matter</Label>
-            <MatterSelect value={matterId} onChange={setMatterId} />
+            <MatterSelect value={matterId} onChange={setMatterId} currentMatterId={expense?.matter_id} />
             {billable && (!matterId || matterId === NONE) && (
               <p className="text-xs text-warning">Billable expenses need a matter so they can reach an invoice.</p>
             )}

@@ -20,6 +20,8 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { toast } from '@/shared/components/ui/sonner'
+import { friendlyErrorMessage } from '@/shared/lib/errors'
+import { isMatterClosed } from '@/features/matters/types'
 
 const NONE = '__none__'
 
@@ -47,7 +49,15 @@ export function TaskFormDialog({
   onOpenChange: (o: boolean) => void
 }) {
   const { activeOrgId, profile } = useAuth()
-  const { data: matters } = useMatters(activeOrgId, {})
+  const { data: allMatters } = useMatters(activeOrgId, {})
+  // A closed matter is read-only — filing a new task under one would
+  // always fail, so it's excluded from fresh selection. Editing an
+  // existing task whose matter is already closed still shows that matter
+  // (it just can't be picked for a different, closed one).
+  const matters = React.useMemo(
+    () => (allMatters ?? []).filter((m) => !isMatterClosed(m.status) || m.id === task?.matter_id),
+    [allMatters, task?.matter_id],
+  )
   const { data: members } = useFirmMembers(activeOrgId)
   const create = useCreateTask(activeOrgId, profile?.id ?? null)
   const update = useUpdateTask(activeOrgId)
@@ -69,7 +79,7 @@ export function TaskFormDialog({
       toast.success(task ? 'Task updated' : 'Task created')
       onOpenChange(false)
     } catch (err) {
-      toast.error('Could not save task', { description: err instanceof Error ? err.message : undefined })
+      toast.error('Could not save task', { description: friendlyErrorMessage(err) })
     }
   }
 

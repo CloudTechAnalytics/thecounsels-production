@@ -19,6 +19,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { formatStorage } from '@/shared/lib/format'
 import { toast } from '@/shared/components/ui/sonner'
+import { friendlyErrorMessage } from '@/shared/lib/errors'
+import { isMatterClosed } from '@/features/matters/types'
 
 const NONE = '__none__'
 const ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,image/*'
@@ -35,7 +37,10 @@ interface QueuedFile {
 
 export function DocumentUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { activeOrgId, profile } = useAuth()
-  const { data: matters } = useMatters(activeOrgId, {})
+  const { data: allMatters } = useMatters(activeOrgId, {})
+  // A closed matter is read-only — filing a new document under one would
+  // always fail, so it's excluded here rather than left to error out.
+  const matters = React.useMemo(() => (allMatters ?? []).filter((m) => !isMatterClosed(m.status)), [allMatters])
   const { data: usedCategories } = useDocumentCategories(activeOrgId)
   const upload = useUploadDocuments(activeOrgId, profile?.id ?? null)
   const inputRef = React.useRef<HTMLInputElement>(null)
@@ -77,7 +82,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: { open: boolean; on
         })
         ok++
       } catch (err) {
-        toast.error(`Could not upload ${file.name}`, { description: err instanceof Error ? err.message : undefined })
+        toast.error(`Could not upload ${file.name}`, { description: friendlyErrorMessage(err) })
       }
     }
     if (ok > 0) {

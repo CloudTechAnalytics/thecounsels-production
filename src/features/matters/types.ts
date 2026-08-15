@@ -86,4 +86,13 @@ export const MATTER_STATUS_FILTER_GROUPS: Partial<Record<MatterStatus, MatterSta
   closed: ['closed', 'won', 'lost'],
 }
 
+/** Mirrors the DB's matter_is_open() (migration 0050) exactly — a closed
+ * matter is read-only, so anywhere a matter picker lets you file something
+ * NEW under one (a document, task, hearing, time entry, expense), a closed
+ * matter would only ever fail with a raw RLS error on submit. Filter it out
+ * up front instead. */
+export function isMatterClosed(status: MatterStatus): boolean {
+  return status === 'closed' || status === 'won' || status === 'lost'
+}
+
 export const PRIORITIES = ['low', 'medium', 'high'] as const

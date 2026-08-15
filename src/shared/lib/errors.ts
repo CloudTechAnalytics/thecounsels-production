@@ -16,6 +16,22 @@ export function errorMessage(err: unknown, fallback?: string): string | undefine
   return fallback
 }
 
+/**
+ * Same as errorMessage(), but translates the raw Postgres RLS-violation
+ * text ("new row violates row-level security policy for table X") into
+ * something a user can actually act on — that message names an internal
+ * table, not a reason. Anywhere a create/update can be blocked by a
+ * closed-matter or similar access rule (not just a missing permission)
+ * should use this instead of errorMessage() directly.
+ */
+export function friendlyErrorMessage(err: unknown, fallback?: string): string | undefined {
+  const raw = errorMessage(err, fallback)
+  if (raw?.includes('row-level security')) {
+    return "You don't have permission to do this — the matter may be closed, or you may not have access to it."
+  }
+  return raw
+}
+
 /** Races a promise against a timeout so a hung network call never blocks the UI forever. */
 export function withTimeout<T>(promise: Promise<T>, ms: number, message = 'The request timed out.'): Promise<T> {
   return Promise.race([

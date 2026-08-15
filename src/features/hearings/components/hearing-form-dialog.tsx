@@ -22,7 +22,8 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { toast } from '@/shared/components/ui/sonner'
-import { errorMessage } from '@/shared/lib/errors'
+import { friendlyErrorMessage } from '@/shared/lib/errors'
+import { isMatterClosed } from '@/features/matters/types'
 
 const NONE = '__none__'
 
@@ -63,7 +64,15 @@ export function HearingFormDialog({
 }) {
   const { activeOrgId, profile } = useAuth()
   useClients(activeOrgId, {}) // warm cache
-  const { data: matters } = useMatters(activeOrgId, {})
+  const { data: allMatters } = useMatters(activeOrgId, {})
+  // A closed matter is read-only — scheduling/editing a hearing under one
+  // would always fail, so it's excluded from fresh selection. Editing an
+  // existing hearing whose matter is already closed still shows that
+  // matter (though the save itself will still be blocked by RLS either way).
+  const matters = React.useMemo(
+    () => (allMatters ?? []).filter((m) => !isMatterClosed(m.status) || m.id === hearing?.matter_id),
+    [allMatters, hearing?.matter_id],
+  )
   const create = useCreateHearing(activeOrgId, profile?.id ?? null)
   const update = useUpdateHearing(activeOrgId)
 
@@ -80,7 +89,7 @@ export function HearingFormDialog({
       toast.success(hearing ? 'Hearing updated' : 'Hearing scheduled')
       onOpenChange(false)
     } catch (err) {
-      toast.error('Could not save hearing', { description: errorMessage(err) })
+      toast.error('Could not save hearing', { description: friendlyErrorMessage(err) })
     }
   }
 

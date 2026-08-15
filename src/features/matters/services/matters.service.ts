@@ -179,9 +179,15 @@ export const mattersService = {
 
   // Team assignments ------------------------------------------------------
   async listAssignments(matterId: string): Promise<MatterAssignmentRow[]> {
+    // matter_assignments has TWO foreign keys into profiles (user_id AND
+    // assigned_by) — the embed must name which one, or PostgREST can't
+    // resolve it and errors with "more than one relationship was found".
+    // That error was never surfaced anywhere in the UI (no error state on
+    // this query), so assigning someone silently kept showing "No one
+    // else is assigned" even though the row was really being written.
     const { data, error } = await supabase
       .from('matter_assignments')
-      .select('*, user:profiles(id, full_name, avatar_url)')
+      .select('*, user:profiles!matter_assignments_user_id_fkey(id, full_name, avatar_url)')
       .eq('matter_id', matterId)
       .order('created_at', { ascending: true })
     if (error) throw error

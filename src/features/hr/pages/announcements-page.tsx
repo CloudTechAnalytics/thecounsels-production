@@ -1,11 +1,15 @@
 import * as React from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { Megaphone } from 'lucide-react'
+import { Megaphone, Pencil, Trash2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useAnnouncements, useSendAnnouncement, useDepartments, useEmployees } from '@/features/hr/hooks/use-hr'
-import { ANNOUNCEMENT_AUDIENCES } from '@/features/hr/types'
+import {
+  useAnnouncements, useSendAnnouncement, useUpdateAnnouncement, useDeleteAnnouncement,
+  useDepartments, useEmployees,
+} from '@/features/hr/hooks/use-hr'
+import { ANNOUNCEMENT_AUDIENCES, type HrAnnouncementRow } from '@/features/hr/types'
 import { ROLE_META } from '@/shared/lib/permissions'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 
 const ROLE_OPTIONS = Object.entries(ROLE_META)
   .filter(([key]) => key !== 'platform_owner' && key !== 'platform_admin')
@@ -137,11 +141,70 @@ function ComposeDialog() {
   )
 }
 
+/** Title/body only — audience isn't editable after the fact, since
+ * notifications already went to the original recipients at send time. */
+function EditDialog({ announcement, open, onOpenChange }: { announcement: HrAnnouncementRow | null; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const { activeOrgId } = useAuth()
+  const update = useUpdateAnnouncement(activeOrgId)
+  const [title, setTitle] = React.useState('')
+  const [body, setBody] = React.useState('')
+
+  React.useEffect(() => {
+    if (open && announcement) {
+      setTitle(announcement.title)
+      setBody(announcement.body)
+    }
+  }, [open, announcement])
+
+  const submit = async () => {
+    if (!announcement) return
+    if (!title.trim() || !body.trim()) {
+      toast.error('Add a title and message')
+      return
+    }
+    try {
+      await update.mutateAsync({ id: announcement.id, values: { title: title.trim(), body: body.trim() } })
+      toast.success('Announcement updated')
+      onOpenChange(false)
+    } catch (err) {
+      toast.error('Could not update', { description: errorMessage(err) })
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit announcement</DialogTitle>
+          <DialogDescription>The audience it was sent to can't be changed after the fact.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Title</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Message</Label>
+            <Textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={submit} loading={update.isPending}>Save changes</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function AnnouncementsPage() {
   const { activeOrgId } = useAuth()
   const { has } = usePermissions()
   const { data: announcements, isLoading } = useAnnouncements(activeOrgId)
+  const del = useDeleteAnnouncement(activeOrgId)
   const canManage = has('hr_announcements.manage')
+  const [editing, setEditing] = React.useState<HrAnnouncementRow | null>(null)
+  const [toDelete, setToDelete] = React.useState<HrAnnouncementRow | null>(null)
 
   return (
     <div>
@@ -163,6 +226,19 @@ export function AnnouncementsPage() {
                   <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{a.body}</p>
                   <p className="mt-2 text-xs text-muted-foreground">{formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</p>
                 </div>
+                {canManage && (
+                  <div className="flex shrink-0 gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditing(a)} aria-label="Edit announcement">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => setToDelete(a)} aria-label="Delete announcement"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </Card>
           ))
@@ -173,6 +249,28 @@ export function AnnouncementsPage() {
           </Card>
         )}
       </div>
+
+      <EditDialog announcement={editing} open={Boolean(editing)} onOpenChange={(o) => !o && setEditing(null)} />
+
+      <ConfirmDialog
+        open={Boolean(toDelete)}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title="Delete announcement"
+        destructive
+        confirmLabel="Delete"
+        loading={del.isPending}
+        description={<>This removes <strong>{toDelete?.title}</strong> for good. It won't un-notify anyone who already received it.</>}
+        onConfirm={async () => {
+          if (!toDelete) return
+          try {
+            await del.mutateAsync(toDelete.id)
+            toast.success('Announcement deleted')
+            setToDelete(null)
+          } catch (err) {
+            toast.error('Could not delete', { description: errorMessage(err) })
+          }
+        }}
+      />
     </div>
   )
 }

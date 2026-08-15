@@ -409,3 +409,19 @@ export function useSendAnnouncement(organizationId: string | null) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['hr', 'announcements', organizationId] }),
   })
 }
+
+export function useUpdateAnnouncement(organizationId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, values }: { id: string; values: { title: string; body: string } }) => hrService.updateAnnouncement(id, values),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hr', 'announcements', organizationId] }),
+  })
+}
+
+export function useDeleteAnnouncement(organizationId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => hrService.deleteAnnouncement(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hr', 'announcements', organizationId] }),
+  })
+}

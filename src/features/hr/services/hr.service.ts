@@ -421,4 +421,14 @@ export const hrService = {
     })
     if (error) throw error
   },
+  /** Title/body only — audience isn't editable after the fact, since
+   * notifications already went out to the original recipients. */
+  async updateAnnouncement(id: string, values: { title: string; body: string }): Promise<void> {
+    const { error } = await supabase.from('hr_announcements').update(values).eq('id', id)
+    if (error) throw error
+  },
+  async deleteAnnouncement(id: string): Promise<void> {
+    const { error } = await supabase.from('hr_announcements').delete().eq('id', id)
+    if (error) throw error
+  },
 }

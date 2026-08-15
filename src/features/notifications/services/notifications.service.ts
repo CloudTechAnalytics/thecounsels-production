@@ -8,6 +8,7 @@ export const DEFAULT_TASK_CHANNEL_PREFS: TaskChannelPrefs = {
   overdue: { email: true, whatsapp: true },
   completed: { email: true, whatsapp: true },
   reassigned: { email: true, whatsapp: true },
+  hearing_reminder: { email: true, whatsapp: true },
 }
 
 const SELECT = '*, actor:profiles!notifications_actor_id_fkey(id, full_name, avatar_url)'

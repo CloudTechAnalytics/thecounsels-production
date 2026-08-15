@@ -31,7 +31,7 @@ export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type NotificationLogChannel = 'IN_APP' | 'EMAIL' | 'WHATSAPP'
 export type NotificationLogStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED'
 /** Per-event-type channel opt-in, keyed to match notification_preferences.task_channel_prefs (migration 0057). */
-export type TaskChannelEvent = 'assigned' | 'due_soon' | 'overdue' | 'completed' | 'reassigned'
+export type TaskChannelEvent = 'assigned' | 'due_soon' | 'overdue' | 'completed' | 'reassigned' | 'hearing_reminder'
 export type TaskChannelPrefs = Record<TaskChannelEvent, { email: boolean; whatsapp: boolean }>
 export type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'void'
 export type TimeEntryStatus = 'draft' | 'submitted' | 'approved' | 'invoiced' | 'paid'

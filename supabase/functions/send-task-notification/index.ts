@@ -1,13 +1,18 @@
 // ============================================================================
 // Edge Function: send-task-notification
-// The ONLY place a task-related email or WhatsApp message is actually sent.
-// Invoked two ways, both passing the same { notification_log_id }: directly
-// via invokeEdgeFunction() for a synchronous send, and via pg_net.http_post
-// from the database (dispatch_task_notification / run_task_reminders,
-// migrations 0058/0059) for scheduler-driven reminders. Either way this
-// function is the single source of truth for what actually got sent — every
-// call updates the matching notification_log row's status/sent_at/
-// failure_reason, never leaving it PENDING forever and never faking SENT.
+// The ONLY place a task- or hearing-related email or WhatsApp message is
+// actually sent (name predates the hearing reminder engine, migration 0098
+// — kept as-is rather than risk a rename across every SQL function that
+// already hard-codes this URL). Branches on notification_log.hearing_id vs
+// task_id to know which it's building. Invoked two ways, both passing the
+// same { notification_log_id }: directly via invokeEdgeFunction() for a
+// synchronous send, and via pg_net.http_post from the database
+// (dispatch_task_notification/run_task_reminders — 0058/0059 — and
+// dispatch_hearing_notification/run_hearing_reminders — 0098) for
+// scheduler-driven reminders. Either way this function is the single
+// source of truth for what actually got sent — every call updates the
+// matching notification_log row's status/sent_at/failure_reason, never
+// leaving it PENDING forever and never faking SENT.
 //
 // Deploy:  supabase functions deploy send-task-notification --no-verify-jwt
 //   (--no-verify-jwt because pg_net calls this with a service-role bearer
@@ -16,7 +21,15 @@
 // Secrets: supabase secrets set RESEND_API_KEY=re_...
 //          supabase secrets set RESEND_FROM_EMAIL="The Counsel <notifications@yourdomain>"
 //          supabase secrets set SITE_URL=https://your-deployed-app-domain
-//          optionally: supabase secrets set WHATSAPP_PROVIDER=meta|twilio (unset = no-op)
+//          WhatsApp — pick ONE provider, unset WHATSAPP_PROVIDER = no-op:
+//            supabase secrets set WHATSAPP_PROVIDER=twilio
+//            supabase secrets set TWILIO_ACCOUNT_SID=AC...
+//            supabase secrets set TWILIO_AUTH_TOKEN=...
+//            supabase secrets set TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+//          or:
+//            supabase secrets set WHATSAPP_PROVIDER=meta
+//            supabase secrets set META_WHATSAPP_TOKEN=...
+//            supabase secrets set META_WHATSAPP_PHONE_NUMBER_ID=...
 // ============================================================================
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.46.1'
 
@@ -144,6 +157,60 @@ function buildWhatsAppMessage(type: string, t: TaskContext): string {
   }
 }
 
+interface HearingContext {
+  title: string
+  hearingAt: string
+  court: string | null
+  judge: string | null
+  location: string | null
+  matterTitle: string | null
+  link: string
+}
+
+function fmtDateTime(d: string): string {
+  return new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+function hearingDetailsBlock(h: HearingContext): string {
+  return `
+    <table cellpadding="0" cellspacing="0" style="width:100%;margin:16px 0;font-size:14px">
+      <tr><td style="padding:4px 12px 4px 0;color:${MUTED};white-space:nowrap">Hearing</td><td style="padding:4px 0;font-weight:600">${esc(h.title)}</td></tr>
+      ${h.matterTitle ? `<tr><td style="padding:4px 12px 4px 0;color:${MUTED}">Matter</td><td style="padding:4px 0">${esc(h.matterTitle)}</td></tr>` : ''}
+      <tr><td style="padding:4px 12px 4px 0;color:${MUTED}">When</td><td style="padding:4px 0;font-weight:600">${esc(fmtDateTime(h.hearingAt))}</td></tr>
+      ${h.court ? `<tr><td style="padding:4px 12px 4px 0;color:${MUTED}">Court</td><td style="padding:4px 0">${esc(h.court)}</td></tr>` : ''}
+      ${h.judge ? `<tr><td style="padding:4px 12px 4px 0;color:${MUTED}">Judge</td><td style="padding:4px 0">${esc(h.judge)}</td></tr>` : ''}
+      ${h.location ? `<tr><td style="padding:4px 12px 4px 0;color:${MUTED}">Location</td><td style="padding:4px 0">${esc(h.location)}</td></tr>` : ''}
+    </table>
+    <a href="${h.link}" style="display:inline-block;margin-top:8px;padding:10px 22px;background:${GOLD};color:#ffffff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">View hearing</a>
+  `
+}
+
+function buildHearingEmail(type: string, h: HearingContext): { subject: string; html: string } {
+  switch (type) {
+    case 'hearing_reminder_24h':
+      return {
+        subject: `Hearing tomorrow: ${h.title}`,
+        html: emailShell('Hearing tomorrow', 'A hearing on your calendar is coming up in 24 hours.', hearingDetailsBlock(h)),
+      }
+    case 'hearing_reminder_1h':
+      return {
+        subject: `Hearing in 1 hour: ${h.title}`,
+        html: emailShell('Hearing in 1 hour', "This hearing is coming up very soon — don't miss it.", hearingDetailsBlock(h)),
+      }
+    default:
+      return { subject: h.title, html: emailShell(h.title, '', hearingDetailsBlock(h)) }
+  }
+}
+
+function buildHearingWhatsAppMessage(type: string, h: HearingContext): string {
+  const base = `${h.title}${h.matterTitle ? ` (${h.matterTitle})` : ''} — ${fmtDateTime(h.hearingAt)}${h.court ? `, ${h.court}` : ''}.`
+  switch (type) {
+    case 'hearing_reminder_24h': return `⚖️ Hearing tomorrow: ${base} ${h.link}`
+    case 'hearing_reminder_1h': return `⚖️ Hearing in 1 hour: ${base} ${h.link}`
+    default: return `${base} ${h.link}`
+  }
+}
+
 // ----------------------------------------------------------------------------
 // Email — Resend REST API. Honest "not configured" FAILED state when the
 // secret is unset, same posture as paystack-init-transaction for payments.
@@ -170,10 +237,10 @@ async function sendEmailNotification(params: { to: string; subject: string; html
 
 // ----------------------------------------------------------------------------
 // WhatsApp — provider-agnostic interface (spec §8: "DO NOT hard-code a
-// WhatsApp provider"). No vendor is wired in; NoopWhatsAppProvider is the
-// honest default until WHATSAPP_PROVIDER + its own secrets are configured.
-// Real providers (Meta Cloud API, Twilio, …) plug in later by implementing
-// this same interface — nothing else in this file or the Task UI changes.
+// WhatsApp provider"). Two real providers below, selected by
+// WHATSAPP_PROVIDER; NoopWhatsAppProvider is the honest default until one
+// is chosen and its own secrets are set — same "FAILED with a real reason,
+// never a fake SENT" posture as everything else in this function.
 // ----------------------------------------------------------------------------
 interface WhatsAppProvider {
   send(to: string, message: string): Promise<{ ok: boolean; providerId?: string; error?: string }>
@@ -185,12 +252,74 @@ class NoopWhatsAppProvider implements WhatsAppProvider {
   }
 }
 
+/** https://www.twilio.com/docs/whatsapp/api — `to`/`from` are E.164 numbers
+ * prefixed "whatsapp:" (e.g. "whatsapp:+2348012345678"). Recipient numbers
+ * stored in notification_preferences.whatsapp_number are plain E.164; the
+ * "whatsapp:" prefix is added here, not asked of the user. */
+class TwilioWhatsAppProvider implements WhatsAppProvider {
+  constructor(private accountSid: string, private authToken: string, private from: string) {}
+  async send(to: string, message: string): Promise<{ ok: boolean; providerId?: string; error?: string }> {
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${this.accountSid}/Messages.json`
+    const toAddr = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`
+    const fromAddr = this.from.startsWith('whatsapp:') ? this.from : `whatsapp:${this.from}`
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${btoa(`${this.accountSid}:${this.authToken}`)}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ From: fromAddr, To: toAddr, Body: message }),
+      })
+      const data = await res.json()
+      if (!res.ok) return { ok: false, error: `Twilio error (${res.status}): ${data?.message ?? JSON.stringify(data).slice(0, 300)}` }
+      return { ok: true, providerId: data?.sid }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Twilio send failed' }
+    }
+  }
+}
+
+/** https://developers.facebook.com/docs/whatsapp/cloud-api — sends via the
+ * business phone number registered to phoneNumberId. `to` must be a plain
+ * E.164 number, no "+" prefix issues either way (Meta accepts both). */
+class MetaCloudApiProvider implements WhatsAppProvider {
+  constructor(private token: string, private phoneNumberId: string) {}
+  async send(to: string, message: string): Promise<{ ok: boolean; providerId?: string; error?: string }> {
+    const url = `https://graph.facebook.com/v20.0/${this.phoneNumberId}/messages`
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: to.replace(/^\+/, ''),
+          type: 'text',
+          text: { body: message },
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) return { ok: false, error: `Meta error (${res.status}): ${data?.error?.message ?? JSON.stringify(data).slice(0, 300)}` }
+      return { ok: true, providerId: data?.messages?.[0]?.id }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Meta WhatsApp send failed' }
+    }
+  }
+}
+
 function getWhatsAppProvider(): WhatsAppProvider {
   const provider = Deno.env.get('WHATSAPP_PROVIDER')
-  // Real providers register here once credentials exist, e.g.:
-  //   if (provider === 'meta') return new MetaCloudApiProvider(...)
-  //   if (provider === 'twilio') return new TwilioWhatsAppProvider(...)
-  void provider
+  if (provider === 'twilio') {
+    const sid = Deno.env.get('TWILIO_ACCOUNT_SID')
+    const token = Deno.env.get('TWILIO_AUTH_TOKEN')
+    const from = Deno.env.get('TWILIO_WHATSAPP_FROM')
+    if (sid && token && from) return new TwilioWhatsAppProvider(sid, token, from)
+  }
+  if (provider === 'meta') {
+    const token = Deno.env.get('META_WHATSAPP_TOKEN')
+    const phoneNumberId = Deno.env.get('META_WHATSAPP_PHONE_NUMBER_ID')
+    if (token && phoneNumberId) return new MetaCloudApiProvider(token, phoneNumberId)
+  }
   return new NoopWhatsAppProvider()
 }
 
@@ -229,20 +358,26 @@ Deno.serve(async (req: Request) => {
     return json({ ok: false, error: reason })
   }
 
-  const [{ data: recipient }, { data: prefs }, { data: task }] = await Promise.all([
+  const isHearing = Boolean(log.hearing_id)
+
+  const [{ data: recipient }, { data: prefs }, { data: task }, { data: hearing }] = await Promise.all([
     admin.from('profiles').select('id, full_name, email, phone').eq('id', log.user_id).maybeSingle(),
     admin.from('notification_preferences').select('whatsapp_number').eq('user_id', log.user_id).maybeSingle(),
-    log.task_id
+    !isHearing && log.task_id
       ? admin.from('tasks').select('id, title, priority, due_date, matter_id').eq('id', log.task_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    isHearing
+      ? admin.from('hearings').select('id, title, hearing_at, court, judge, location, matter_id').eq('id', log.hearing_id).maybeSingle()
       : Promise.resolve({ data: null }),
   ])
   if (!recipient) return fail('Recipient profile not found.')
-  if (!task) return fail('Task not found — it may have been deleted.')
+  if (isHearing ? !hearing : !task) return fail(`${isHearing ? 'Hearing' : 'Task'} not found — it may have been deleted.`)
 
+  const matterId = isHearing ? hearing!.matter_id : task!.matter_id
   let matterTitle: string | null = null
   let clientName: string | null = null
-  if (task.matter_id) {
-    const { data: matter } = await admin.from('matters').select('title, client_id').eq('id', task.matter_id).maybeSingle()
+  if (matterId) {
+    const { data: matter } = await admin.from('matters').select('title, client_id').eq('id', matterId).maybeSingle()
     matterTitle = matter?.title ?? null
     if (matter?.client_id) {
       const { data: client } = await admin.from('clients').select('display_name').eq('id', matter.client_id).maybeSingle()
@@ -250,25 +385,41 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  let assignedByName: string | null = null
-  if (log.actor_id) {
-    const { data: actor } = await admin.from('profiles').select('full_name').eq('id', log.actor_id).maybeSingle()
-    assignedByName = actor?.full_name ?? null
-  }
+  let subject: string, html: string, waMessage: string
 
-  const ctx: TaskContext = {
-    title: task.title,
-    priority: task.priority,
-    dueDate: task.due_date,
-    matterTitle,
-    clientName,
-    assignedByName,
-    link: task.matter_id ? `${SITE_URL}/matters/${task.matter_id}` : `${SITE_URL}/tasks`,
+  if (isHearing) {
+    const hctx: HearingContext = {
+      title: hearing!.title,
+      hearingAt: hearing!.hearing_at,
+      court: hearing!.court,
+      judge: hearing!.judge,
+      location: hearing!.location,
+      matterTitle,
+      link: hearing!.matter_id ? `${SITE_URL}/matters/${hearing!.matter_id}` : `${SITE_URL}/hearings`,
+    }
+    ;({ subject, html } = buildHearingEmail(log.notification_type, hctx))
+    waMessage = buildHearingWhatsAppMessage(log.notification_type, hctx)
+  } else {
+    let assignedByName: string | null = null
+    if (log.actor_id) {
+      const { data: actor } = await admin.from('profiles').select('full_name').eq('id', log.actor_id).maybeSingle()
+      assignedByName = actor?.full_name ?? null
+    }
+    const tctx: TaskContext = {
+      title: task!.title,
+      priority: task!.priority,
+      dueDate: task!.due_date,
+      matterTitle,
+      clientName,
+      assignedByName,
+      link: task!.matter_id ? `${SITE_URL}/matters/${task!.matter_id}` : `${SITE_URL}/tasks`,
+    }
+    ;({ subject, html } = buildEmail(log.notification_type, tctx))
+    waMessage = buildWhatsAppMessage(log.notification_type, tctx)
   }
 
   if (log.channel === 'EMAIL') {
     if (!recipient.email) return fail('Recipient has no email on file.')
-    const { subject, html } = buildEmail(log.notification_type, ctx)
     const result = await sendEmailNotification({ to: recipient.email, subject, html })
     if (!result.ok) return fail(result.error ?? 'Email send failed')
     await admin.from('notification_log').update({ status: 'SENT', sent_at: new Date().toISOString() }).eq('id', logId)
@@ -278,8 +429,7 @@ Deno.serve(async (req: Request) => {
   if (log.channel === 'WHATSAPP') {
     const to = prefs?.whatsapp_number
     if (!to) return fail('No WhatsApp number on file.')
-    const message = buildWhatsAppMessage(log.notification_type, ctx)
-    const result = await sendWhatsAppNotification({ to, message })
+    const result = await sendWhatsAppNotification({ to, message: waMessage })
     if (!result.ok) return fail(result.error ?? 'WhatsApp send failed')
     await admin.from('notification_log').update({ status: 'SENT', sent_at: new Date().toISOString() }).eq('id', logId)
     return json({ ok: true })

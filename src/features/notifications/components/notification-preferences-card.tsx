@@ -12,13 +12,14 @@ import { Label } from '@/shared/components/ui/label'
 import { toast } from '@/shared/components/ui/sonner'
 import type { TaskChannelEvent, TaskChannelPrefs } from '@/shared/types/database.types'
 
-const TASK_EVENT_ORDER: TaskChannelEvent[] = ['assigned', 'due_soon', 'overdue', 'completed', 'reassigned']
+const TASK_EVENT_ORDER: TaskChannelEvent[] = ['assigned', 'due_soon', 'overdue', 'completed', 'reassigned', 'hearing_reminder']
 const TASK_EVENT_LABELS: Record<TaskChannelEvent, string> = {
   assigned: 'Task assigned to you',
   due_soon: 'Upcoming deadline reminders',
   overdue: 'Task overdue',
   completed: 'A task you created is completed',
   reassigned: 'Task reassigned to you',
+  hearing_reminder: 'Hearing coming up (24h / 1h before)',
 }
 
 /** Per-task-event Email/WhatsApp matrix — in-app is intentionally absent here;
@@ -42,7 +43,7 @@ function TaskChannelMatrix({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/40 text-xs text-muted-foreground">
-            <th className="px-3 py-2 text-left font-medium">Task notification</th>
+            <th className="px-3 py-2 text-left font-medium">Notification</th>
             <th className="w-16 px-3 py-2 text-center font-medium">Email</th>
             <th className="w-20 px-3 py-2 text-center font-medium">WhatsApp</th>
           </tr>
@@ -183,9 +184,9 @@ export function NotificationPreferencesCard({
         />
 
         <div className="border-t border-border pt-4">
-          <p className="mb-1 text-sm font-medium">Task notification channels</p>
+          <p className="mb-1 text-sm font-medium">Task &amp; hearing notification channels</p>
           <p className="mb-3 text-xs text-muted-foreground">
-            Choose which task events send Email/WhatsApp. Each column only applies once its channel above is enabled.
+            Choose which events send Email/WhatsApp. Each column only applies once its channel above is enabled.
           </p>
           <TaskChannelMatrix
             prefs={prefs.task_channel_prefs ?? DEFAULT_TASK_CHANNEL_PREFS}

@@ -85,12 +85,12 @@ export function DashboardPage() {
           </>
         ) : (
           <>
-            <StatTile label="My active matters" countTo={my?.myActiveMatters ?? 0} value={String(my?.myActiveMatters ?? 0)} hint="You lead these" icon={Briefcase} loading={myKpisLoading} />
-            <StatTile label="My hearings this week" countTo={my?.myHearingsThisWeek ?? 0} value={String(my?.myHearingsThisWeek ?? 0)} hint="Next 7 days" icon={CalendarClock} loading={myKpisLoading} />
-            <StatTile label="My open tasks" countTo={p?.openTasks ?? 0} value={String(p?.openTasks ?? 0)} hint="Assigned to you, not yet done" icon={CheckSquare} loading={personalLoading} />
-            <StatTile label="My clients" countTo={my?.myClients ?? 0} value={String(my?.myClients ?? 0)} hint="Across matters you lead" icon={Users} loading={myKpisLoading} />
-            <StatTile label="My billable hours" value={`${p?.billableHoursMTD ?? 0}h`} hint="This month" icon={Clock} loading={personalLoading} />
-            <StatTile label="My logged expenses" value={formatMoneyCompact(p?.expensesMTD ?? 0)} hint="This month" icon={Receipt} loading={personalLoading} />
+            <StatTile label="Active matters" countTo={my?.myActiveMatters ?? 0} value={String(my?.myActiveMatters ?? 0)} hint="You lead these" icon={Briefcase} loading={myKpisLoading} />
+            <StatTile label="Hearings this week" countTo={my?.myHearingsThisWeek ?? 0} value={String(my?.myHearingsThisWeek ?? 0)} hint="Next 7 days" icon={CalendarClock} loading={myKpisLoading} />
+            <StatTile label="Open tasks" countTo={p?.openTasks ?? 0} value={String(p?.openTasks ?? 0)} hint="Assigned to you, not yet done" icon={CheckSquare} loading={personalLoading} />
+            <StatTile label="Clients" countTo={my?.myClients ?? 0} value={String(my?.myClients ?? 0)} hint="Across matters you lead" icon={Users} loading={myKpisLoading} />
+            <StatTile label="Billable hours" value={`${p?.billableHoursMTD ?? 0}h`} hint="This month" icon={Clock} loading={personalLoading} />
+            <StatTile label="Logged expenses" value={formatMoneyCompact(p?.expensesMTD ?? 0)} hint="This month" icon={Receipt} loading={personalLoading} />
           </>
         )}
       </div>

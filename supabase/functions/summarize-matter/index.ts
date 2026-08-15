@@ -14,8 +14,9 @@
 //   Get a free key at https://aistudio.google.com/apikey — no card needed.
 //   Free tier is rate-limited (requests/minute and /day); if generation
 //   starts failing under real load, that's the first thing to check.
-// If GEMINI_MODEL below is ever deprecated/renamed, update it to whatever
-// aistudio.google.com currently lists as its free-tier flash model.
+// GEMINI_MODEL uses the "-latest" alias (see its own comment below) so a
+// retired dated model string shouldn't cause this again — if generation
+// still fails, it's most likely the API key or a rate limit, not the model.
 // ============================================================================
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.46.1'
 
@@ -29,15 +30,17 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 }
 
-// gemini-2.0-flash was retired (confirmed via a live 404 from Google's API,
-// pointing at their "Interactions API" migration guide) — 2.5-flash is the
-// current stable "price-performance workhorse" tier per ai.google.dev/
-// gemini-api/docs/models as of Aug 2026, the positioning Google has
-// historically kept on the free tier (unlike a brand-new flagship release,
-// which sometimes launches paid-only before free-tier access follows). If
-// this one also gets retired, the error log will say so exactly the same
-// way — check aistudio.google.com's current model list and swap this string.
-const GEMINI_MODEL = 'gemini-2.5-flash'
+// gemini-2.0-flash, then gemini-2.5-flash, were each retired for new users
+// in turn (both confirmed via a live 404 from Google's API) — pinning an
+// exact dated model string here has now broken this feature twice in one
+// session. Switched to the "-latest" alias instead: Google hot-swaps it to
+// whatever the current non-deprecated Flash model is, with a 2-week email
+// notice before any breaking change — it stays on the Flash tier (the
+// free-tier-friendly one this integration was chosen for) rather than ever
+// silently resolving to a paid Pro model. If generation ever starts
+// failing again, it's no longer "which model string is current" — check
+// GEMINI_API_KEY/quota first.
+const GEMINI_MODEL = 'gemini-flash-latest'
 const MAX_TOKENS = 700
 
 Deno.serve(async (req: Request) => {

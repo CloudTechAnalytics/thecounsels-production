@@ -1,0 +1,17 @@
+-- ============================================================================
+-- Migration 0105 — Fix stale registration_settings.trial_plan_id.
+--
+-- Seeded by migration 0051 to point at the "Early Access" plan. That plan
+-- was later retired (is_active = false, see the "Hide retired plans" work
+-- earlier) but nothing ever repointed trial_plan_id — so "Start Free
+-- Trial" sent a now-inactive plan id to register_organization(), which
+-- correctly rejected it ("Select a valid plan"). Predates migration 0104;
+-- would have failed the same way before it too, just never got exercised.
+--
+-- Fix: clear it to null rather than hardcoding a new plan id — both the
+-- frontend (plan-step.tsx) and register_organization() (0104) already fall
+-- back to the Professional plan by key when trial_plan_id is unset, so this
+-- self-heals and won't go stale again if Professional's own id ever
+-- changes (e.g. a future re-seed).
+-- ============================================================================
+update public.registration_settings set trial_plan_id = null where id = true;

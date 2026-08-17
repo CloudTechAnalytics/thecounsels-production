@@ -504,8 +504,9 @@ export function LandingPage() {
               with Confidence.
             </motion.h1>
             <motion.p variants={fadeUp} className="mt-6 max-w-lg text-lg leading-relaxed text-muted-foreground">
-              Manage cases, clients, hearings, documents, billing, and legal operations from one
-              secure workspace built for modern law firms.
+              No task, deadline, or follow-up should ever get buried in someone's inbox or a
+              spreadsheet. The Counsel keeps every matter — from first filing to final invoice —
+              visible, assigned, and on schedule.
             </motion.p>
             <motion.div variants={fadeUp} className="mt-9 flex flex-wrap items-center gap-4">
               <Button asChild size="lg" variant="outline" className="border-border bg-transparent text-foreground hover:bg-accent hover:text-foreground">

@@ -68,7 +68,7 @@ export function CreateOrganizationDialog() {
       toast.success('Organization created', {
         description:
           values.orgType === 'customer'
-            ? `${org.name} is live${trial ? ' on a 14-day trial' : ''} and its admin can sign in now.`
+            ? `${org.name} is live${trial ? ' on a 30-day trial' : ''} and its admin can sign in now.`
             : `${org.name} is live as a ${values.orgType} organization (no billing) and its admin can sign in now.`,
       })
       form.reset()
@@ -195,7 +195,7 @@ export function CreateOrganizationDialog() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="trial">Free trial — 14 days</SelectItem>
+                            <SelectItem value="trial">Free trial — 30 days</SelectItem>
                             {plans
                               ?.filter((p) => p.is_active)
                               .map((p) => (

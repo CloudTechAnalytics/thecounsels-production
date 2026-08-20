@@ -206,7 +206,13 @@ export function RegisterPage() {
                   />
                   <span>
                     I agree to the{' '}
-                    <a href="#" className="font-medium text-primary hover:underline" onClick={(e) => e.preventDefault()}>
+                    <a
+                      href="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-primary hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       Terms &amp; Conditions
                     </a>
                   </span>

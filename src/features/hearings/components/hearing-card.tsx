@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { MoreHorizontal, Pencil, Trash2, MapPin, Scale } from 'lucide-react'
-import { HEARING_STATUS_META, type HearingRow } from '@/features/hearings/types'
+import { HEARING_STATUS_META, HEARING_STATUSES, type HearingRow } from '@/features/hearings/types'
 import { isMatterClosed } from '@/features/matters/types'
+import { useSetHearingStatus } from '@/features/hearings/hooks/use-hearings'
+import { useAuth } from '@/features/auth/context/auth-provider'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
+import { StatusBadgeMenu } from '@/shared/components/status-badge-menu'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,7 +31,8 @@ export function HearingCard({
   canDelete: boolean
   showMatter?: boolean
 }) {
-  const meta = HEARING_STATUS_META[h.status]
+  const { activeOrgId } = useAuth()
+  const setStatus = useSetHearingStatus(activeOrgId)
   // A closed matter's hearings have no leadership bypass, unlike the
   // matter itself — hearings_update/_delete RLS blocks everyone once
   // matter_is_open() is false, no exceptions. Hide the menu to match,
@@ -46,7 +50,13 @@ export function HearingCard({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-semibold">{h.title}</p>
-          <Badge variant={meta.variant}>{meta.label}</Badge>
+          <StatusBadgeMenu
+            value={h.status}
+            options={HEARING_STATUSES}
+            meta={HEARING_STATUS_META}
+            disabled={!showEdit}
+            onChange={(status) => setStatus.mutate({ id: h.id, status, title: h.title })}
+          />
           <Badge variant="outline" className="capitalize">{h.type}</Badge>
         </div>
         {showMatter && h.matter && (

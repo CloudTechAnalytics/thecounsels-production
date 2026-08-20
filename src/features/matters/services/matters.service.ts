@@ -100,6 +100,30 @@ export const mattersService = {
     return row
   },
 
+  /** Quick status change, no full edit form — a minimal patch (not
+   * update()'s full toRow() overwrite, which needs the entire form's worth
+   * of fields). Only valid while the matter is NOT already closed/won/lost
+   * — matters_update RLS (migration 0050) blocks any update at all once it
+   * is, by design; the only way out of that state is reopen() below. The
+   * caller (matter-status-menu.tsx) is responsible for routing to reopen()
+   * instead when the current status is terminal — this method doesn't
+   * re-check that itself, matching update()'s own lack of that guard. */
+  async setStatus(id: string, organizationId: string, status: MatterStatus, matterNumber: string | null): Promise<void> {
+    const isClosing = ['closed', 'won', 'lost'].includes(status)
+    const { error } = await supabase
+      .from('matters')
+      .update({ status, closed_on: isClosing ? new Date().toISOString().slice(0, 10) : null })
+      .eq('id', id)
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: isClosing ? 'matter.closed' : 'matter.updated',
+      p_entity_type: 'matter',
+      p_entity_id: id,
+      p_summary: isClosing ? `Closed matter ${matterNumber ?? ''}` : `Updated matter ${matterNumber ?? ''} status to ${status}`,
+    })
+  },
+
   async reopen(id: string, reason: string | undefined): Promise<void> {
     // Returns the bare matters row (no client/lead_lawyer joins) — callers
     // rely on query invalidation to refetch the full MatterRow shape.

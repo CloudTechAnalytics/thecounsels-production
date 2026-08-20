@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { mattersService, type MatterFilters } from '@/features/matters/services/matters.service'
 import { administrationService } from '@/features/administration/services/administration.service'
 import type { MatterFormValues } from '@/features/matters/schemas'
+import type { MatterStatus } from '@/shared/types/database.types'
 
 export function useMatters(organizationId: string | null, filters: MatterFilters) {
   return useQuery({
@@ -61,6 +62,15 @@ export function useUpdateMatter(organizationId: string | null) {
   return useMutation({
     mutationFn: ({ id, values }: { id: string; values: MatterFormValues }) =>
       mattersService.update(id, organizationId!, values),
+    onSuccess: invalidate,
+  })
+}
+
+export function useSetMatterStatus(organizationId: string | null) {
+  const invalidate = useInvalidate(organizationId)
+  return useMutation({
+    mutationFn: ({ id, status, matterNumber }: { id: string; status: MatterStatus; matterNumber: string | null }) =>
+      mattersService.setStatus(id, organizationId!, status, matterNumber),
     onSuccess: invalidate,
   })
 }

@@ -3,10 +3,11 @@ import { format, isPast, isToday } from 'date-fns'
 import { MoreHorizontal, Pencil, Trash2, Circle, CheckCircle2, Clock } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useSetTaskStatus } from '@/features/tasks/hooks/use-tasks'
-import { TASK_PRIORITY_META, TASK_STATUS_META, type TaskRow } from '@/features/tasks/types'
+import { TASK_PRIORITY_META, TASK_STATUS_META, TASK_STATUSES, type TaskRow } from '@/features/tasks/types'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
+import { StatusBadgeMenu } from '@/shared/components/status-badge-menu'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,7 +73,12 @@ export function TaskItem({
         <div className="flex flex-wrap items-center gap-2">
           <p className={cn('text-sm font-medium', done && 'text-muted-foreground line-through')}>{task.title}</p>
           <Badge variant={TASK_PRIORITY_META[task.priority].variant}>{TASK_PRIORITY_META[task.priority].label}</Badge>
-          {task.status !== 'done' && <Badge variant={TASK_STATUS_META[task.status].variant}>{TASK_STATUS_META[task.status].label}</Badge>}
+          <StatusBadgeMenu
+            value={task.status}
+            options={TASK_STATUSES}
+            meta={TASK_STATUS_META}
+            onChange={(status) => setStatus.mutate({ id: task.id, status })}
+          />
         </div>
         {task.description && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{task.description}</p>}
         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">

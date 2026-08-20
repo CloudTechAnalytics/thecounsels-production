@@ -5,8 +5,9 @@ import { ArrowLeft, Pencil, Trash2, LockOpen, FileText, StickyNote, LayoutGrid, 
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { usePlanFeature } from '@/features/administration/hooks/use-administration'
-import { useMatter, useDeleteMatter, useReopenMatter } from '@/features/matters/hooks/use-matters'
+import { useMatter, useDeleteMatter, useReopenMatter, useSetMatterStatus } from '@/features/matters/hooks/use-matters'
 import { MatterFormDialog } from '@/features/matters/components/matter-form-dialog'
+import { MatterStatusMenu } from '@/features/matters/components/matter-status-menu'
 import { DocumentsPanel } from '@/features/matters/components/documents-panel'
 import { NotesPanel } from '@/features/matters/components/notes-panel'
 import { MatterTimeline } from '@/features/matters/components/matter-timeline'
@@ -17,7 +18,6 @@ import { MatterAiSummaryCard } from '@/features/matters/components/matter-ai-sum
 import { MatterAiChatPanel } from '@/features/matters/components/matter-ai-chat-panel'
 import { MatterProgressCard } from '@/features/matters/components/matter-progress-card'
 import { MatterTeamCard } from '@/features/matters/components/matter-team-card'
-import { MATTER_STATUS_META } from '@/features/matters/types'
 import { Card } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
@@ -59,6 +59,7 @@ export function MatterDetailPage() {
   const { data: matter, isLoading, isError } = useMatter(id)
   const del = useDeleteMatter(activeOrgId)
   const reopen = useReopenMatter(activeOrgId)
+  const setStatus = useSetMatterStatus(activeOrgId)
   const [tab, setTab] = React.useState<TabKey>('overview')
   const [editOpen, setEditOpen] = React.useState(false)
   const [confirmDelete, setConfirmDelete] = React.useState(false)
@@ -84,7 +85,6 @@ export function MatterDetailPage() {
     )
   }
 
-  const status = MATTER_STATUS_META[matter.status]
   const isClosed = ['closed', 'won', 'lost'].includes(matter.status)
 
   return (
@@ -97,7 +97,12 @@ export function MatterDetailPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs text-muted-foreground">{matter.matter_number}</span>
-            <Badge variant={status.variant}>{status.label}</Badge>
+            <MatterStatusMenu
+              status={matter.status}
+              disabled={!has(isClosed ? 'matters.reopen' : 'matters.update')}
+              onChangeStatus={(next) => setStatus.mutate({ id: matter.id, status: next, matterNumber: matter.matter_number })}
+              onReopen={() => setReopenOpen(true)}
+            />
             <Badge variant="muted" className="capitalize">{matter.priority} priority</Badge>
           </div>
           <h1 className="mt-1 font-display text-2xl font-semibold">{matter.title}</h1>

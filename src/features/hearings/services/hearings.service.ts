@@ -76,6 +76,23 @@ export const hearingsService = {
     })
   },
 
+  /** Quick status change, no full edit form — a minimal patch (not update()'s
+   * full toRow() overwrite) so nothing else on the hearing gets touched.
+   * The existing DB triggers (track_hearing_modified etc.) fire the same
+   * way regardless of which columns changed, so notifications/timeline
+   * entries still happen exactly as they would from the full edit form. */
+  async setStatus(id: string, organizationId: string, status: HearingStatus, title: string): Promise<void> {
+    const { error } = await supabase.from('hearings').update({ status }).eq('id', id)
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'hearing.updated',
+      p_entity_type: 'hearing',
+      p_entity_id: id,
+      p_summary: `Marked "${title}" as ${status}`,
+    })
+  },
+
   async remove(id: string, organizationId: string, title: string): Promise<void> {
     const { error } = await supabase.from('hearings').delete().eq('id', id)
     if (error) throw error

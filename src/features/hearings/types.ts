@@ -13,3 +13,5 @@ export const HEARING_STATUS_META: Record<HearingStatus, { label: string; variant
   held: { label: 'Held', variant: 'success' },
   cancelled: { label: 'Cancelled', variant: 'muted' },
 }
+
+export const HEARING_STATUSES: HearingStatus[] = ['scheduled', 'adjourned', 'held', 'cancelled']

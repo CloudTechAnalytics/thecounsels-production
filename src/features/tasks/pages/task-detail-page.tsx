@@ -4,14 +4,15 @@ import { format } from 'date-fns'
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useTask, useDeleteTask } from '@/features/tasks/hooks/use-tasks'
+import { useTask, useDeleteTask, useSetTaskStatus } from '@/features/tasks/hooks/use-tasks'
 import { TaskFormDialog } from '@/features/tasks/components/task-form-dialog'
 import { TaskCommentsPanel } from '@/features/tasks/components/task-comments-panel'
-import { TASK_PRIORITY_META, TASK_STATUS_META } from '@/features/tasks/types'
+import { TASK_PRIORITY_META, TASK_STATUS_META, TASK_STATUSES } from '@/features/tasks/types'
 import { isMatterClosed } from '@/features/matters/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
+import { StatusBadgeMenu } from '@/shared/components/status-badge-menu'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
@@ -28,6 +29,7 @@ export function TaskDetailPage() {
   const { has } = usePermissions()
   const { data: task, isLoading } = useTask(id)
   const del = useDeleteTask(activeOrgId)
+  const setStatus = useSetTaskStatus(activeOrgId)
 
   const [editOpen, setEditOpen] = React.useState(false)
   const [confirmDelete, setConfirmDelete] = React.useState(false)
@@ -81,7 +83,12 @@ export function TaskDetailPage() {
         <Card className="p-6 lg:col-span-2">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={TASK_PRIORITY_META[task.priority].variant}>{TASK_PRIORITY_META[task.priority].label}</Badge>
-            <Badge variant={TASK_STATUS_META[task.status].variant}>{TASK_STATUS_META[task.status].label}</Badge>
+            <StatusBadgeMenu
+              value={task.status}
+              options={TASK_STATUSES}
+              meta={TASK_STATUS_META}
+              onChange={(status) => setStatus.mutate({ id: task.id, status })}
+            />
           </div>
           {task.description && <p className="mt-4 whitespace-pre-wrap text-sm text-muted-foreground">{task.description}</p>}
           {readOnly && (

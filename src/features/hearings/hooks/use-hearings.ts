@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { hearingsService, type HearingFilters } from '@/features/hearings/services/hearings.service'
 import type { HearingFormValues } from '@/features/hearings/schemas'
+import type { HearingStatus } from '@/shared/types/database.types'
 
 export function useHearings(organizationId: string | null, filters: HearingFilters = {}) {
   return useQuery({
@@ -31,6 +32,15 @@ export function useUpdateHearing(organizationId: string | null) {
   return useMutation({
     mutationFn: ({ id, values }: { id: string; values: HearingFormValues }) =>
       hearingsService.update(id, organizationId!, values),
+    onSuccess: invalidate,
+  })
+}
+
+export function useSetHearingStatus(organizationId: string | null) {
+  const invalidate = useInvalidate(organizationId)
+  return useMutation({
+    mutationFn: ({ id, status, title }: { id: string; status: HearingStatus; title: string }) =>
+      hearingsService.setStatus(id, organizationId!, status, title),
     onSuccess: invalidate,
   })
 }

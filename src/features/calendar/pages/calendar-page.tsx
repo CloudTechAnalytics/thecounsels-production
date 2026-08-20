@@ -62,13 +62,16 @@ export function CalendarPage() {
       map.set(key, arr)
     }
     for (const h of data ?? []) {
+      // Resolved hearings (held/cancelled) shouldn't linger on the calendar
+      // — same "resolved work disappears" expectation tasks get below.
+      if (h.status === 'held' || h.status === 'cancelled') continue
       const key = format(new Date(h.hearing_at), 'yyyy-MM-dd')
       push(key, { kind: 'hearing', id: h.id, time: format(new Date(h.hearing_at), 'HH:mm'), title: h.title, sortKey: h.hearing_at, data: h })
     }
     for (const t of taskData ?? []) {
       // due_date is a plain date (no time component) — every task due that
       // day sorts after the day's timed hearings, alphabetically among themselves.
-      if (!t.due_date || t.status === 'cancelled') continue
+      if (!t.due_date || t.status === 'cancelled' || t.status === 'done') continue
       push(t.due_date, { kind: 'task', id: t.id, time: '', title: t.title, sortKey: t.due_date + 'T23:59:59', data: t })
     }
     for (const items of map.values()) items.sort((a, b) => a.sortKey.localeCompare(b.sortKey))
@@ -103,11 +106,12 @@ export function CalendarPage() {
   const monthItems = React.useMemo(() => {
     const items: DayItem[] = []
     for (const h of data ?? []) {
+      if (h.status === 'held' || h.status === 'cancelled') continue
       if (!isSameMonth(new Date(h.hearing_at), cursor)) continue
       items.push({ kind: 'hearing', id: h.id, time: format(new Date(h.hearing_at), 'HH:mm'), title: h.title, sortKey: h.hearing_at, data: h })
     }
     for (const t of taskData ?? []) {
-      if (!t.due_date || t.status === 'cancelled') continue
+      if (!t.due_date || t.status === 'cancelled' || t.status === 'done') continue
       if (!isSameMonth(new Date(t.due_date + 'T00:00:00'), cursor)) continue
       items.push({ kind: 'task', id: t.id, time: '', title: t.title, sortKey: t.due_date + 'T23:59:59', data: t })
     }

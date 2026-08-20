@@ -1480,6 +1480,7 @@ export interface Database {
           scheduled_change_at: string | null
           last_trial_reminder_days: number | null
           last_payment_at: string | null
+          additional_storage_gb: number
         } & Timestamps
         Insert: {
           id?: string
@@ -1503,6 +1504,7 @@ export interface Database {
           scheduled_change_at?: string | null
           last_trial_reminder_days?: number | null
           last_payment_at?: string | null
+          additional_storage_gb?: number
         }
         Update: Partial<Database['public']['Tables']['subscriptions']['Insert']>
         Relationships: [
@@ -1898,6 +1900,31 @@ export interface Database {
       platform_storage_usage: {
         Args: Record<PropertyKey, never>
         Returns: { organization_id: string; total_bytes: number }[]
+      }
+      org_storage_usage: {
+        Args: { p_org: string }
+        Returns: number
+      }
+      org_storage_limit_bytes: {
+        Args: { p_org: string }
+        Returns: number
+      }
+      org_storage_breakdown: {
+        Args: { p_org: string }
+        Returns: { category: string; bytes: number }[]
+      }
+      org_largest_files: {
+        Args: { p_org: string; p_limit?: number }
+        Returns: {
+          source: string
+          id: string
+          name: string
+          size_bytes: number
+          uploaded_by_name: string | null
+          created_at: string
+          matter_id: string | null
+          employee_user_id: string | null
+        }[]
       }
       update_organization_slug: {
         Args: { p_org: string; p_slug: string }

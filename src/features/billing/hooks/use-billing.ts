@@ -9,6 +9,7 @@ import type {
   UpdateInvoiceDraftFormValues,
 } from '@/features/billing/schemas'
 import type { InvoiceStatus } from '@/shared/types/database.types'
+import { useInvalidateStorageUsage } from '@/shared/hooks/use-storage-quota'
 
 export function useBillingStats(orgId: string | null) {
   return useQuery({ queryKey: ['billing', orgId, 'stats'], enabled: Boolean(orgId), queryFn: () => billingService.getStats(orgId!) })
@@ -125,14 +126,19 @@ export function useUpdateExpense(orgId: string | null) {
 }
 export function useUploadReceipt(orgId: string | null, userId: string | null) {
   const invalidate = useInvalidate(orgId)
+  const invalidateStorage = useInvalidateStorageUsage(orgId)
   return useMutation({
     mutationFn: ({ expenseId, matterId, file }: { expenseId: string; matterId?: string | null; file: File }) =>
       billingService.uploadReceipt({ organizationId: orgId!, expenseId, matterId, file, uploadedBy: userId }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      invalidateStorage()
+    },
   })
 }
 export function useReplaceReceipt(orgId: string | null, userId: string | null) {
   const invalidate = useInvalidate(orgId)
+  const invalidateStorage = useInvalidateStorageUsage(orgId)
   return useMutation({
     mutationFn: ({
       expenseId,
@@ -145,14 +151,21 @@ export function useReplaceReceipt(orgId: string | null, userId: string | null) {
       file: File
       oldReceipt: { id: string; storage_path: string }
     }) => billingService.replaceReceipt({ organizationId: orgId!, expenseId, matterId, file, uploadedBy: userId }, oldReceipt),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      invalidateStorage()
+    },
   })
 }
 export function useRemoveReceipt(orgId: string | null) {
   const invalidate = useInvalidate(orgId)
+  const invalidateStorage = useInvalidateStorageUsage(orgId)
   return useMutation({
     mutationFn: (receipt: { id: string; storage_path: string }) => billingService.removeReceipt(receipt),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      invalidateStorage()
+    },
   })
 }
 export function useDeleteTimeEntry(orgId: string | null) {

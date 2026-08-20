@@ -102,13 +102,20 @@ export const platformService = {
     )
     const storageByOrg = new Map((storageRes.data ?? []).map((r) => [r.organization_id, r.total_bytes]))
 
-    return rows.map((o) => ({
-      ...o,
-      storage_used_bytes: storageByOrg.get(o.id) ?? 0,
-      member_count: countByOrg.get(o.id) ?? 0,
-      subscription: subByOrg.get(o.id) ?? null,
-      owner: ownerByOrg.get(o.id) ?? null,
-    }))
+    return rows.map((o) => {
+      const sub = subByOrg.get(o.id) ?? null
+      // Already available on the subscriptions+plan embed fetched above —
+      // no separate query needed.
+      const storageGb = (sub?.plan?.storage_gb ?? 0) + (sub?.additional_storage_gb ?? 0)
+      return {
+        ...o,
+        storage_used_bytes: storageByOrg.get(o.id) ?? 0,
+        storage_limit_bytes: storageGb * 1024 ** 3,
+        member_count: countByOrg.get(o.id) ?? 0,
+        subscription: sub,
+        owner: ownerByOrg.get(o.id) ?? null,
+      }
+    })
   },
 
   async getStats(): Promise<PlatformStats> {

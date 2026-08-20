@@ -13,7 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { formatStorage } from '@/shared/lib/format'
 import { toast } from '@/shared/components/ui/sonner'
-import { errorMessage } from '@/shared/lib/errors'
+import { errorMessage, friendlyErrorMessage } from '@/shared/lib/errors'
+
+const MAX_HR_DOCUMENT_BYTES = 20 * 1024 * 1024
 
 const categoryLabel = (v: string) => HR_DOCUMENT_CATEGORIES.find((c) => c.value === v)?.label ?? v
 
@@ -84,11 +86,15 @@ function UploadForm({ userId }: { userId: string }) {
           const file = e.target.files?.[0]
           e.target.value = ''
           if (!file) return
+          if (file.size > MAX_HR_DOCUMENT_BYTES) {
+            toast.error('File is too large', { description: `Maximum size is ${formatStorage(MAX_HR_DOCUMENT_BYTES)}.` })
+            return
+          }
           try {
             await upload.mutateAsync({ userId, file, category })
             toast.success('Document uploaded')
           } catch (err) {
-            toast.error('Could not upload', { description: errorMessage(err) })
+            toast.error('Could not upload', { description: friendlyErrorMessage(err) })
           }
         }}
       />

@@ -19,6 +19,8 @@ export interface OrgRow extends Organization {
   member_count: number
   subscription: SubscriptionWithPlan | null
   owner: { full_name: string | null; email: string } | null
+  /** plan.storage_gb + subscription.additional_storage_gb, in bytes — 0 means no subscription/plan configured. */
+  storage_limit_bytes: number
 }
 
 export interface RegistrationSettings {

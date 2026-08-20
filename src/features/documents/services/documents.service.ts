@@ -1,5 +1,7 @@
 import { supabase } from '@/shared/lib/supabase'
 import type { DocumentRow, Matter, Profile } from '@/shared/types/database.types'
+import { storageQuotaService, storageLimitMessage } from '@/shared/services/storage-quota.service'
+import { formatStorage } from '@/shared/lib/format'
 
 const BUCKET = 'documents'
 
@@ -101,6 +103,15 @@ export const documentsService = {
     displayName?: string
   }): Promise<void> {
     const { organizationId, file, uploadedBy, matterId, category, displayName } = params
+
+    // Fail fast before spending an actual upload round-trip — the DB
+    // trigger (migration 0108) remains the authoritative, race-safe
+    // enforcement regardless of what this optimistic check decides.
+    const availability = await storageQuotaService.checkAvailability(organizationId, file.size)
+    if (!availability.allowed) {
+      throw new Error(storageLimitMessage(availability.usedBytes, availability.limitBytes, formatStorage))
+    }
+
     const folder = matterId || 'general'
     const path = `${organizationId}/${folder}/${crypto.randomUUID()}-${sanitize(file.name)}`
 

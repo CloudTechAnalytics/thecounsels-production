@@ -2,6 +2,7 @@ import * as React from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { documentsService, type DocumentFilters } from '@/features/documents/services/documents.service'
 import type { DocumentRow } from '@/shared/types/database.types'
+import { useInvalidateStorageUsage } from '@/shared/hooks/use-storage-quota'
 
 /** Paginated (200/page) — a firm with decades of migrated records can
  * easily exceed Postgres/PostgREST's default row cap, so this always pages
@@ -30,9 +31,11 @@ export function useDocumentCategories(organizationId: string | null) {
 
 function useInvalidate(organizationId: string | null) {
   const qc = useQueryClient()
+  const invalidateStorage = useInvalidateStorageUsage(organizationId)
   return (matterId?: string | null) => {
     qc.invalidateQueries({ queryKey: ['org-documents', organizationId] })
     if (matterId) qc.invalidateQueries({ queryKey: ['matter-summary', matterId] })
+    invalidateStorage()
   }
 }
 

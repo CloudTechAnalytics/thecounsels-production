@@ -60,6 +60,7 @@ export function ViewOrganizationDialog({
             <Separator className="my-2" />
             <Row label="Users" value={org.member_count} />
             <Row label="Storage used" value={formatStorage(org.storage_used_bytes)} />
+            <Row label="Storage limit" value={org.storage_limit_bytes ? formatStorage(org.storage_limit_bytes) : 'Not configured'} />
             <Row label="Created" value={format(new Date(org.created_at), 'PP')} />
             <Row label="Last login" value={org.last_login_at ? format(new Date(org.last_login_at), 'PPp') : 'Never'} />
           </div>

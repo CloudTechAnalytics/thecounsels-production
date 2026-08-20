@@ -1,5 +1,7 @@
 import { supabase } from '@/shared/lib/supabase'
 import type { InvoiceStatus, TimeEntryStatus } from '@/shared/types/database.types'
+import { storageQuotaService, storageLimitMessage } from '@/shared/services/storage-quota.service'
+import { formatStorage } from '@/shared/lib/format'
 import {
   timeAmount,
   type BillingStats,
@@ -237,6 +239,12 @@ export const billingService = {
     uploadedBy: string | null
   }): Promise<void> {
     const { organizationId, expenseId, matterId, file, uploadedBy } = params
+
+    const availability = await storageQuotaService.checkAvailability(organizationId, file.size)
+    if (!availability.allowed) {
+      throw new Error(storageLimitMessage(availability.usedBytes, availability.limitBytes, formatStorage))
+    }
+
     const folder = matterId || 'general'
     const safeName = file.name.replace(/[^\w.\-]+/g, '_').slice(-120)
     const path = `${organizationId}/${folder}/${crypto.randomUUID()}-${safeName}`

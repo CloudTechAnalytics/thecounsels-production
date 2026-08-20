@@ -1,5 +1,7 @@
 import { supabase } from '@/shared/lib/supabase'
 import { administrationService } from '@/features/administration/services/administration.service'
+import { storageQuotaService, storageLimitMessage } from '@/shared/services/storage-quota.service'
+import { formatStorage } from '@/shared/lib/format'
 import type { Database } from '@/shared/types/database.types'
 import type {
   Employee, Department, JobTitle, LeaveType, LeaveBalanceRow, LeaveRequestRow, HrRequestRow, HrDocumentRow, StaffProfileRow,
@@ -261,6 +263,12 @@ export const hrService = {
     uploadedBy: string | null
   }): Promise<void> {
     const { organizationId, userId, file, category, uploadedBy } = params
+
+    const availability = await storageQuotaService.checkAvailability(organizationId, file.size)
+    if (!availability.allowed) {
+      throw new Error(storageLimitMessage(availability.usedBytes, availability.limitBytes, formatStorage))
+    }
+
     const path = `${organizationId}/${userId}/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-]+/g, '_')}`
     const { error: upErr } = await supabase.storage.from('hr-documents').upload(path, file, {
       contentType: file.type || 'application/octet-stream',

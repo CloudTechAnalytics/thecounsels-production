@@ -51,6 +51,15 @@ import { initialsOf, titleCase, formatStorage, daysUntil } from '@/shared/lib/fo
 import { errorMessage } from '@/shared/lib/errors'
 import { toast } from '@/shared/components/ui/sonner'
 
+/** "14.7 GB / 250 GB (5.9%)" — falls back to just the used figure when no
+ * limit is configured (storage_limit_bytes === 0), matching how the
+ * underlying RPC treats an unconfigured plan (see migration 0108). */
+function storageSummary(usedBytes: number, limitBytes: number): string {
+  if (!limitBytes) return formatStorage(usedBytes)
+  const pct = Math.round((usedBytes / limitBytes) * 100)
+  return `${formatStorage(usedBytes)} / ${formatStorage(limitBytes)} (${pct}%)`
+}
+
 const STATUS_VARIANT: Record<string, BadgeProps['variant']> = {
   active: 'success',
   trial: 'warning',
@@ -362,7 +371,7 @@ export function OrganizationsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">{org.member_count}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatStorage(org.storage_used_bytes)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{storageSummary(org.storage_used_bytes, org.storage_limit_bytes)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {org.subscription?.current_period_end ? format(new Date(org.subscription.current_period_end), 'MMM d, yyyy') : '—'}
                       </TableCell>
@@ -424,7 +433,7 @@ export function OrganizationsPage() {
                     </div>
                     <div>
                       <p className="text-muted-foreground">Storage</p>
-                      <p className="mt-0.5 font-medium">{formatStorage(org.storage_used_bytes)}</p>
+                      <p className="mt-0.5 font-medium">{storageSummary(org.storage_used_bytes, org.storage_limit_bytes)}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Renewal</p>

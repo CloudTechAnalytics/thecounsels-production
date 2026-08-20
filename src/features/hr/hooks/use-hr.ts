@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { hrService } from '@/features/hr/services/hr.service'
 import { supabase } from '@/shared/lib/supabase'
 import type { StaffProfileRow } from '@/features/hr/types'
+import { useInvalidateStorageUsage } from '@/shared/hooks/use-storage-quota'
 
 export function useEmployees(organizationId: string | null) {
   return useQuery({
@@ -281,21 +282,25 @@ export function useEmployeeHrDocuments(organizationId: string | null, userId: st
 
 export function useUploadHrDocument(organizationId: string | null, uploadedBy: string | null) {
   const qc = useQueryClient()
+  const invalidateStorage = useInvalidateStorageUsage(organizationId)
   return useMutation({
     mutationFn: (params: { userId: string; file: File; category: string }) =>
       hrService.uploadHrDocument({ organizationId: organizationId!, uploadedBy, ...params }),
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['hr', 'employee-documents', organizationId, vars.userId] })
       qc.invalidateQueries({ queryKey: ['hr', 'my-documents', organizationId, vars.userId] })
+      invalidateStorage()
     },
   })
 }
 
 export function useDeleteHrDocument(organizationId: string | null) {
   const qc = useQueryClient()
+  const invalidateStorage = useInvalidateStorageUsage(organizationId)
   return useMutation({
     mutationFn: ({ id, storagePath }: { id: string; storagePath: string; userId: string }) => hrService.deleteHrDocument(id, storagePath),
     onSuccess: (_d, vars) => {
+      invalidateStorage()
       qc.invalidateQueries({ queryKey: ['hr', 'employee-documents', organizationId, vars.userId] })
       qc.invalidateQueries({ queryKey: ['hr', 'my-documents', organizationId, vars.userId] })
     },

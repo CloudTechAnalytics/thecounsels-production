@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const USER_COUNT_BANDS = ['1–5', '6–15', '16–30', '31+'] as const
 
-/** e.g. "Law Castle Firm" -> "law-castle-firm". Same shape as platform/schemas.ts's slugify — kept
+/** e.g. "CloudTech Legal Firm" -> "cloudtech-legal-firm". Same shape as platform/schemas.ts's slugify — kept
  *  local so onboarding doesn't reach into the platform feature for a one-line helper. */
 export function slugify(value: string): string {
   return value

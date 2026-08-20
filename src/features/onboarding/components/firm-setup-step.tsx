@@ -81,7 +81,7 @@ export function FirmSetupStep({
               <FormControl>
                 <HintInput
                   hint="A-Z"
-                  placeholder="e.g. Law Castle Firm"
+                  placeholder="e.g. CloudTech Legal Firm"
                   autoFocus
                   {...field}
                   onChange={(e) => onFirmNameChange(e.target.value)}
@@ -133,7 +133,7 @@ export function FirmSetupStep({
             <FormItem>
               <FormLabel>Legal name <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
               <FormControl>
-                <HintInput hint="A-Z" placeholder="e.g. Law Castle Legal Practitioners LLP" {...field} />
+                <HintInput hint="A-Z" placeholder="e.g. CloudTech Legal Practitioners LLP" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

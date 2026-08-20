@@ -9,6 +9,7 @@ import { Button } from '@/shared/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar'
 import { Badge } from '@/shared/components/ui/badge'
 import { GlobalSearch } from '@/shared/components/layout/global-search'
+import { AssistantDialog } from '@/shared/components/layout/assistant-dialog'
 import { NotificationBell } from '@/features/notifications/components/notification-bell'
 import { SubscriptionStatusPill } from '@/features/subscription-billing/components/subscription-status-banner'
 import { ThemeToggle } from '@/shared/components/theme-toggle'
@@ -41,6 +42,7 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
       <GlobalSearch />
 
       <div className="ml-auto flex items-center gap-2">
+        {hasFeature('ai_summarization') && <AssistantDialog />}
         <SubscriptionStatusPill />
         <ThemeToggle />
         <NotificationBell />

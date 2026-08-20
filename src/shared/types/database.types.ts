@@ -1031,6 +1031,26 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['matter_ai_chat_messages']['Insert']>
         Relationships: []
       }
+      assistant_messages: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          role: string
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          role: string
+          content: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['assistant_messages']['Insert']>
+        Relationships: []
+      }
       task_comments: {
         Row: {
           id: string

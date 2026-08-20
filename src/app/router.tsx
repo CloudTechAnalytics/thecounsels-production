@@ -35,6 +35,7 @@ import { SettingsPage } from '@/features/settings/pages/settings-page'
 import { BillingPage } from '@/features/billing/pages/billing-page'
 import { ReportsPage } from '@/features/reports/pages/reports-page'
 import { ClientsPage } from '@/features/clients/pages/clients-page'
+import { ClientDetailPage } from '@/features/clients/pages/client-detail-page'
 import { NotificationsPage } from '@/features/notifications/pages/notifications-page'
 import { MessagesPage } from '@/features/messaging/pages/messages-page'
 import { MattersPage } from '@/features/matters/pages/matters-page'
@@ -53,6 +54,7 @@ import { HrReportsPage } from '@/features/hr/pages/hr-reports-page'
 import { HearingsPage } from '@/features/hearings/pages/hearings-page'
 import { CalendarPage } from '@/features/calendar/pages/calendar-page'
 import { TasksPage } from '@/features/tasks/pages/tasks-page'
+import { TaskDetailPage } from '@/features/tasks/pages/task-detail-page'
 import { StaffPage } from '@/features/staff/pages/staff-page'
 
 // CloudTech platform console
@@ -206,11 +208,13 @@ export const router = createBrowserRouter([
                       { path: 'matters', element: withPermission(<MattersPage />, 'matters.view') },
                       { path: 'matters/:id', element: withPermission(<MatterDetailPage />, 'matters.view') },
                       { path: 'clients', element: withPermission(<ClientsPage />, 'clients.view') },
+                      { path: 'clients/:id', element: withPermission(<ClientDetailPage />, 'clients.view') },
                       { path: 'documents', element: withPermission(<DocumentsPage />, 'documents.view') },
                       { path: 'documents/import', element: withPermission(<BulkImportPage />, 'documents.upload') },
                       { path: 'hearings', element: withPermission(<HearingsPage />, 'hearings.view') },
                       { path: 'calendar', element: withPermission(<CalendarPage />, 'calendar.view') },
                       { path: 'tasks', element: withPermission(<TasksPage />, 'tasks.view') },
+                      { path: 'tasks/:id', element: withPermission(<TaskDetailPage />, 'tasks.view') },
                       { path: 'staff', element: withPermission(<StaffPage />, 'staff.view') },
                       { path: 'billing', element: withPermission(<BillingPage />, 'billing.view') },
                       { path: 'reports', element: withPermission(<ReportsPage />, 'reports.view') },

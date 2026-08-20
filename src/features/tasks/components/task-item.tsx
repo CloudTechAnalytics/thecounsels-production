@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { format, isPast, isToday } from 'date-fns'
 import { MoreHorizontal, Pencil, Trash2, Circle, CheckCircle2, Clock } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
@@ -45,6 +45,7 @@ export function TaskItem({
   showMatter?: boolean
 }) {
   const { activeOrgId } = useAuth()
+  const navigate = useNavigate()
   const setStatus = useSetTaskStatus(activeOrgId)
   const done = task.status === 'done'
   const emphasize = !done && (task.priority === 'urgent' || task.priority === 'high')
@@ -52,13 +53,17 @@ export function TaskItem({
   return (
     <Card
       className={cn(
-        'flex items-start gap-3 p-3',
+        'flex cursor-pointer items-start gap-3 p-3',
         emphasize && cn('border-l-4', task.priority === 'urgent' ? 'border-l-destructive' : 'border-l-warning'),
       )}
+      onClick={() => navigate(`/tasks/${task.id}`)}
     >
       <button
         className="mt-0.5 text-muted-foreground hover:text-primary"
-        onClick={() => setStatus.mutate({ id: task.id, status: done ? 'todo' : 'done' })}
+        onClick={(e) => {
+          e.stopPropagation()
+          setStatus.mutate({ id: task.id, status: done ? 'todo' : 'done' })
+        }}
         aria-label={done ? 'Mark incomplete' : 'Mark complete'}
       >
         {done ? <CheckCircle2 className="h-5 w-5 text-success" /> : <Circle className="h-5 w-5" />}
@@ -73,7 +78,9 @@ export function TaskItem({
         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
           {task.due_date && <DueLabel due={task.due_date} done={done} />}
           {showMatter && task.matter && (
-            <Link to={`/matters/${task.matter.id}`} className="text-xs text-primary hover:underline">{task.matter.matter_number}</Link>
+            <Link to={`/matters/${task.matter.id}`} className="text-xs text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+              {task.matter.matter_number}
+            </Link>
           )}
           {task.assignee && (
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -88,9 +95,11 @@ export function TaskItem({
       {(canEdit || canDelete) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Actions"><MoreHorizontal className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" aria-label="Actions" onClick={(e) => e.stopPropagation()}>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
             {canEdit && <DropdownMenuItem onClick={onEdit}><Pencil /> Edit</DropdownMenuItem>}
             {canDelete && (
               <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onDelete}><Trash2 /> Delete</DropdownMenuItem>

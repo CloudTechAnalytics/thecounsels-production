@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Users, Building2, User, MoreHorizontal, Pencil, Trash2, Mail, Phone, AlertTriangle, Contact } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
@@ -33,6 +34,7 @@ const STATUS: Record<string, BadgeProps['variant']> = {
 }
 
 export function ClientsPage() {
+  const navigate = useNavigate()
   const { activeOrgId } = useAuth()
   const { has } = usePermissions()
   const [search, setSearch] = React.useState('')
@@ -148,7 +150,7 @@ export function ClientsPage() {
             </TableHeader>
             <TableBody>
               {data.map((c) => (
-                <TableRow key={c.id}>
+                <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/clients/${c.id}`)}>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/12 text-xs font-semibold text-primary">
@@ -178,7 +180,10 @@ export function ClientsPage() {
                       {!c.email && !c.phone && <span className="text-muted-foreground">—</span>}
                       <button
                         type="button"
-                        onClick={() => setManagingContacts(c)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setManagingContacts(c)
+                        }}
                         className="flex items-center gap-1.5 text-primary hover:underline"
                       >
                         <Contact className="h-3 w-3" /> {c.contacts[0]?.count ?? 0} contact{(c.contacts[0]?.count ?? 0) === 1 ? '' : 's'}
@@ -193,7 +198,7 @@ export function ClientsPage() {
                       {c.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" aria-label="Actions">

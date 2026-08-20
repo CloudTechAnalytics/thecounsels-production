@@ -14,6 +14,41 @@ export function useClients(organizationId: string | null, filters: ClientFilters
   })
 }
 
+/** retry: false — same reasoning as useMatter()/useTask(): don't keep
+ * retrying a fetch that failed because access was revoked. */
+export function useClient(id: string | undefined) {
+  return useQuery({
+    queryKey: ['client', id],
+    enabled: Boolean(id),
+    queryFn: () => clientsService.get(id!),
+    retry: false,
+  })
+}
+
+export function useClientInvoices(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['client', clientId, 'invoices'],
+    enabled: Boolean(clientId),
+    queryFn: () => clientsService.listInvoices(clientId!),
+  })
+}
+
+export function useClientPayments(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['client', clientId, 'payments'],
+    enabled: Boolean(clientId),
+    queryFn: () => clientsService.listPayments(clientId!),
+  })
+}
+
+export function useClientDocuments(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['client', clientId, 'documents'],
+    enabled: Boolean(clientId),
+    queryFn: () => clientsService.listDocuments(clientId!),
+  })
+}
+
 /** Matters attached to a client — used to warn before a delete that cascades. */
 export function useClientMatterCount(clientId: string | undefined) {
   return useQuery({

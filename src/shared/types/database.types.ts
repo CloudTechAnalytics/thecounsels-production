@@ -1030,6 +1030,41 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['matter_ai_chat_messages']['Insert']>
         Relationships: []
       }
+      task_comments: {
+        Row: {
+          id: string
+          organization_id: string
+          task_id: string
+          user_id: string
+          body: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          task_id: string
+          user_id: string
+          body: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['task_comments']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'task_comments_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'task_comments_task_id_fkey'
+            columns: ['task_id']
+            isOneToOne: false
+            referencedRelation: 'tasks'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       hr_announcements: {
         Row: {
           id: string

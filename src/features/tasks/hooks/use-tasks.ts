@@ -11,6 +11,18 @@ export function useTasks(organizationId: string | null, filters: TaskFilters, cu
   })
 }
 
+/** retry: false — same reasoning as useMatter(): don't keep retrying a
+ * fetch that failed because access was revoked, or a stale cached success
+ * would mask that. */
+export function useTask(id: string | undefined) {
+  return useQuery({
+    queryKey: ['task', id],
+    enabled: Boolean(id),
+    queryFn: () => tasksService.get(id!),
+    retry: false,
+  })
+}
+
 function useInvalidate(organizationId: string | null) {
   const qc = useQueryClient()
   return () => {

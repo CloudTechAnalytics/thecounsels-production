@@ -27,6 +27,12 @@ function toRow(values: TaskFormValues) {
 }
 
 export const tasksService = {
+  async get(id: string): Promise<TaskRow | null> {
+    const { data, error } = await supabase.from('tasks').select(SELECT).eq('id', id).maybeSingle()
+    if (error) throw error
+    return data as unknown as TaskRow | null
+  },
+
   async list(organizationId: string, filters: TaskFilters, currentUserId: string | null): Promise<TaskRow[]> {
     let q = supabase
       .from('tasks')

@@ -1,6 +1,14 @@
 import { supabase } from '@/shared/lib/supabase'
-import type { Client, ClientContact, ClientStatus, ClientType } from '@/shared/types/database.types'
+import type { Client, ClientContact, ClientStatus, ClientType, DocumentRow, Invoice, Payment } from '@/shared/types/database.types'
 import { clientDisplayName, type ClientFormValues, type ContactFormValues } from '@/features/clients/schemas'
+
+/** Lightweight rows for the Client Detail page's tabs — deliberately not
+ * the heavier billingService/documentsService SELECT shapes (those carry
+ * embeds this page doesn't need); documents has no client_id column at
+ * all (confirmed via migration history), so it's joined through matters. */
+export interface ClientDocumentRow extends DocumentRow {
+  matter: { id: string; matter_number: string } | null
+}
 
 export interface ClientFilters {
   search?: string
@@ -42,6 +50,46 @@ function toRow(values: ClientFormValues) {
 }
 
 export const clientsService = {
+  async get(id: string): Promise<Client | null> {
+    const { data, error } = await supabase.from('clients').select('*').eq('id', id).maybeSingle()
+    if (error) throw error
+    return data
+  },
+
+  /** Client-level invoices/payments/documents for the Detail page's tabs.
+   * invoices/payments reference client_id directly (confirmed — including
+   * genuine client-level invoices with no matter attached); documents
+   * only has matter_id, so it's joined through matters.client_id. */
+  async listInvoices(clientId: string): Promise<Invoice[]> {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data ?? []
+  },
+
+  async listPayments(clientId: string): Promise<Payment[]> {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data ?? []
+  },
+
+  async listDocuments(clientId: string): Promise<ClientDocumentRow[]> {
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*, matter:matters!inner(id, matter_number)')
+      .eq('matter.client_id', clientId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return (data ?? []) as unknown as ClientDocumentRow[]
+  },
+
   async list(organizationId: string, filters: ClientFilters = {}): Promise<ClientRow[]> {
     let q = supabase
       .from('clients')

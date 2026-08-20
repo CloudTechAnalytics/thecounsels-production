@@ -11,7 +11,7 @@ import {
   addMonths,
   format,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, CalendarDays, CheckSquare, Gavel } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, CheckSquare, Gavel, CalendarClock } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useHearings } from '@/features/hearings/hooks/use-hearings'
@@ -20,6 +20,9 @@ import { HEARING_STATUS_META, type HearingRow } from '@/features/hearings/types'
 import { isMatterClosed } from '@/features/matters/types'
 import { useTasks } from '@/features/tasks/hooks/use-tasks'
 import { TASK_STATUS_META, type TaskRow } from '@/features/tasks/types'
+import { useAppointments } from '@/features/appointments/hooks/use-appointments'
+import { AppointmentFormDialog } from '@/features/appointments/components/appointment-form-dialog'
+import { APPOINTMENT_STATUS_META, type AppointmentRow } from '@/features/appointments/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -33,6 +36,7 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 type DayItem =
   | { kind: 'hearing'; id: string; time: string; title: string; sortKey: string; data: HearingRow }
   | { kind: 'task'; id: string; time: string; title: string; sortKey: string; data: TaskRow }
+  | { kind: 'appointment'; id: string; time: string; title: string; sortKey: string; data: AppointmentRow }
 
 export function CalendarPage() {
   const { activeOrgId, userId } = useAuth()
@@ -43,6 +47,9 @@ export function CalendarPage() {
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<HearingRow | null>(null)
   const [presetDate, setPresetDate] = React.useState<string | undefined>()
+  const [apptFormOpen, setApptFormOpen] = React.useState(false)
+  const [apptEditing, setApptEditing] = React.useState<AppointmentRow | null>(null)
+  const [apptPresetDate, setApptPresetDate] = React.useState<string | undefined>()
 
   const gridStart = startOfWeek(startOfMonth(cursor))
   const gridEnd = endOfWeek(endOfMonth(cursor))
@@ -52,7 +59,9 @@ export function CalendarPage() {
   // Every open task with a due date — cheap enough for a firm's task volume,
   // and shares its cache with the Tasks page's own unfiltered query.
   const { data: taskData } = useTasks(activeOrgId, {}, userId)
+  const { data: apptData } = useAppointments(activeOrgId, { from: gridStart.toISOString(), to: gridEnd.toISOString() })
   const canCreate = has('hearings.create')
+  const canCreateAppt = has('appointments.create')
 
   const byDay = React.useMemo(() => {
     const map = new Map<string, DayItem[]>()
@@ -74,9 +83,15 @@ export function CalendarPage() {
       if (!t.due_date || t.status === 'cancelled' || t.status === 'done') continue
       push(t.due_date, { kind: 'task', id: t.id, time: '', title: t.title, sortKey: t.due_date + 'T23:59:59', data: t })
     }
+    for (const a of apptData ?? []) {
+      // Same "resolved work disappears" rule as hearings.
+      if (a.status === 'completed' || a.status === 'cancelled' || a.status === 'no_show') continue
+      const key = format(new Date(a.appointment_at), 'yyyy-MM-dd')
+      push(key, { kind: 'appointment', id: a.id, time: format(new Date(a.appointment_at), 'HH:mm'), title: a.title, sortKey: a.appointment_at, data: a })
+    }
     for (const items of map.values()) items.sort((a, b) => a.sortKey.localeCompare(b.sortKey))
     return map
-  }, [data, taskData])
+  }, [data, taskData, apptData])
 
   const openHearing = (h: HearingRow) => {
     // No leadership bypass on hearings once the matter is closed (unlike
@@ -94,6 +109,15 @@ export function CalendarPage() {
   // here) — clicking one takes you to the Tasks page instead, same as
   // clicking a notification about one would.
   const openTask = () => navigate('/tasks')
+  const openAppointment = (a: AppointmentRow) => {
+    if (a.matter && isMatterClosed(a.matter.status)) {
+      toast.info('This appointment is on a closed matter and can no longer be edited.')
+      return
+    }
+    setApptEditing(a)
+    setApptPresetDate(undefined)
+    setApptFormOpen(true)
+  }
   const openNewOn = (day: Date) => {
     if (!canCreate) return
     setEditing(null)
@@ -115,8 +139,13 @@ export function CalendarPage() {
       if (!isSameMonth(new Date(t.due_date + 'T00:00:00'), cursor)) continue
       items.push({ kind: 'task', id: t.id, time: '', title: t.title, sortKey: t.due_date + 'T23:59:59', data: t })
     }
+    for (const a of apptData ?? []) {
+      if (a.status === 'completed' || a.status === 'cancelled' || a.status === 'no_show') continue
+      if (!isSameMonth(new Date(a.appointment_at), cursor)) continue
+      items.push({ kind: 'appointment', id: a.id, time: format(new Date(a.appointment_at), 'HH:mm'), title: a.title, sortKey: a.appointment_at, data: a })
+    }
     return items.sort((a, b) => a.sortKey.localeCompare(b.sortKey))
-  }, [data, taskData, cursor])
+  }, [data, taskData, apptData, cursor])
 
   return (
     <div>
@@ -124,11 +153,21 @@ export function CalendarPage() {
         title="Calendar"
         description="Every court date, appearance, and task due date across the firm."
         actions={
-          canCreate ? (
-            <Button onClick={() => { setEditing(null); setPresetDate(undefined); setFormOpen(true) }}>
-              <Plus /> Schedule
-            </Button>
-          ) : undefined
+          <div className="flex flex-wrap gap-2">
+            {canCreateAppt && (
+              <Button
+                variant="outline"
+                onClick={() => { setApptEditing(null); setApptPresetDate(undefined); setApptFormOpen(true) }}
+              >
+                <CalendarClock /> Appointment
+              </Button>
+            )}
+            {canCreate && (
+              <Button onClick={() => { setEditing(null); setPresetDate(undefined); setFormOpen(true) }}>
+                <Plus /> Schedule
+              </Button>
+            )}
+          </div>
         }
       />
 
@@ -192,15 +231,28 @@ export function CalendarPage() {
                     {items.slice(0, 3).map((item) => (
                       <div
                         key={`${item.kind}-${item.id}`}
-                        onClick={(e) => { e.stopPropagation(); item.kind === 'hearing' ? openHearing(item.data) : openTask() }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (item.kind === 'hearing') openHearing(item.data)
+                          else if (item.kind === 'appointment') openAppointment(item.data)
+                          else openTask()
+                        }}
                         className={cn(
                           'flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] font-medium',
                           item.kind === 'hearing'
                             ? 'bg-primary/10 text-primary hover:bg-primary/20'
-                            : 'bg-muted text-foreground hover:bg-muted/70',
+                            : item.kind === 'appointment'
+                              ? 'bg-accent/15 text-accent-foreground hover:bg-accent/25'
+                              : 'bg-muted text-foreground hover:bg-muted/70',
                         )}
                       >
-                        {item.kind === 'hearing' ? <Gavel className="h-3 w-3 shrink-0" /> : <CheckSquare className="h-3 w-3 shrink-0" />}
+                        {item.kind === 'hearing' ? (
+                          <Gavel className="h-3 w-3 shrink-0" />
+                        ) : item.kind === 'appointment' ? (
+                          <CalendarClock className="h-3 w-3 shrink-0" />
+                        ) : (
+                          <CheckSquare className="h-3 w-3 shrink-0" />
+                        )}
                         <span className="truncate">{item.time ? `${item.time} ` : ''}{item.title}</span>
                       </div>
                     ))}
@@ -216,17 +268,23 @@ export function CalendarPage() {
           {monthItems.length > 0 ? (
             monthItems.map((item) => {
               const isHearing = item.kind === 'hearing'
-              const d = isHearing ? new Date(item.data.hearing_at) : new Date(item.data.due_date + 'T00:00:00')
+              const isAppointment = item.kind === 'appointment'
+              const d =
+                item.kind === 'hearing'
+                  ? new Date(item.data.hearing_at)
+                  : item.kind === 'appointment'
+                    ? new Date(item.data.appointment_at)
+                    : new Date(item.data.due_date + 'T00:00:00')
               return (
                 <Card
                   key={`${item.kind}-${item.id}`}
                   className="flex cursor-pointer items-center gap-4 p-3 hover:border-primary/40"
-                  onClick={() => (isHearing ? openHearing(item.data) : openTask())}
+                  onClick={() => (isHearing ? openHearing(item.data) : isAppointment ? openAppointment(item.data) : openTask())}
                 >
                   <div
                     className={cn(
                       'flex w-14 shrink-0 flex-col items-center rounded-lg py-1.5',
-                      isHearing ? 'bg-primary/10 text-primary' : 'bg-muted text-foreground',
+                      isHearing ? 'bg-primary/10 text-primary' : isAppointment ? 'bg-accent/15 text-accent-foreground' : 'bg-muted text-foreground',
                     )}
                   >
                     <span className="text-[10px] font-semibold uppercase">{format(d, 'EEE')}</span>
@@ -234,17 +292,27 @@ export function CalendarPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-1.5 truncate text-sm font-medium">
-                      {isHearing ? <Gavel className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <CheckSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                      {isHearing ? (
+                        <Gavel className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      ) : isAppointment ? (
+                        <CalendarClock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <CheckSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      )}
                       {item.title}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {isHearing
                         ? `${format(d, 'HH:mm')}${item.data.court ? ` · ${item.data.court}` : ''}`
-                        : (item.data.matter?.title ?? 'No matter linked')}
+                        : isAppointment
+                          ? `${format(d, 'HH:mm')}${item.data.client ? ` · ${item.data.client.display_name}` : ''}`
+                          : ((item.data as TaskRow).matter?.title ?? 'No matter linked')}
                     </p>
                   </div>
                   {isHearing ? (
                     <Badge variant={HEARING_STATUS_META[item.data.status].variant}>{HEARING_STATUS_META[item.data.status].label}</Badge>
+                  ) : isAppointment ? (
+                    <Badge variant={APPOINTMENT_STATUS_META[item.data.status].variant}>{APPOINTMENT_STATUS_META[item.data.status].label}</Badge>
                   ) : (
                     <Badge variant={TASK_STATUS_META[item.data.status].variant}>{TASK_STATUS_META[item.data.status].label}</Badge>
                   )}
@@ -261,6 +329,7 @@ export function CalendarPage() {
       )}
 
       <HearingFormDialog hearing={editing} presetDate={presetDate} open={formOpen} onOpenChange={setFormOpen} />
+      <AppointmentFormDialog appointment={apptEditing} presetDate={apptPresetDate} open={apptFormOpen} onOpenChange={setApptFormOpen} />
     </div>
   )
 }

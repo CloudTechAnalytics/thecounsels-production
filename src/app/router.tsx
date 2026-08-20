@@ -52,6 +52,7 @@ import { HrDocumentsPage } from '@/features/hr/pages/hr-documents-page'
 import { AnnouncementsPage } from '@/features/hr/pages/announcements-page'
 import { HrReportsPage } from '@/features/hr/pages/hr-reports-page'
 import { HearingsPage } from '@/features/hearings/pages/hearings-page'
+import { AppointmentsPage } from '@/features/appointments/pages/appointments-page'
 import { CalendarPage } from '@/features/calendar/pages/calendar-page'
 import { TasksPage } from '@/features/tasks/pages/tasks-page'
 import { TaskDetailPage } from '@/features/tasks/pages/task-detail-page'
@@ -212,6 +213,7 @@ export const router = createBrowserRouter([
                       { path: 'documents', element: withPermission(<DocumentsPage />, 'documents.view') },
                       { path: 'documents/import', element: withPermission(<BulkImportPage />, 'documents.upload') },
                       { path: 'hearings', element: withPermission(<HearingsPage />, 'hearings.view') },
+                      { path: 'appointments', element: withPlanFeature(withPermission(<AppointmentsPage />, 'appointments.view'), 'appointments') },
                       { path: 'calendar', element: withPermission(<CalendarPage />, 'calendar.view') },
                       { path: 'tasks', element: withPermission(<TasksPage />, 'tasks.view') },
                       { path: 'tasks/:id', element: withPermission(<TaskDetailPage />, 'tasks.view') },

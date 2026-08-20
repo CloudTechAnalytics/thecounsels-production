@@ -26,6 +26,7 @@ export type ClientStatus = 'active' | 'inactive' | 'prospect'
 export type MatterStatus = 'open' | 'pending' | 'in_court' | 'closed' | 'won' | 'lost' | 'appeal'
 export type HearingType = 'mention' | 'hearing' | 'trial' | 'ruling' | 'motion' | 'conference' | 'other'
 export type HearingStatus = 'scheduled' | 'adjourned' | 'held' | 'cancelled'
+export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show'
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type NotificationLogChannel = 'IN_APP' | 'EMAIL' | 'WHATSAPP'
@@ -38,7 +39,7 @@ export type TimeEntryStatus = 'draft' | 'submitted' | 'approved' | 'invoiced' | 
 export type TicketStatus = 'open' | 'in_progress' | 'waiting' | 'resolved' | 'closed'
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type NotificationPriority = 'info' | 'reminder' | 'warning' | 'urgent'
-export type NotificationCategory = 'matters' | 'clients' | 'hearings' | 'billing' | 'tasks' | 'documents' | 'notes' | 'messaging' | 'hr'
+export type NotificationCategory = 'matters' | 'clients' | 'hearings' | 'billing' | 'tasks' | 'documents' | 'notes' | 'messaging' | 'hr' | 'appointments'
 export type RoleKey =
   | 'platform_owner'
   | 'platform_admin'
@@ -1167,6 +1168,60 @@ export interface Database {
           },
         ]
       }
+      appointments: {
+        Row: {
+          id: string
+          organization_id: string
+          client_id: string | null
+          matter_id: string | null
+          title: string
+          appointment_at: string
+          duration_minutes: number | null
+          location: string | null
+          assigned_to_id: string | null
+          status: AppointmentStatus
+          notes: string | null
+          created_by: string | null
+        } & Timestamps
+        Insert: {
+          id?: string
+          organization_id: string
+          client_id?: string | null
+          matter_id?: string | null
+          title: string
+          appointment_at: string
+          duration_minutes?: number | null
+          location?: string | null
+          assigned_to_id?: string | null
+          status?: AppointmentStatus
+          notes?: string | null
+          created_by?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['appointments']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'appointments_client_id_fkey'
+            columns: ['client_id']
+            isOneToOne: false
+            referencedRelation: 'clients'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'appointments_matter_id_fkey'
+            columns: ['matter_id']
+            isOneToOne: false
+            referencedRelation: 'matters'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'appointments_assigned_to_id_fkey'
+            columns: ['assigned_to_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       matter_events: {
         Row: {
           id: string
@@ -2030,6 +2085,7 @@ export type MatterNote = Database['public']['Tables']['matter_notes']['Row']
 export type MatterAssignment = Database['public']['Tables']['matter_assignments']['Row']
 export type MatterEvent = Database['public']['Tables']['matter_events']['Row']
 export type Hearing = Database['public']['Tables']['hearings']['Row']
+export type Appointment = Database['public']['Tables']['appointments']['Row']
 export type Task = Database['public']['Tables']['tasks']['Row']
 export type StaffProfile = Database['public']['Tables']['staff_profiles']['Row']
 export type TimeEntry = Database['public']['Tables']['time_entries']['Row']

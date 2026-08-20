@@ -16,6 +16,7 @@ export const NOTIFICATION_CATEGORY_META: Record<NotificationCategory, { label: s
   matters: { label: 'Matters' },
   clients: { label: 'Clients' },
   hearings: { label: 'Hearings' },
+  appointments: { label: 'Appointments' },
   billing: { label: 'Billing' },
   tasks: { label: 'Tasks' },
   documents: { label: 'Documents' },

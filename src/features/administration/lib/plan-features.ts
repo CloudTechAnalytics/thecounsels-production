@@ -8,7 +8,7 @@
  * controls what the UI *shows*, same relationship the permission system
  * has between usePermissions() and RLS).
  */
-export type PlanFeatureKey = 'messaging' | 'whatsapp_reminders' | 'hr_module' | 'ai_summarization'
+export type PlanFeatureKey = 'messaging' | 'whatsapp_reminders' | 'hr_module' | 'ai_summarization' | 'appointments'
 
 export function planHasFeature(features: unknown, key: PlanFeatureKey): boolean {
   return Boolean(features && typeof features === 'object' && (features as Record<string, unknown>)[key] === true)

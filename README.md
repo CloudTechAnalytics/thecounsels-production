@@ -13,6 +13,8 @@ The product has **two completely separate experiences**:
 
 Routing switches layout by identity: a Platform Admin only ever sees `/platform/*`; a firm user only ever sees the workspace. No shared sidebar, no data leakage.
 
+**New to this codebase?** Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) first — it covers the repo/branch/environment layout (two separate GitHub repos, two separate Supabase projects for Testing/Production), the security model, and the specific gotcha classes that have bitten this project before. This README is setup instructions; that doc is the map.
+
 ---
 
 ## Tech stack

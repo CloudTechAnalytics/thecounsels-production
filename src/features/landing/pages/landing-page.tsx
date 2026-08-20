@@ -192,8 +192,7 @@ const PLANS = [
     key: 'enterprise',
     name: 'Enterprise',
     price: 'Custom',
-    priceHint: 'Starting from ₦150,000/month',
-    tagline: 'For larger or custom firms',
+    tagline: 'Tailored pricing — talk to sales',
     features: ['Custom users & storage', 'Custom features & workflows', 'Custom integrations', 'Custom support requirements'],
   },
 ]
@@ -760,7 +759,6 @@ export function LandingPage() {
                 <span className="font-display text-4xl font-semibold">{p.price}</span>
                 {p.price !== 'Custom' && <span className="text-sm text-muted-foreground"> /month</span>}
               </p>
-              {p.priceHint && <p className="text-xs text-muted-foreground">{p.priceHint}</p>}
               <ul className="mt-6 flex-1 space-y-2.5">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm">

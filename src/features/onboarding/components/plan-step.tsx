@@ -93,9 +93,7 @@ function PlanCard({ plan, selected, onSelect }: { plan: Plan; selected: boolean;
           {formatNaira(Number(plan.price_monthly))}<span className="text-sm font-normal text-muted-foreground">/month</span>
         </p>
       )}
-      {plan.is_custom && (
-        <p className="text-xs text-muted-foreground">Starting from {formatNaira(Number(plan.price_monthly))}/month</p>
-      )}
+      {plan.is_custom && <p className="text-xs text-muted-foreground">Tailored pricing — talk to sales</p>}
       <ul className="mt-4 space-y-1.5">
         {plan.highlights.slice(0, 4).map((h) => (
           <li key={h} className="flex items-start gap-1.5 text-xs text-muted-foreground">

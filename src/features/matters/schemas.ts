@@ -11,6 +11,7 @@ export const matterSchema = z.object({
   court: z.string().optional(),
   judge: z.string().optional(),
   description: z.string().optional(),
+  branchId: z.string().optional(),
 })
 
 export type MatterFormValues = z.infer<typeof matterSchema>

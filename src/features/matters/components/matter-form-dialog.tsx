@@ -6,6 +6,7 @@ import { useClients } from '@/features/clients/hooks/use-clients'
 import { useCreateMatter, useUpdateMatter, useFirmMembers } from '@/features/matters/hooks/use-matters'
 import { matterSchema, type MatterFormValues } from '@/features/matters/schemas'
 import { PRACTICE_AREAS, PRIORITIES, MATTER_STATUSES, MATTER_STATUS_META, type MatterRow } from '@/features/matters/types'
+import { BranchPicker } from '@/features/branches/components/branch-picker'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
@@ -47,6 +48,7 @@ function toDefaults(matter?: MatterRow | null): MatterFormValues {
     court: matter?.court ?? '',
     judge: matter?.judge ?? '',
     description: matter?.description ?? '',
+    branchId: matter?.branch_id ?? '',
   }
 }
 
@@ -235,6 +237,18 @@ export function MatterFormDialog({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="branchId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Branch</FormLabel>
+                  <BranchPicker organizationId={activeOrgId} value={field.value ?? ''} onChange={field.onChange} mode="form" restrictToViewer />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <Separator />
             <div className="grid gap-4 sm:grid-cols-3">

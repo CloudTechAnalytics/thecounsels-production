@@ -24,6 +24,10 @@ function toRow(values: TaskFormValues) {
     matter_id: values.matterId || null,
     due_date: values.dueDate || null,
     completed_at: values.status === 'done' ? new Date().toISOString() : null,
+    // Only meaningful for standalone (matterId-less) tasks — a matter-
+    // linked task derives its branch purely from the matter, so its own
+    // branch_id stays null even if the form happened to have one set.
+    branch_id: values.matterId ? null : values.branchId || null,
   }
 }
 

@@ -8,6 +8,7 @@ export const taskSchema = z.object({
   assigneeId: z.string().optional(),
   matterId: z.string().optional(),
   dueDate: z.string().optional(),
+  branchId: z.string().optional(),
 })
 
 export type TaskFormValues = z.infer<typeof taskSchema>

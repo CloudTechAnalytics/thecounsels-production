@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/shared/components/ui/sonner'
 import { friendlyErrorMessage } from '@/shared/lib/errors'
 import { isMatterClosed } from '@/features/matters/types'
+import { BranchPicker } from '@/features/branches/components/branch-picker'
 
 const NONE = '__none__'
 
@@ -34,6 +35,7 @@ function toDefaults(task?: TaskRow | null, presetMatterId?: string): TaskFormVal
     assigneeId: task?.assignee_id ?? '',
     matterId: task?.matter_id ?? presetMatterId ?? '',
     dueDate: task?.due_date ?? '',
+    branchId: task?.branch_id ?? '',
   }
 }
 
@@ -63,6 +65,7 @@ export function TaskFormDialog({
   const update = useUpdateTask(activeOrgId)
 
   const form = useForm<TaskFormValues>({ resolver: zodResolver(taskSchema), defaultValues: toDefaults(task) })
+  const matterId = form.watch('matterId')
   React.useEffect(() => {
     if (open) form.reset(toDefaults(task, presetMatterId))
   }, [open, task, presetMatterId, form])
@@ -197,6 +200,19 @@ export function TaskFormDialog({
                 )}
               />
             </div>
+
+            {(!matterId || matterId === NONE) && (
+              <FormField
+                control={form.control}
+                name="branchId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Branch</FormLabel>
+                    <BranchPicker organizationId={activeOrgId} value={field.value ?? ''} onChange={field.onChange} mode="form" restrictToViewer />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>

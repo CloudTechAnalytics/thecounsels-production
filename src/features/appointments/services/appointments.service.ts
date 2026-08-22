@@ -28,6 +28,9 @@ function toRow(values: AppointmentFormValues) {
     assigned_to_id: values.assignedToId || null,
     status: values.status,
     notes: values.notes?.trim() || null,
+    // Only meaningful for standalone (matterId-less) appointments — see the
+    // identical note in tasks.service.ts's toRow().
+    branch_id: values.matterId ? null : values.branchId || null,
   }
 }
 

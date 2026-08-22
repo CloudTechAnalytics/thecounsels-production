@@ -26,6 +26,9 @@ function toRow(values: HearingFormValues) {
     location: values.location?.trim() || null,
     notes: values.notes?.trim() || null,
     outcome: values.outcome?.trim() || null,
+    // Only meaningful for standalone (matterId-less) hearings — see the
+    // identical note in tasks.service.ts's toRow().
+    branch_id: values.matterId ? null : values.branchId || null,
   }
 }
 

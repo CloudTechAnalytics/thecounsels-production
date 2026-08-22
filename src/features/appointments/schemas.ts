@@ -10,6 +10,7 @@ export const appointmentSchema = z.object({
   assignedToId: z.string().optional(),
   status: z.enum(['scheduled', 'completed', 'cancelled', 'no_show']),
   notes: z.string().optional(),
+  branchId: z.string().optional(),
 })
 
 export type AppointmentFormValues = z.infer<typeof appointmentSchema>

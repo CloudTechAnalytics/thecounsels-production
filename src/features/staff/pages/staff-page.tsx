@@ -16,19 +16,36 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar'
 import { initialsOf } from '@/shared/lib/format'
+import { MapPin } from 'lucide-react'
+import { useBranches } from '@/features/branches/hooks/use-branches'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 
 export function StaffPage() {
-  const { activeOrgId } = useAuth()
+  const { activeOrgId, activeMembership } = useAuth()
   const { has } = usePermissions()
   const { data: members, isLoading } = useFirmMembers(activeOrgId)
   const { data: profiles } = useStaffProfiles(activeOrgId)
   const { data: matters } = useMatters(activeOrgId, {})
   const { data: assignments } = useAllMatterAssignments(activeOrgId)
+  const { data: branches } = useBranches(activeOrgId)
   const [search, setSearch] = React.useState('')
+  const [branchFilter, setBranchFilter] = React.useState('all')
   const [selected, setSelected] = React.useState<StaffMember | null>(null)
 
   const canManage = has('staff.manage')
   const profileByUser = React.useMemo(() => new Map((profiles ?? []).map((p) => [p.user_id, p])), [profiles])
+
+  // A branch-scoped viewer (access_scope 'branch'/'multiple_branches') only
+  // ever sees colleagues who share one of their own branches, or org-wide
+  // leadership — never an unfiltered firm-wide roster. An organization-
+  // scope viewer (e.g. Managing Partner) sees everyone by default, with an
+  // optional filter to narrow down to one branch at a time.
+  const myScope = activeMembership?.access_scope ?? 'organization'
+  const myBranchIds = React.useMemo(
+    () => new Set((activeMembership?.member_branches ?? []).map((mb) => mb.branch_id)),
+    [activeMembership],
+  )
+  const isBranchRestrictedViewer = myScope === 'branch' || myScope === 'multiple_branches'
 
   // "Active matters" used to only count matters someone LED (lead_lawyer_id)
   // — always 0 for support staff (paralegals, litigation clerks,
@@ -69,6 +86,15 @@ export function StaffPage() {
       const name = m.profile?.full_name ?? m.profile?.email ?? ''
       return name.toLowerCase().includes(search.toLowerCase())
     })
+    .filter((m) => {
+      // Organization-scope colleagues (leadership) are always visible,
+      // regardless of who's looking.
+      if (m.access_scope === 'organization') return true
+      const memberBranchIds = m.member_branches.map((mb) => mb.branch_id)
+      if (isBranchRestrictedViewer) return memberBranchIds.some((id) => myBranchIds.has(id))
+      if (branchFilter === 'all') return true
+      return memberBranchIds.includes(branchFilter)
+    })
     .map((member) => ({
       member,
       profile: profileByUser.get(member.user_id) ?? null,
@@ -105,11 +131,22 @@ export function StaffPage() {
         }
       />
 
-      <div className="mb-4 max-w-md">
-        <div className="relative">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative max-w-md flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search team…" className="pl-9" />
         </div>
+        {!isBranchRestrictedViewer && branches && branches.length > 1 && (
+          <Select value={branchFilter} onValueChange={setBranchFilter}>
+            <SelectTrigger className="w-full sm:w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All branches</SelectItem>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {isLoading ? (
@@ -138,6 +175,12 @@ export function StaffPage() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{s.member.profile?.full_name ?? s.member.profile?.email}</p>
                       <p className="truncate text-xs text-muted-foreground">{s.member.role?.name}</p>
+                      <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-muted-foreground">
+                        <MapPin className="h-2.5 w-2.5 shrink-0" />
+                        {s.member.access_scope === 'organization'
+                          ? 'All branches'
+                          : s.member.member_branches.map((mb) => mb.branch?.name).filter(Boolean).join(', ') || 'No branch'}
+                      </p>
                     </div>
                   </div>
                   <Badge variant={avail.variant}>{avail.label}</Badge>

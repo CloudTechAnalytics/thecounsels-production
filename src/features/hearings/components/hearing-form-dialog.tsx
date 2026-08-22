@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/shared/components/ui/sonner'
 import { friendlyErrorMessage } from '@/shared/lib/errors'
 import { isMatterClosed } from '@/features/matters/types'
+import { BranchPicker } from '@/features/branches/components/branch-picker'
 
 const NONE = '__none__'
 
@@ -46,6 +47,7 @@ function toDefaults(hearing?: HearingRow | null, presetDate?: string, presetMatt
     location: hearing?.location ?? '',
     notes: hearing?.notes ?? '',
     outcome: hearing?.outcome ?? '',
+    branchId: hearing?.branch_id ?? '',
   }
 }
 
@@ -77,6 +79,7 @@ export function HearingFormDialog({
   const update = useUpdateHearing(activeOrgId)
 
   const form = useForm<HearingFormValues>({ resolver: zodResolver(hearingSchema), defaultValues: toDefaults(hearing) })
+  const matterIdWatch = form.watch('matterId')
   React.useEffect(() => {
     if (open) form.reset(toDefaults(hearing, presetDate, presetMatterId))
   }, [open, hearing, presetDate, presetMatterId, form])
@@ -240,6 +243,19 @@ export function HearingFormDialog({
                 )}
               />
             </div>
+
+            {(!matterIdWatch || matterIdWatch === NONE) && (
+              <FormField
+                control={form.control}
+                name="branchId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Branch</FormLabel>
+                    <BranchPicker organizationId={activeOrgId} value={field.value ?? ''} onChange={field.onChange} mode="form" restrictToViewer />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <Separator />
             <FormField

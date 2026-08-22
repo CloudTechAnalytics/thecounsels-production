@@ -8,6 +8,7 @@ import { useCreateAppointment, useUpdateAppointment } from '@/features/appointme
 import { appointmentSchema, type AppointmentFormValues } from '@/features/appointments/schemas'
 import { APPOINTMENT_STATUS_META, type AppointmentRow } from '@/features/appointments/types'
 import { isMatterClosed } from '@/features/matters/types'
+import { BranchPicker } from '@/features/branches/components/branch-picker'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
@@ -44,6 +45,7 @@ function toDefaults(appointment?: AppointmentRow | null, presetDate?: string, pr
     assignedToId: appointment?.assigned_to_id ?? '',
     status: appointment?.status ?? 'scheduled',
     notes: appointment?.notes ?? '',
+    branchId: appointment?.branch_id ?? '',
   }
 }
 
@@ -75,6 +77,7 @@ export function AppointmentFormDialog({
   const update = useUpdateAppointment(activeOrgId)
 
   const form = useForm<AppointmentFormValues>({ resolver: zodResolver(appointmentSchema), defaultValues: toDefaults(appointment) })
+  const matterIdWatch = form.watch('matterId')
   React.useEffect(() => {
     if (open) form.reset(toDefaults(appointment, presetDate, presetClientId))
   }, [open, appointment, presetDate, presetClientId, form])
@@ -252,6 +255,19 @@ export function AppointmentFormDialog({
                 )}
               />
             </div>
+
+            {(!matterIdWatch || matterIdWatch === NONE) && (
+              <FormField
+                control={form.control}
+                name="branchId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Branch</FormLabel>
+                    <BranchPicker organizationId={activeOrgId} value={field.value ?? ''} onChange={field.onChange} mode="form" restrictToViewer />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

@@ -33,6 +33,7 @@ function toRow(values: MatterFormValues) {
     court: values.court?.trim() || null,
     judge: values.judge?.trim() || null,
     description: values.description?.trim() || null,
+    branch_id: values.branchId || null,
   }
 }
 

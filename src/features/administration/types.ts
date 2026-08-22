@@ -8,6 +8,7 @@ export interface InvitationWithRelations extends Invitation {
 export interface MemberWithRelations extends Membership {
   profile: Pick<Profile, 'id' | 'full_name' | 'email' | 'avatar_url' | 'title'> | null
   role: Pick<Role, 'id' | 'name' | 'key' | 'rank'> | null
+  member_branches: { branch_id: string; branch: { id: string; name: string } | null }[]
 }
 
 export interface OrganizationSummary extends Organization {

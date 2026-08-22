@@ -6,6 +6,8 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useMembers, useSubscription, useSetMembershipStatus, useRemoveMember } from '@/features/administration/hooks/use-administration'
 import { CreateUserDialog } from '@/features/administration/components/create-user-dialog'
 import { MemberAccessDialog } from '@/features/administration/components/member-access-dialog'
+import { useBranches } from '@/features/branches/hooks/use-branches'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { adminUsersService } from '@/shared/services/admin-users.service'
 import { initialsOf } from '@/shared/lib/format'
 import { errorMessage } from '@/shared/lib/errors'
@@ -138,14 +140,26 @@ export function MembersPanel({
 }) {
   const members = useMembers(organizationId)
   const subscription = useSubscription(organizationId)
+  const { data: branches } = useBranches(organizationId)
   const { has } = usePermissions()
   const { userId } = useAuth()
   const canManage = has('members.manage')
+  const [branchFilter, setBranchFilter] = React.useState('all')
 
   const activeCount = members.data?.filter((m) => m.status === 'active').length ?? 0
   const seats = subscription.data?.seats ?? null
   const atLimit = seats != null && activeCount >= seats
   const planName = subscription.data?.plan?.name ?? 'current'
+
+  // Organization-scope members access every branch, so they match any
+  // branch filter — the filter answers "who can see Lagos", not "who is
+  // narrowly pinned to only Lagos."
+  const filteredMembers = (members.data ?? []).filter(
+    (m) =>
+      branchFilter === 'all' ||
+      m.access_scope === 'organization' ||
+      m.member_branches.some((mb) => mb.branch_id === branchFilter),
+  )
 
   return (
     <Card>
@@ -160,6 +174,18 @@ export function MembersPanel({
             </p>
           )}
         </div>
+        <div className="flex items-center gap-2">
+          {branches && branches.length > 1 && (
+            <Select value={branchFilter} onValueChange={setBranchFilter}>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All branches</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         {atLimit ? (
           <div className="flex flex-col items-end gap-1">
             <Button variant="outline" onClick={onNavigateToPlan} disabled={!onNavigateToPlan}>
@@ -172,6 +198,7 @@ export function MembersPanel({
         ) : (
           <CreateUserDialog organizationId={organizationId} />
         )}
+        </div>
       </CardHeader>
       <CardContent>
         {members.isLoading ? (
@@ -180,19 +207,20 @@ export function MembersPanel({
               <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
-        ) : members.data && members.data.length > 0 ? (
+        ) : filteredMembers.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Branch</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
                 {canManage && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {members.data.map((m) => (
+              {filteredMembers.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -212,6 +240,13 @@ export function MembersPanel({
                       {m.is_owner && <Badge variant="default">Owner</Badge>}
                     </div>
                   </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {m.access_scope === 'organization'
+                      ? 'All branches'
+                      : m.member_branches.length > 0
+                        ? m.member_branches.map((mb) => mb.branch?.name).filter(Boolean).join(', ')
+                        : '—'}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={m.status === 'active' ? 'success' : 'muted'}>{m.status}</Badge>
                   </TableCell>
@@ -229,7 +264,9 @@ export function MembersPanel({
           </Table>
         ) : (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            No members yet. Add your first user to get started.
+            {members.data && members.data.length > 0
+              ? 'No members have access to this branch.'
+              : 'No members yet. Add your first user to get started.'}
           </p>
         )}
       </CardContent>

@@ -224,7 +224,7 @@ export const administrationService = {
     const { data, error } = await supabase
       .from('memberships')
       .select(
-        '*, profile:profiles!memberships_user_id_fkey(id, full_name, email, avatar_url, title), role:roles(id, name, key, rank)',
+        '*, profile:profiles!memberships_user_id_fkey(id, full_name, email, avatar_url, title), role:roles(id, name, key, rank), member_branches(branch_id, branch:branches(id, name))',
       )
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: true })

@@ -9,6 +9,11 @@ export interface CreateUserInput {
   title?: string
   /** True only when a Platform Admin is seating an org's first admin as part of creating the organization. */
   platformSeed?: boolean
+  /** Where this user can act, orthogonal to their role — defaults to
+   * 'organization' (full reach) server-side when omitted. */
+  accessScope?: 'organization' | 'branch' | 'multiple_branches' | 'personal'
+  /** Required when accessScope is 'branch' or 'multiple_branches'. */
+  branchIds?: string[]
 }
 
 /**

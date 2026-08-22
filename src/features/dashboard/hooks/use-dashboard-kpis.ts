@@ -9,10 +9,15 @@ export interface DashboardKpis {
   activeClients: number
 }
 
-/** Firm-wide matter/hearing/client counts for the dashboard KPI tiles. */
-export function useDashboardKpis(organizationId: string | null) {
+/** Firm-wide matter/hearing/client counts for the dashboard KPI tiles.
+ * branchId is an optional client-side filter on top of whatever RLS
+ * already authorizes ("All Branches" = branchId omitted = RLS alone
+ * decides). Clients stay unfiltered by branch — org-wide identity, per the
+ * branch architecture's own design (branch visibility applies to a
+ * client's matters, not the client record itself). */
+export function useDashboardKpis(organizationId: string | null, branchId?: string) {
   return useQuery({
-    queryKey: ['dashboard', 'kpis', organizationId],
+    queryKey: ['dashboard', 'kpis', organizationId, branchId],
     enabled: Boolean(organizationId),
     queryFn: async (): Promise<DashboardKpis> => {
       // Rolling window: today 00:00 through the next 7 days.
@@ -21,19 +26,26 @@ export function useDashboardKpis(organizationId: string | null) {
       const weekEnd = new Date(weekStart)
       weekEnd.setDate(weekStart.getDate() + 7)
 
+      let mattersQ = supabase.from('matters').select('status').eq('organization_id', organizationId!)
+      let hearingsQ = supabase
+        .from('hearings')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organizationId!)
+        // Only still-pending hearings count as "this week" — a 'held'
+        // one already happened, even if its timestamp still falls
+        // inside the rolling window.
+        .in('status', ['scheduled', 'adjourned'])
+        .gte('hearing_at', weekStart.toISOString())
+        .lt('hearing_at', weekEnd.toISOString())
+      if (branchId) {
+        mattersQ = mattersQ.eq('branch_id', branchId)
+        hearingsQ = hearingsQ.eq('branch_id', branchId)
+      }
+
       const [matters, hearings, clients] = await Promise.all([
         // One query for all three matter-status KPIs — cheaper than three count-head queries.
-        supabase.from('matters').select('status').eq('organization_id', organizationId!),
-        supabase
-          .from('hearings')
-          .select('id', { count: 'exact', head: true })
-          .eq('organization_id', organizationId!)
-          // Only still-pending hearings count as "this week" — a 'held'
-          // one already happened, even if its timestamp still falls
-          // inside the rolling window.
-          .in('status', ['scheduled', 'adjourned'])
-          .gte('hearing_at', weekStart.toISOString())
-          .lt('hearing_at', weekEnd.toISOString()),
+        mattersQ,
+        hearingsQ,
         supabase
           .from('clients')
           .select('id', { count: 'exact', head: true })

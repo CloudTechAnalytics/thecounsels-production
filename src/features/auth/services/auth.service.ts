@@ -96,7 +96,7 @@ export const authService = {
   async getMemberships(userId: string): Promise<ActiveMembership[]> {
     const { data, error } = await supabase
       .from('memberships')
-      .select('*, role:roles(*), organization:organizations(*)')
+      .select('*, role:roles(*), organization:organizations(*), member_branches(branch_id, branch:branches(*))')
       .eq('user_id', userId)
       .eq('status', 'active')
     if (error) throw error

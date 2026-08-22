@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Building2, Users, ShieldCheck, CreditCard, LifeBuoy, HardDrive } from 'lucide-react'
+import { Building2, Users, ShieldCheck, CreditCard, LifeBuoy, HardDrive, MapPin } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { MembersPanel } from '@/features/administration/components/members-panel'
@@ -7,6 +7,7 @@ import { OrganizationSettings } from '@/features/administration/components/organ
 import { RolesViewer } from '@/features/administration/components/roles-viewer'
 import { PlanSummary } from '@/features/administration/components/plan-summary'
 import { StorageManagement } from '@/features/administration/components/storage-management'
+import { BranchesTab } from '@/features/administration/components/branches-tab'
 import { FirmSupportPanel } from '@/features/support/components/firm-support-panel'
 import { PageHeader } from '@/shared/components/page-header'
 import { Badge } from '@/shared/components/ui/badge'
@@ -15,6 +16,7 @@ import { cn } from '@/shared/lib/utils'
 const TABS = [
   { key: 'organization', label: 'Organization', icon: Building2 },
   { key: 'members', label: 'Members', icon: Users },
+  { key: 'branches', label: 'Branches', icon: MapPin },
   { key: 'roles', label: 'Roles & Permissions', icon: ShieldCheck },
   { key: 'plan', label: 'Plan & Billing', icon: CreditCard },
   { key: 'storage', label: 'Storage', icon: HardDrive },
@@ -66,6 +68,7 @@ export function AdministrationPage() {
 
       {tab === 'organization' && <OrganizationSettings />}
       {tab === 'members' && <MembersPanel organizationId={activeOrgId} onNavigateToPlan={() => setTab('plan')} />}
+      {tab === 'branches' && <BranchesTab organizationId={activeOrgId} />}
       {tab === 'roles' && <RolesViewer />}
       {tab === 'plan' && <PlanSummary />}
       {tab === 'storage' && <StorageManagement organizationId={activeOrgId} />}

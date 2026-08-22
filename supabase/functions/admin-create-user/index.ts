@@ -30,6 +30,10 @@ interface Payload {
   // Platform staff creation (no organization):
   platform?: boolean
   platformRole?: string
+  // Branch access scope (migration 0113) — 'organization' when omitted,
+  // matching memberships.access_scope's own DB default.
+  accessScope?: 'organization' | 'branch' | 'multiple_branches' | 'personal'
+  branchIds?: string[]
 }
 
 function json(body: unknown, status = 200) {
@@ -57,7 +61,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Invalid JSON body' }, 400)
   }
 
-  const { email, password, fullName, organizationId, roleKey, title, platform, platformRole, platformSeed } = body
+  const { email, password, fullName, organizationId, roleKey, title, platform, platformRole, platformSeed, accessScope, branchIds } = body
   if (!email || !password || !fullName) {
     return json({ error: 'email, password and fullName are required' }, 400)
   }
@@ -187,18 +191,37 @@ Deno.serve(async (req: Request) => {
   }
 
   const isOwnerRole = role!.key === 'managing_partner'
-  const { error: memErr } = await admin.from('memberships').insert({
-    organization_id: organizationId,
-    user_id: userId,
-    role_id: role!.id,
-    status: 'active',
-    is_owner: isOwnerRole,
-    title: title ?? null,
-    joined_at: new Date().toISOString(),
-  })
-  if (memErr) {
+  const { data: newMembership, error: memErr } = await admin
+    .from('memberships')
+    .insert({
+      organization_id: organizationId,
+      user_id: userId,
+      role_id: role!.id,
+      status: 'active',
+      is_owner: isOwnerRole,
+      title: title ?? null,
+      joined_at: new Date().toISOString(),
+      access_scope: accessScope ?? 'organization',
+    })
+    .select('id')
+    .single()
+  if (memErr || !newMembership) {
     await rollbackIfNew()
-    return json({ error: memErr.message }, 400)
+    return json({ error: memErr?.message ?? 'Could not create membership' }, 400)
+  }
+
+  // Branch assignment — only meaningful for 'branch'/'multiple_branches'
+  // scope; validate every id actually belongs to this org before inserting
+  // (defense in depth — member_branches_write's own RLS would reject a
+  // foreign branch too, but this gives a cleaner error here).
+  if ((accessScope === 'branch' || accessScope === 'multiple_branches') && branchIds?.length) {
+    const { data: validBranches } = await admin.from('branches').select('id').eq('organization_id', organizationId).in('id', branchIds)
+    const validIds = (validBranches ?? []).map((b) => b.id)
+    if (validIds.length > 0) {
+      await admin.from('member_branches').insert(
+        validIds.map((branchId) => ({ organization_id: organizationId, membership_id: newMembership.id, branch_id: branchId, assigned_by: userData.user.id })),
+      )
+    }
   }
 
   await admin.from('profiles').update({ full_name: fullName, must_change_password: isNewUser }).eq('id', userId)
@@ -213,6 +236,7 @@ Deno.serve(async (req: Request) => {
     // through explicitly so this doesn't show up as "Someone" in Recent
     // Activity even though the function already knows exactly who invited this person.
     p_actor_id: userData.user.id,
+    p_branch_id: accessScope === 'branch' && branchIds?.length === 1 ? branchIds[0] : null,
   })
 
   return json({ userId, email }, 201)

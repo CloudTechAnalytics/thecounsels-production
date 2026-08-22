@@ -6,10 +6,16 @@ import type {
 } from '@/shared/types/database.types'
 import type { PermissionKey } from '@/shared/lib/permissions'
 
-/** A membership joined with its role and organization. */
+/** A membership joined with its role and organization. access_scope
+ * ('organization'|'branch'|'multiple_branches'|'personal') answers WHERE
+ * this user can act — orthogonal to the role, which answers WHAT they can
+ * do. member_branches is only populated (non-empty) for 'branch'/
+ * 'multiple_branches' scope; an 'organization'-scope member has full reach
+ * regardless of what's here. */
 export interface ActiveMembership extends Membership {
   role: Role
   organization: Organization
+  member_branches: { branch_id: string; branch: { id: string; name: string; is_head_office: boolean } }[]
 }
 
 export interface AuthState {

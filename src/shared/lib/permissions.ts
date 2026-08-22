@@ -11,6 +11,8 @@ export const PERMISSION_KEYS = [
   'organization.manage',
   'offices.view',
   'offices.manage',
+  'branches.view',
+  'branches.manage',
   'practice_areas.view',
   'practice_areas.manage',
   'departments.view',

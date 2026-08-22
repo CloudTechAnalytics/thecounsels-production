@@ -6,6 +6,8 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useMatters } from '@/features/matters/hooks/use-matters'
 import { MatterFormDialog } from '@/features/matters/components/matter-form-dialog'
+import { useBranchScope } from '@/features/dashboard/hooks/use-branch-scope'
+import { BranchSelector } from '@/features/dashboard/components/branch-selector'
 import { MATTER_STATUS_META, MATTER_STATUSES, PRACTICE_AREAS } from '@/features/matters/types'
 import type { MatterFilters } from '@/features/matters/services/matters.service'
 import { PageHeader } from '@/shared/components/page-header'
@@ -26,7 +28,8 @@ export function MattersPage() {
   const [search, setSearch] = React.useState('')
   const [status, setStatus] = React.useState<MatterFilters['status']>('all')
   const [practiceArea, setPracticeArea] = React.useState<MatterFilters['practiceArea']>('all')
-  const { data, isLoading } = useMatters(activeOrgId, { search, status, practiceArea })
+  const branchScope = useBranchScope()
+  const { data, isLoading } = useMatters(activeOrgId, { search, status, practiceArea, branchId: branchScope.selectedBranchId })
   const [formOpen, setFormOpen] = React.useState(false)
 
   return (
@@ -80,6 +83,9 @@ export function MattersPage() {
             ))}
           </SelectContent>
         </Select>
+        {branchScope.canSelect && (
+          <BranchSelector options={branchScope.options} value={branchScope.selectedBranchId} onChange={branchScope.setSelectedBranchId} />
+        )}
       </div>
 
       <Card className="overflow-hidden">

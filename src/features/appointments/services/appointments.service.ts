@@ -14,6 +14,7 @@ export interface AppointmentFilters {
   matterId?: string | 'all'
   clientId?: string | 'all'
   assignedToId?: string | 'all'
+  branchId?: string
 }
 
 function toRow(values: AppointmentFormValues) {
@@ -41,6 +42,7 @@ export const appointmentsService = {
     if (filters.matterId && filters.matterId !== 'all') q = q.eq('matter_id', filters.matterId)
     if (filters.clientId && filters.clientId !== 'all') q = q.eq('client_id', filters.clientId)
     if (filters.assignedToId && filters.assignedToId !== 'all') q = q.eq('assigned_to_id', filters.assignedToId)
+    if (filters.branchId) q = q.eq('branch_id', filters.branchId)
     if (filters.from) q = q.gte('appointment_at', filters.from)
     if (filters.to) q = q.lte('appointment_at', filters.to)
     if (filters.search?.trim()) {

@@ -11,6 +11,7 @@ export interface HearingFilters {
   from?: string
   to?: string
   matterId?: string | 'all'
+  branchId?: string
 }
 
 function toRow(values: HearingFormValues) {
@@ -37,6 +38,7 @@ export const hearingsService = {
       .order('hearing_at', { ascending: true })
     if (filters.status && filters.status !== 'all') q = q.eq('status', filters.status)
     if (filters.matterId && filters.matterId !== 'all') q = q.eq('matter_id', filters.matterId)
+    if (filters.branchId) q = q.eq('branch_id', filters.branchId)
     if (filters.from) q = q.gte('hearing_at', filters.from)
     if (filters.to) q = q.lte('hearing_at', filters.to)
     if (filters.search?.trim()) {

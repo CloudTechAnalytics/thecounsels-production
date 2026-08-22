@@ -7,18 +7,22 @@ export interface RecentMatter extends MatterRow {
   latestActivity: string | null
 }
 
-/** The 5 most recently updated matters, for the dashboard's "recently updated" card. */
-export function useRecentMatters(organizationId: string | null, limit = 5) {
+/** The 5 most recently updated matters, for the dashboard's "recently
+ * updated" card. branchId is an optional client-side filter on top of RLS
+ * (see useDashboardKpis's own comment). */
+export function useRecentMatters(organizationId: string | null, limit = 5, branchId?: string) {
   return useQuery({
-    queryKey: ['dashboard', 'recent-matters', organizationId],
+    queryKey: ['dashboard', 'recent-matters', organizationId, branchId],
     enabled: Boolean(organizationId),
     queryFn: async (): Promise<RecentMatter[]> => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('matters')
         .select('*, client:clients(id, display_name, type), lead_lawyer:profiles!matters_lead_lawyer_id_fkey(id, full_name, avatar_url)')
         .eq('organization_id', organizationId!)
         .order('updated_at', { ascending: false })
         .limit(limit)
+      if (branchId) q = q.eq('branch_id', branchId)
+      const { data, error } = await q
       if (error) throw error
       const matters = (data ?? []) as unknown as MatterRow[]
       if (matters.length === 0) return []

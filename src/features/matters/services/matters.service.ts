@@ -18,6 +18,7 @@ export interface MatterFilters {
   status?: MatterStatus | 'all'
   practiceArea?: string | 'all'
   clientId?: string
+  branchId?: string
 }
 
 function toRow(values: MatterFormValues) {
@@ -48,6 +49,7 @@ export const mattersService = {
     }
     if (filters.practiceArea && filters.practiceArea !== 'all') q = q.eq('practice_area', filters.practiceArea)
     if (filters.clientId) q = q.eq('client_id', filters.clientId)
+    if (filters.branchId) q = q.eq('branch_id', filters.branchId)
     if (filters.search?.trim()) {
       const s = `%${filters.search.trim()}%`
       q = q.or(`title.ilike.${s},matter_number.ilike.${s}`)

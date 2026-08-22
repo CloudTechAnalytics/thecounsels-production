@@ -1,10 +1,11 @@
 import * as React from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { KeyRound, Users, MoreHorizontal, Ban, RotateCcw, Trash2 } from 'lucide-react'
+import { KeyRound, Users, MoreHorizontal, Ban, RotateCcw, Trash2, MapPin } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useMembers, useSubscription, useSetMembershipStatus, useRemoveMember } from '@/features/administration/hooks/use-administration'
 import { CreateUserDialog } from '@/features/administration/components/create-user-dialog'
+import { MemberAccessDialog } from '@/features/administration/components/member-access-dialog'
 import { adminUsersService } from '@/shared/services/admin-users.service'
 import { initialsOf } from '@/shared/lib/format'
 import { errorMessage } from '@/shared/lib/errors'
@@ -26,6 +27,7 @@ import type { MemberWithRelations } from '@/features/administration/types'
  * the one account guaranteed to still have access. */
 function MemberActionsMenu({ member, organizationId }: { member: MemberWithRelations; organizationId: string }) {
   const [resetOpen, setResetOpen] = React.useState(false)
+  const [accessOpen, setAccessOpen] = React.useState(false)
   const [confirmSuspend, setConfirmSuspend] = React.useState(false)
   const [confirmRemove, setConfirmRemove] = React.useState(false)
   const setStatus = useSetMembershipStatus(organizationId)
@@ -57,6 +59,9 @@ function MemberActionsMenu({ member, organizationId }: { member: MemberWithRelat
           <DropdownMenuItem onClick={() => setResetOpen(true)}>
             <KeyRound className="h-4 w-4" /> Reset password
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setAccessOpen(true)}>
+            <MapPin className="h-4 w-4" /> Edit access
+          </DropdownMenuItem>
           {!member.is_owner && (
             <>
               <DropdownMenuSeparator />
@@ -76,6 +81,8 @@ function MemberActionsMenu({ member, organizationId }: { member: MemberWithRelat
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <MemberAccessDialog organizationId={organizationId} member={member} open={accessOpen} onOpenChange={setAccessOpen} />
 
       <ResetPasswordDialog
         open={resetOpen}

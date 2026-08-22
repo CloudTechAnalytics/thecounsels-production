@@ -5,6 +5,8 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useHearings, useDeleteHearing } from '@/features/hearings/hooks/use-hearings'
 import { HearingFormDialog } from '@/features/hearings/components/hearing-form-dialog'
+import { useBranchScope } from '@/features/dashboard/hooks/use-branch-scope'
+import { BranchSelector } from '@/features/dashboard/components/branch-selector'
 import { HearingCard } from '@/features/hearings/components/hearing-card'
 import { HEARING_STATUS_META, type HearingRow } from '@/features/hearings/types'
 import type { HearingFilters } from '@/features/hearings/services/hearings.service'
@@ -23,7 +25,8 @@ export function HearingsPage() {
   const { has } = usePermissions()
   const [search, setSearch] = React.useState('')
   const [status, setStatus] = React.useState<HearingFilters['status']>('all')
-  const { data, isLoading } = useHearings(activeOrgId, { search, status })
+  const branchScope = useBranchScope()
+  const { data, isLoading } = useHearings(activeOrgId, { search, status, branchId: branchScope.selectedBranchId })
   const del = useDeleteHearing(activeOrgId)
 
   const [formOpen, setFormOpen] = React.useState(false)
@@ -90,6 +93,9 @@ export function HearingsPage() {
             ))}
           </SelectContent>
         </Select>
+        {branchScope.canSelect && (
+          <BranchSelector options={branchScope.options} value={branchScope.selectedBranchId} onChange={branchScope.setSelectedBranchId} />
+        )}
       </div>
 
       {isLoading ? (

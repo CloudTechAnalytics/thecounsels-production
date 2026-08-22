@@ -23,6 +23,8 @@ import { useDashboardKpis } from '@/features/dashboard/hooks/use-dashboard-kpis'
 import { useMyDashboardKpis } from '@/features/dashboard/hooks/use-my-dashboard-kpis'
 import { useFirmInsights } from '@/features/dashboard/hooks/use-firm-insights'
 import { useRecentMatters } from '@/features/dashboard/hooks/use-recent-matters'
+import { useBranchScope } from '@/features/dashboard/hooks/use-branch-scope'
+import { BranchSelector } from '@/features/dashboard/components/branch-selector'
 import { useBillingStats, usePersonalStats } from '@/features/billing/hooks/use-billing'
 import { StatTile } from '@/features/dashboard/components/stat-tile'
 import { DateRangeControl } from '@/features/dashboard/components/date-range-control'
@@ -44,14 +46,15 @@ export function DashboardPage() {
   const { has } = usePermissions()
   const canFinancials = has('reports.financial')
   const dateRange = useDateRange()
+  const branchScope = useBranchScope()
 
-  const { data: kpis, isLoading: kpisLoading } = useDashboardKpis(activeOrgId)
+  const { data: kpis, isLoading: kpisLoading } = useDashboardKpis(activeOrgId, branchScope.selectedBranchId)
   const { data: myKpis, isLoading: myKpisLoading } = useMyDashboardKpis(canFinancials ? null : activeOrgId, userId)
   // Firm revenue is restricted to leadership/finance; others see their own numbers.
   const { data: billing, isLoading: billingLoading } = useBillingStats(canFinancials ? activeOrgId : null)
   const { data: personal, isLoading: personalLoading } = usePersonalStats(canFinancials ? null : activeOrgId, userId)
   const { data: insights, isLoading: insightsLoading } = useFirmInsights(activeOrgId, canFinancials)
-  const { data: recentMatters, isLoading: recentMattersLoading } = useRecentMatters(activeOrgId)
+  const { data: recentMatters, isLoading: recentMattersLoading } = useRecentMatters(activeOrgId, 5, branchScope.selectedBranchId)
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'there'
   const orgName = activeMembership?.organization.name
@@ -64,6 +67,11 @@ export function DashboardPage() {
       <PageHeader
         title={`Welcome back, ${firstName}`}
         description={orgName ? `Here's what's happening at ${orgName} today.` : undefined}
+        actions={
+          branchScope.canSelect ? (
+            <BranchSelector options={branchScope.options} value={branchScope.selectedBranchId} onChange={branchScope.setSelectedBranchId} />
+          ) : undefined
+        }
       />
 
       <OnboardingChecklistCard organizationId={activeOrgId} />

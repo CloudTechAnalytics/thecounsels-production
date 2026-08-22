@@ -5,6 +5,8 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useAppointments, useDeleteAppointment } from '@/features/appointments/hooks/use-appointments'
 import { AppointmentFormDialog } from '@/features/appointments/components/appointment-form-dialog'
+import { useBranchScope } from '@/features/dashboard/hooks/use-branch-scope'
+import { BranchSelector } from '@/features/dashboard/components/branch-selector'
 import { AppointmentCard } from '@/features/appointments/components/appointment-card'
 import { APPOINTMENT_STATUS_META, type AppointmentRow } from '@/features/appointments/types'
 import type { AppointmentFilters } from '@/features/appointments/services/appointments.service'
@@ -24,7 +26,8 @@ export function AppointmentsPage() {
   const { has } = usePermissions()
   const [search, setSearch] = React.useState('')
   const [status, setStatus] = React.useState<AppointmentFilters['status']>('all')
-  const { data, isLoading } = useAppointments(activeOrgId, { search, status })
+  const branchScope = useBranchScope()
+  const { data, isLoading } = useAppointments(activeOrgId, { search, status, branchId: branchScope.selectedBranchId })
   const del = useDeleteAppointment(activeOrgId)
 
   const [formOpen, setFormOpen] = React.useState(false)
@@ -89,6 +92,9 @@ export function AppointmentsPage() {
             ))}
           </SelectContent>
         </Select>
+        {branchScope.canSelect && (
+          <BranchSelector options={branchScope.options} value={branchScope.selectedBranchId} onChange={branchScope.setSelectedBranchId} />
+        )}
       </div>
 
       {isLoading ? (

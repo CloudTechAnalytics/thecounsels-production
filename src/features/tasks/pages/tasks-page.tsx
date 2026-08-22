@@ -5,6 +5,8 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useTasks, useDeleteTask } from '@/features/tasks/hooks/use-tasks'
 import { TaskFormDialog } from '@/features/tasks/components/task-form-dialog'
+import { useBranchScope } from '@/features/dashboard/hooks/use-branch-scope'
+import { BranchSelector } from '@/features/dashboard/components/branch-selector'
 import { TaskItem } from '@/features/tasks/components/task-item'
 import { TASK_PRIORITY_META, TASK_STATUS_META, type TaskRow } from '@/features/tasks/types'
 import type { TaskFilters } from '@/features/tasks/services/tasks.service'
@@ -24,7 +26,8 @@ export function TasksPage() {
   const [search, setSearch] = React.useState('')
   const [status, setStatus] = React.useState<TaskFilters['status']>('all')
   const [scope, setScope] = React.useState<'all' | 'me'>('all')
-  const { data, isLoading } = useTasks(activeOrgId, { search, status, assigneeId: scope }, profile?.id ?? null)
+  const branchScope = useBranchScope()
+  const { data, isLoading } = useTasks(activeOrgId, { search, status, assigneeId: scope, branchId: branchScope.selectedBranchId }, profile?.id ?? null)
   const del = useDeleteTask(activeOrgId)
 
   const [formOpen, setFormOpen] = React.useState(false)
@@ -98,6 +101,9 @@ export function TasksPage() {
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
+        {branchScope.canSelect && (
+          <BranchSelector options={branchScope.options} value={branchScope.selectedBranchId} onChange={branchScope.setSelectedBranchId} />
+        )}
       </div>
 
       {isLoading ? (

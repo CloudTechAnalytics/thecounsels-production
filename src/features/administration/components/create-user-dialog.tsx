@@ -6,6 +6,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { UserPlus } from 'lucide-react'
 import { useAssignableRoles } from '@/features/administration/hooks/use-administration'
 import { adminUsersService } from '@/shared/services/admin-users.service'
+import { BranchPicker } from '@/features/branches/components/branch-picker'
+import { BranchMultiToggle } from '@/features/branches/components/branch-multi-toggle'
 import { errorMessage } from '@/shared/lib/errors'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
@@ -27,8 +29,18 @@ const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
   password: z.string().min(10, 'At least 10 characters').regex(/[0-9]/, 'Add a number'),
   roleId: z.string().min(1, 'Choose a role'),
+  accessScope: z.enum(['organization', 'branch', 'multiple_branches', 'personal']),
+  branchId: z.string().optional(),
+  branchIds: z.array(z.string()).optional(),
 })
 type Values = z.infer<typeof schema>
+
+const ACCESS_SCOPE_META: Record<Values['accessScope'], { label: string; description: string }> = {
+  organization: { label: 'Organization-wide', description: 'Sees everything across every branch.' },
+  branch: { label: 'Single branch', description: 'Sees only their assigned branch.' },
+  multiple_branches: { label: 'Multiple branches', description: 'Sees only their assigned branches.' },
+  personal: { label: 'Personal only', description: 'Sees only what\'s explicitly assigned to them.' },
+}
 
 export function CreateUserDialog({ organizationId }: { organizationId: string }) {
   const [open, setOpen] = React.useState(false)
@@ -37,8 +49,9 @@ export function CreateUserDialog({ organizationId }: { organizationId: string })
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { fullName: '', email: '', password: '', roleId: '' },
+    defaultValues: { fullName: '', email: '', password: '', roleId: '', accessScope: 'organization', branchId: '', branchIds: [] },
   })
+  const accessScope = form.watch('accessScope')
 
   React.useEffect(() => {
     if (roles && !form.getValues('roleId')) {
@@ -57,10 +70,12 @@ export function CreateUserDialog({ organizationId }: { organizationId: string })
         fullName: values.fullName,
         organizationId,
         roleKey: role.key,
+        accessScope: values.accessScope,
+        branchIds: values.accessScope === 'branch' ? (values.branchId ? [values.branchId] : []) : values.accessScope === 'multiple_branches' ? values.branchIds ?? [] : [],
       })
       toast.success('Team member added', { description: `${values.email} can sign in with the temporary password now.` })
       await qc.invalidateQueries({ queryKey: ['administration', 'members', organizationId] })
-      form.reset({ fullName: '', email: '', password: '', roleId: values.roleId })
+      form.reset({ fullName: '', email: '', password: '', roleId: values.roleId, accessScope: 'organization', branchId: '', branchIds: [] })
       setOpen(false)
     } catch (err) {
       console.error('Create user failed:', err)
@@ -155,6 +170,59 @@ export function CreateUserDialog({ organizationId }: { organizationId: string })
             <FormDescription>
               Share this password securely — they'll be asked to change it on first sign-in.
             </FormDescription>
+
+            <FormField
+              control={form.control}
+              name="accessScope"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Access scope</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(ACCESS_SCOPE_META).map(([v, meta]) => (
+                        <SelectItem key={v} value={v}>
+                          {meta.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>{ACCESS_SCOPE_META[field.value].description}</FormDescription>
+                </FormItem>
+              )}
+            />
+
+            {accessScope === 'branch' && (
+              <FormField
+                control={form.control}
+                name="branchId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Branch</FormLabel>
+                    <BranchPicker organizationId={organizationId} value={field.value ?? ''} onChange={field.onChange} mode="form" />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {accessScope === 'multiple_branches' && (
+              <FormField
+                control={form.control}
+                name="branchIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Branches</FormLabel>
+                    <BranchMultiToggle organizationId={organizationId} value={field.value ?? []} onChange={field.onChange} />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
                 Cancel

@@ -11,6 +11,7 @@ export interface TaskFilters {
   status?: TaskStatus | 'all'
   assigneeId?: string | 'all' | 'me'
   matterId?: string | 'all'
+  branchId?: string
 }
 
 function toRow(values: TaskFormValues) {
@@ -45,6 +46,7 @@ export const tasksService = {
     if (filters.assigneeId === 'me' && currentUserId) q = q.eq('assignee_id', currentUserId)
     else if (filters.assigneeId && filters.assigneeId !== 'all' && filters.assigneeId !== 'me')
       q = q.eq('assignee_id', filters.assigneeId)
+    if (filters.branchId) q = q.eq('branch_id', filters.branchId)
     if (filters.search?.trim()) q = q.ilike('title', `%${filters.search.trim()}%`)
     const { data, error } = await q
     if (error) throw error

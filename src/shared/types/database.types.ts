@@ -19,6 +19,7 @@ export type OrgStatus = 'trial' | 'active' | 'suspended' | 'cancelled'
 export type OrganizationType = 'customer' | 'demo' | 'internal'
 export type MembershipStatus = 'invited' | 'active' | 'suspended' | 'disabled'
 export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired'
+export type AccessScope = 'organization' | 'branch' | 'multiple_branches' | 'personal'
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'paused' | 'cancelled' | 'expired' | 'suspended'
 export type BillingCycle = 'monthly' | 'yearly'
 export type ClientType = 'individual' | 'corporate'
@@ -204,6 +205,102 @@ export interface Database {
           },
         ]
       }
+      branches: {
+        Row: {
+          id: string
+          organization_id: string
+          name: string
+          code: string | null
+          address: string | null
+          city: string | null
+          state: string | null
+          country: string | null
+          phone: string | null
+          email: string | null
+          is_head_office: boolean
+          is_active: boolean
+        } & Timestamps
+        Insert: {
+          id?: string
+          organization_id: string
+          name: string
+          code?: string | null
+          address?: string | null
+          city?: string | null
+          state?: string | null
+          country?: string | null
+          phone?: string | null
+          email?: string | null
+          is_head_office?: boolean
+          is_active?: boolean
+        }
+        Update: Partial<Database['public']['Tables']['branches']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'branches_organization_id_fkey'
+            columns: ['organization_id']
+            isOneToOne: false
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      member_branches: {
+        Row: {
+          id: string
+          organization_id: string
+          membership_id: string
+          branch_id: string
+          assigned_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          membership_id: string
+          branch_id: string
+          assigned_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['member_branches']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'member_branches_membership_id_fkey'
+            columns: ['membership_id']
+            isOneToOne: false
+            referencedRelation: 'memberships'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'member_branches_branch_id_fkey'
+            columns: ['branch_id']
+            isOneToOne: false
+            referencedRelation: 'branches'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      invitation_branches: {
+        Row: { id: string; invitation_id: string; branch_id: string }
+        Insert: { id?: string; invitation_id: string; branch_id: string }
+        Update: Partial<Database['public']['Tables']['invitation_branches']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'invitation_branches_invitation_id_fkey'
+            columns: ['invitation_id']
+            isOneToOne: false
+            referencedRelation: 'invitations'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'invitation_branches_branch_id_fkey'
+            columns: ['branch_id']
+            isOneToOne: false
+            referencedRelation: 'branches'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       memberships: {
         Row: {
           id: string
@@ -216,6 +313,7 @@ export interface Database {
           invited_by: string | null
           invited_at: string | null
           joined_at: string | null
+          access_scope: AccessScope
         } & Timestamps
         Insert: {
           id?: string
@@ -228,6 +326,7 @@ export interface Database {
           invited_by?: string | null
           invited_at?: string | null
           joined_at?: string | null
+          access_scope?: AccessScope
         }
         Update: Partial<Database['public']['Tables']['memberships']['Insert']>
         Relationships: [
@@ -266,6 +365,7 @@ export interface Database {
           message: string | null
           expires_at: string
           accepted_at: string | null
+          access_scope: AccessScope
         } & Timestamps
         Insert: {
           id?: string
@@ -278,6 +378,7 @@ export interface Database {
           message?: string | null
           expires_at?: string
           accepted_at?: string | null
+          access_scope?: AccessScope
         }
         Update: Partial<Database['public']['Tables']['invitations']['Insert']>
         Relationships: []
@@ -295,6 +396,7 @@ export interface Database {
           ip_address: string | null
           created_at: string
           is_platform_action: boolean
+          branch_id: string | null
         }
         Insert: {
           id?: string
@@ -307,6 +409,7 @@ export interface Database {
           metadata?: Json
           ip_address?: string | null
           is_platform_action?: boolean
+          branch_id?: string | null
         }
         Update: Partial<Database['public']['Tables']['audit_logs']['Insert']>
         Relationships: []
@@ -484,6 +587,7 @@ export interface Database {
           created_by: string | null
           ai_summary: string | null
           ai_summary_generated_at: string | null
+          branch_id: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -504,6 +608,7 @@ export interface Database {
           created_by?: string | null
           ai_summary?: string | null
           ai_summary_generated_at?: string | null
+          branch_id?: string | null
         }
         Update: Partial<Database['public']['Tables']['matters']['Insert']>
         Relationships: [
@@ -519,6 +624,13 @@ export interface Database {
             columns: ['lead_lawyer_id']
             isOneToOne: false
             referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'matters_branch_id_fkey'
+            columns: ['branch_id']
+            isOneToOne: false
+            referencedRelation: 'branches'
             referencedColumns: ['id']
           },
         ]
@@ -547,6 +659,41 @@ export interface Database {
             columns: ['user_id']
             isOneToOne: false
             referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      matter_branch_shares: {
+        Row: {
+          id: string
+          organization_id: string
+          matter_id: string
+          branch_id: string
+          shared_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          matter_id: string
+          branch_id: string
+          shared_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['matter_branch_shares']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'matter_branch_shares_matter_id_fkey'
+            columns: ['matter_id']
+            isOneToOne: false
+            referencedRelation: 'matters'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'matter_branch_shares_branch_id_fkey'
+            columns: ['branch_id']
+            isOneToOne: false
+            referencedRelation: 'branches'
             referencedColumns: ['id']
           },
         ]
@@ -608,6 +755,7 @@ export interface Database {
           reminder_1h_sent_at: string | null
           overdue_last_notified_at: string | null
           created_by: string | null
+          branch_id: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -626,6 +774,7 @@ export interface Database {
           reminder_1h_sent_at?: string | null
           overdue_last_notified_at?: string | null
           created_by?: string | null
+          branch_id?: string | null
         }
         Update: Partial<Database['public']['Tables']['tasks']['Insert']>
         Relationships: [
@@ -824,6 +973,7 @@ export interface Database {
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           work_email: string | null
+          branch_id: string | null
         }
         Insert: {
           organization_id: string
@@ -851,6 +1001,7 @@ export interface Database {
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           work_email?: string | null
+          branch_id?: string | null
         }
         Update: Partial<Database['public']['Tables']['staff_profiles']['Insert']>
         Relationships: []
@@ -1160,6 +1311,7 @@ export interface Database {
           outcome: string | null
           notes: string | null
           created_by: string | null
+          branch_id: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -1176,6 +1328,7 @@ export interface Database {
           outcome?: string | null
           notes?: string | null
           created_by?: string | null
+          branch_id?: string | null
         }
         Update: Partial<Database['public']['Tables']['hearings']['Insert']>
         Relationships: [
@@ -1202,6 +1355,7 @@ export interface Database {
           status: AppointmentStatus
           notes: string | null
           created_by: string | null
+          branch_id: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -1216,6 +1370,7 @@ export interface Database {
           status?: AppointmentStatus
           notes?: string | null
           created_by?: string | null
+          branch_id?: string | null
         }
         Update: Partial<Database['public']['Tables']['appointments']['Insert']>
         Relationships: [
@@ -1287,6 +1442,7 @@ export interface Database {
           category: string | null
           uploaded_by: string | null
           created_at: string
+          branch_id: string | null
         }
         Insert: {
           id?: string
@@ -1300,6 +1456,7 @@ export interface Database {
           category?: string | null
           uploaded_by?: string | null
           created_at?: string
+          branch_id?: string | null
         }
         Update: Partial<Database['public']['Tables']['documents']['Insert']>
         Relationships: [
@@ -1904,6 +2061,7 @@ export interface Database {
           p_metadata?: Json
           p_platform?: boolean
           p_actor_id?: string | null
+          p_branch_id?: string | null
         }
         Returns: Database['public']['Tables']['audit_logs']['Row']
       }
@@ -1946,6 +2104,14 @@ export interface Database {
       reopen_matter: {
         Args: { p_matter: string; p_reason?: string | null }
         Returns: Database['public']['Tables']['matters']['Row']
+      }
+      set_head_office: {
+        Args: { p_org: string; p_branch: string }
+        Returns: undefined
+      }
+      user_has_branch_access: {
+        Args: { p_org: string; p_branch_id: string | null }
+        Returns: boolean
       }
       register_organization: {
         Args: {
@@ -2094,6 +2260,9 @@ export type Permission = Database['public']['Tables']['permissions']['Row']
 export type Membership = Database['public']['Tables']['memberships']['Row']
 export type Invitation = Database['public']['Tables']['invitations']['Row']
 export type AuditLog = Database['public']['Tables']['audit_logs']['Row']
+export type Branch = Database['public']['Tables']['branches']['Row']
+export type MemberBranch = Database['public']['Tables']['member_branches']['Row']
+export type MatterBranchShare = Database['public']['Tables']['matter_branch_shares']['Row']
 export type Plan = Database['public']['Tables']['plans']['Row']
 export type Subscription = Database['public']['Tables']['subscriptions']['Row']
 export type PlatformSettings = Database['public']['Tables']['platform_settings']['Row']

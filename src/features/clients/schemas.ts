@@ -27,6 +27,7 @@ export const clientSchema = z
     country: z.string().optional(),
     status: z.enum(['active', 'inactive', 'prospect']),
     notes: z.string().optional(),
+    branchId: z.string().optional(),
   })
   .superRefine((val, ctx) => {
     if (val.type === 'corporate' && !val.companyName?.trim()) {

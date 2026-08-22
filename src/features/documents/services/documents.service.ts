@@ -28,6 +28,7 @@ export interface DocumentFilters {
   search?: string
   category?: string | 'all'
   matterId?: string | 'all'
+  branchId?: string
 }
 
 const SELECT = '*, matter:matters(id, title, matter_number), uploaded_by_profile:profiles!documents_uploaded_by_fkey(id, full_name)'
@@ -56,6 +57,7 @@ export const documentsService = {
       .order('created_at', { ascending: false })
     if (filters.category && filters.category !== 'all') q = q.eq('category', filters.category)
     if (filters.matterId && filters.matterId !== 'all') q = q.eq('matter_id', filters.matterId)
+    if (filters.branchId) q = q.eq('branch_id', filters.branchId)
     if (filters.search?.trim()) q = q.ilike('display_name', `%${filters.search.trim()}%`)
     // One extra row beyond PAGE_SIZE to detect "more" without a second count query.
     q = q.range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)

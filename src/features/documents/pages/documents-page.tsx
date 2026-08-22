@@ -11,6 +11,8 @@ import { DocumentActionsMenu } from '@/features/documents/components/document-ac
 import { DocumentRenameDialog } from '@/features/documents/components/document-rename-dialog'
 import { documentsService, DOCUMENT_CATEGORIES, type DocumentFilters, type DocumentWithMatter } from '@/features/documents/services/documents.service'
 import { DocumentViewer } from '@/features/matters/components/document-viewer'
+import { useBranchScope } from '@/features/dashboard/hooks/use-branch-scope'
+import { BranchSelector } from '@/features/dashboard/components/branch-selector'
 import { PageHeader } from '@/shared/components/page-header'
 import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
@@ -30,7 +32,8 @@ export function DocumentsPage() {
   const [search, setSearch] = React.useState('')
   const [category, setCategory] = React.useState<DocumentFilters['category']>('all')
   const [matterId, setMatterId] = React.useState<DocumentFilters['matterId']>('all')
-  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useDocuments(activeOrgId, { search, category, matterId })
+  const branchScope = useBranchScope()
+  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useDocuments(activeOrgId, { search, category, matterId, branchId: branchScope.selectedBranchId })
   const { data: matters } = useMatters(activeOrgId, {})
   const { data: usedCategories } = useDocumentCategories(activeOrgId)
   const categoryOptions = React.useMemo(() => {
@@ -104,6 +107,9 @@ export function DocumentsPage() {
             {matters?.map((m) => <SelectItem key={m.id} value={m.id}>{m.matter_number} — {m.title}</SelectItem>)}
           </SelectContent>
         </Select>
+        {branchScope.canSelect && (
+          <BranchSelector options={branchScope.options} value={branchScope.selectedBranchId} onChange={branchScope.setSelectedBranchId} />
+        )}
       </div>
 
       <Card className="overflow-hidden">

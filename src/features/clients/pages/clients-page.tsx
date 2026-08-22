@@ -7,6 +7,8 @@ import { useClients, useDeleteClient, useClientMatterCount } from '@/features/cl
 import { ClientFormDialog } from '@/features/clients/components/client-form-dialog'
 import { ManageContactsDialog } from '@/features/clients/components/manage-contacts-dialog'
 import type { ClientFilters } from '@/features/clients/services/clients.service'
+import { useBranchScope } from '@/features/dashboard/hooks/use-branch-scope'
+import { BranchSelector } from '@/features/dashboard/components/branch-selector'
 import type { Client } from '@/shared/types/database.types'
 import { PageHeader } from '@/shared/components/page-header'
 import { ExportButton } from '@/shared/components/export-button'
@@ -40,7 +42,8 @@ export function ClientsPage() {
   const [search, setSearch] = React.useState('')
   const [type, setType] = React.useState<ClientFilters['type']>('all')
   const [status, setStatus] = React.useState<ClientFilters['status']>('all')
-  const filters: ClientFilters = { search, type, status }
+  const branchScope = useBranchScope()
+  const filters: ClientFilters = { search, type, status, branchId: branchScope.selectedBranchId }
   const { data, isLoading } = useClients(activeOrgId, filters)
   const del = useDeleteClient(activeOrgId)
 
@@ -127,6 +130,9 @@ export function ClientsPage() {
             <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
+        {branchScope.canSelect && (
+          <BranchSelector options={branchScope.options} value={branchScope.selectedBranchId} onChange={branchScope.setSelectedBranchId} />
+        )}
       </div>
 
       <Card className="overflow-hidden">

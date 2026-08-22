@@ -8,6 +8,7 @@ import { useCreateClient, useUpdateClient, useCheckClientDuplicates } from '@/fe
 import { clientSchema, clientDisplayName, type ClientFormValues } from '@/features/clients/schemas'
 import type { DuplicateMatch } from '@/features/clients/services/clients.service'
 import type { Client } from '@/shared/types/database.types'
+import { BranchPicker } from '@/features/branches/components/branch-picker'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
@@ -44,6 +45,7 @@ function toDefaults(client?: Client | null): ClientFormValues {
     country: client?.country ?? '',
     status: client?.status ?? 'active',
     notes: client?.notes ?? '',
+    branchId: client?.branch_id ?? '',
   }
 }
 
@@ -232,6 +234,18 @@ export function ClientFormDialog({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="branchId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Branch</FormLabel>
+                  <BranchPicker organizationId={activeOrgId} value={field.value ?? ''} onChange={field.onChange} mode="form" />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {type === 'corporate' ? (
               <div className="grid gap-4 sm:grid-cols-2">

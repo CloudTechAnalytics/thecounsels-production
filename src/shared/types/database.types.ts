@@ -502,6 +502,7 @@ export interface Database {
           notes: string | null
           created_by: string | null
           registration_number: string | null
+          branch_id: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -521,6 +522,7 @@ export interface Database {
           notes?: string | null
           created_by?: string | null
           registration_number?: string | null
+          branch_id?: string | null
         }
         Update: Partial<Database['public']['Tables']['clients']['Insert']>
         Relationships: [
@@ -529,6 +531,13 @@ export interface Database {
             columns: ['organization_id']
             isOneToOne: false
             referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'clients_branch_id_fkey'
+            columns: ['branch_id']
+            isOneToOne: false
+            referencedRelation: 'branches'
             referencedColumns: ['id']
           },
         ]

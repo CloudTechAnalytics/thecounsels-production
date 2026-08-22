@@ -14,6 +14,7 @@ export interface ClientFilters {
   search?: string
   type?: ClientType | 'all'
   status?: ClientStatus | 'all'
+  branchId?: string
 }
 
 /** A client row plus how many contacts it has, for the list's badge —
@@ -46,6 +47,7 @@ function toRow(values: ClientFormValues) {
     country: values.country?.trim() || null,
     status: values.status,
     notes: values.notes?.trim() || null,
+    branch_id: values.branchId || null,
   }
 }
 
@@ -99,6 +101,7 @@ export const clientsService = {
 
     if (filters.type && filters.type !== 'all') q = q.eq('type', filters.type)
     if (filters.status && filters.status !== 'all') q = q.eq('status', filters.status)
+    if (filters.branchId) q = q.eq('branch_id', filters.branchId)
     if (filters.search?.trim()) {
       const s = `%${filters.search.trim()}%`
       // Scoped to client-level fields — per-contact name/email isn't searched here.

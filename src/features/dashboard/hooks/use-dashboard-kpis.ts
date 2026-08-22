@@ -12,9 +12,9 @@ export interface DashboardKpis {
 /** Firm-wide matter/hearing/client counts for the dashboard KPI tiles.
  * branchId is an optional client-side filter on top of whatever RLS
  * already authorizes ("All Branches" = branchId omitted = RLS alone
- * decides). Clients stay unfiltered by branch — org-wide identity, per the
- * branch architecture's own design (branch visibility applies to a
- * client's matters, not the client record itself). */
+ * decides). Clients keep a single org-wide identity (never duplicated per
+ * branch), but do carry the branch they were created under (migration
+ * 0118) — filtered here the same way matters/hearings are. */
 export function useDashboardKpis(organizationId: string | null, branchId?: string) {
   return useQuery({
     queryKey: ['dashboard', 'kpis', organizationId, branchId],
@@ -37,20 +37,22 @@ export function useDashboardKpis(organizationId: string | null, branchId?: strin
         .in('status', ['scheduled', 'adjourned'])
         .gte('hearing_at', weekStart.toISOString())
         .lt('hearing_at', weekEnd.toISOString())
+      let clientsQ = supabase
+        .from('clients')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organizationId!)
+        .eq('status', 'active')
       if (branchId) {
         mattersQ = mattersQ.eq('branch_id', branchId)
         hearingsQ = hearingsQ.eq('branch_id', branchId)
+        clientsQ = clientsQ.eq('branch_id', branchId)
       }
 
       const [matters, hearings, clients] = await Promise.all([
         // One query for all three matter-status KPIs — cheaper than three count-head queries.
         mattersQ,
         hearingsQ,
-        supabase
-          .from('clients')
-          .select('id', { count: 'exact', head: true })
-          .eq('organization_id', organizationId!)
-          .eq('status', 'active'),
+        clientsQ,
       ])
       if (matters.error) throw matters.error
       if (hearings.error) throw hearings.error

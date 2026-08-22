@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Check, LogOut, Menu, Settings, UserCircle, Users2, ArrowLeft } from 'lucide-react'
+import { Check, LogOut, Menu, Settings, UserCircle, Users2, ArrowLeft, MapPin } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { useBackToWorkspaceTarget } from '@/shared/hooks/use-back-to-workspace-target'
@@ -68,6 +68,16 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
                 <Badge variant="default" className="mt-2">Platform Admin</Badge>
               ) : (
                 roleLabel && <Badge variant="secondary" className="mt-2">{roleLabel}</Badge>
+              )}
+              {!profile?.is_platform_admin && activeMembership && (
+                <p className="mt-1.5 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  {activeMembership.access_scope === 'organization'
+                    ? 'All branches'
+                    : activeMembership.member_branches.length > 0
+                      ? activeMembership.member_branches.map((mb) => mb.branch.name).join(', ')
+                      : 'No branch assigned yet'}
+                </p>
               )}
             </div>
 

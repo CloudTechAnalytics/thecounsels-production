@@ -96,6 +96,15 @@ export function ProfileCard() {
             <p className="text-sm text-muted-foreground">
               {activeMembership?.role.name ?? 'Team member'} · {profile?.email}
             </p>
+            {activeMembership && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {activeMembership.access_scope === 'organization'
+                  ? 'Access: all branches'
+                  : activeMembership.member_branches.length > 0
+                    ? `Branch${activeMembership.member_branches.length > 1 ? 'es' : ''}: ${activeMembership.member_branches.map((mb) => mb.branch.name).join(', ')}`
+                    : 'No branch assigned yet — contact your firm admin'}
+              </p>
+            )}
           </div>
         </div>
 

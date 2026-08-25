@@ -11,6 +11,7 @@ import { Input } from '@/shared/components/ui/input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { TurnstileWidget } from '@/shared/components/turnstile-widget'
 import { env } from '@/shared/config/env'
+import { logClientError } from '@/shared/lib/error-log'
 
 export function ForgotPasswordPage() {
   const { sendPasswordReset } = useAuth()
@@ -29,7 +30,11 @@ export function ForgotPasswordPage() {
     try {
       await sendPasswordReset(values.email, captchaToken ?? undefined)
     } catch (err) {
+      // Deliberately never surfaced to the user (see comment above) — but a
+      // real failure here (rate limit, SMTP misconfig) is otherwise
+      // completely invisible, so it's worth a record somewhere.
       console.error('Password reset request failed:', err)
+      logClientError(err, { source: 'sendPasswordReset' })
     }
     setCaptchaToken(null)
     setSentTo(values.email)

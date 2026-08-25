@@ -39,6 +39,17 @@ function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}): Pro
 // globally, regardless of route.
 export const hadAuthRedirectInUrl = /[?&](code|token_hash)=/.test(window.location.href)
 
+// Narrower than the above: true only when this looks like a password-recovery
+// link specifically — the one path (see sendPasswordReset's redirectTo) that
+// must never auto-load into the app's normal authenticated state, even
+// though clicking it does establish a real (if temporary) Supabase session.
+// Captured synchronously for the same reason as hadAuthRedirectInUrl: by the
+// time an async check could run, detectSessionInUrl may already have
+// consumed the param. See auth-provider.tsx's mount effect for how this
+// keeps a recovery session isolated to the reset-password page.
+export const isPasswordRecoveryUrl =
+  window.location.pathname === '/auth/reset-password' && hadAuthRedirectInUrl
+
 /**
  * Singleton, fully-typed Supabase client. This is the ONLY backend in the app —
  * PostgreSQL, Auth, Storage, and Realtime are all reached through it, with

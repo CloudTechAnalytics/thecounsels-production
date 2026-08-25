@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { supabase, hadAuthRedirectInUrl } from '@/shared/lib/supabase'
+import { supabase, hadAuthRedirectInUrl, isPasswordRecoveryUrl } from '@/shared/lib/supabase'
 import { PERMISSION_KEYS, type PermissionKey } from '@/shared/lib/permissions'
 import { authService } from '@/features/auth/services/auth.service'
 import type { ActiveMembership, AuthContextValue, AuthState } from '@/features/auth/types'
@@ -182,25 +182,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     let mounted = true
 
-    withTimeout(supabase.auth.getSession(), BOOTSTRAP_TIMEOUT_MS, 'Connecting to Supabase timed out.')
-      .then(({ data }) => {
-        if (mounted) void load(data.session?.user.id ?? null)
-      })
-      .catch((error) => {
-        // Without this, a transient network/CORS hiccup (or a genuinely
-        // stalled request — the timeout above guarantees this settles
-        // either way) on the very first getSession() call leaves `status`
-        // stuck at 'loading' forever — load() never runs, so every guarded
-        // route (RequireAuth, RedirectIfAuthenticated,
-        // RequireActiveSubscription) hangs on the brand loading screen
-        // indefinitely instead of settling into 'unauthenticated'. Fall
-        // back the same way load()'s own catch does.
-        console.error('Failed to get initial session:', error)
-        if (mounted) {
-          toast.error('Could not connect', { description: errorMessage(error, 'Check your connection and reload.') })
-          void load(null)
-        }
-      })
+    // A password-recovery link establishes a real Supabase session before
+    // this even runs (detectSessionInUrl resolves as part of client
+    // construction, ahead of getSession() below) — without this check,
+    // getSession() would return that session and load() would pull the
+    // user's whole real account into the app's normal authenticated state
+    // while they're just trying to reset a forgotten password. The
+    // onAuthStateChange PASSWORD_RECOVERY guard further down catches the
+    // same case for the *event*, but only if that listener happens to be
+    // registered before the recovery event fires — this covers the case
+    // where it isn't. updatePassword() (below) is what actually loads the
+    // user in, once they've deliberately completed the reset.
+    if (isPasswordRecoveryUrl) {
+      // Deliberately skip getSession()->load() only — onAuthStateChange
+      // still gets registered below (this effect runs once for the app's
+      // whole lifetime, not per-route, so skipping it here would leave the
+      // app blind to every later auth event, not just this one).
+      if (mounted) setState({ ...initialState, status: 'unauthenticated' })
+    } else {
+      withTimeout(supabase.auth.getSession(), BOOTSTRAP_TIMEOUT_MS, 'Connecting to Supabase timed out.')
+        .then(({ data }) => {
+          if (mounted) void load(data.session?.user.id ?? null)
+        })
+        .catch((error) => {
+          // Without this, a transient network/CORS hiccup (or a genuinely
+          // stalled request — the timeout above guarantees this settles
+          // either way) on the very first getSession() call leaves `status`
+          // stuck at 'loading' forever — load() never runs, so every guarded
+          // route (RequireAuth, RedirectIfAuthenticated,
+          // RequireActiveSubscription) hangs on the brand loading screen
+          // indefinitely instead of settling into 'unauthenticated'. Fall
+          // back the same way load()'s own catch does.
+          console.error('Failed to get initial session:', error)
+          if (mounted) {
+            toast.error('Could not connect', { description: errorMessage(error, 'Check your connection and reload.') })
+            void load(null)
+          }
+        })
+    }
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
@@ -280,9 +299,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sendPasswordReset: (email, captchaToken) => authService.sendPasswordReset(email, captchaToken),
       updatePassword: async (pwd) => {
         await authService.updatePassword(pwd)
-        // Refresh so a cleared must_change_password flag is reflected immediately —
-        // otherwise RequirePasswordChange would bounce the user right back.
-        await load(state.userId)
+        // Read the live session's user id rather than closing over
+        // state.userId — on the password-recovery path (isPasswordRecoveryUrl
+        // above) state.userId is deliberately still null at this point even
+        // though a real (recovery) session exists, and this is exactly the
+        // moment it should stop being isolated: the user just deliberately
+        // completed the reset, so load them into the app now. For the
+        // ordinary in-app password-change path (Settings, forced change)
+        // this resolves to the same id state.userId already held — just
+        // fetched fresh instead of from a closure. Also still what clears a
+        // must_change_password flag immediately, same as before, so
+        // RequirePasswordChange doesn't bounce the user right back.
+        const { data } = await supabase.auth.getUser()
+        await load(data.user?.id ?? null)
       },
       setActiveOrg,
       startSupport: async (orgId: string) => {

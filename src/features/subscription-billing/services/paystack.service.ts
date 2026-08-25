@@ -1,4 +1,5 @@
 import { invokeEdgeFunction } from '@/shared/lib/edge-function'
+import type { BillingCycle } from '@/shared/types/database.types'
 
 export interface InitTransactionResult {
   authorizationUrl: string
@@ -12,10 +13,15 @@ export interface InitTransactionResult {
  * server-side, after verifying the event with Paystack.
  */
 export const paystackService = {
-  async initTransaction(organizationId: string, planId: string): Promise<InitTransactionResult> {
+  async initTransaction(
+    organizationId: string,
+    planId: string,
+    billingCycle: BillingCycle = 'monthly',
+  ): Promise<InitTransactionResult> {
     return invokeEdgeFunction<InitTransactionResult>('paystack-init-transaction', {
       organizationId,
       planId,
+      billingCycle,
       callbackUrl: `${window.location.origin}/subscription/callback`,
     })
   },

@@ -60,7 +60,7 @@ Deno.serve(async (req: Request) => {
     customer?: { customer_code?: string }
     plan?: { plan_code?: string }
     subscription_code?: string
-    metadata?: { organization_id?: string; plan_id?: string }
+    metadata?: { organization_id?: string; plan_id?: string; billing_cycle?: string }
     next_payment_date?: string
   }
 
@@ -114,15 +114,24 @@ Deno.serve(async (req: Request) => {
       // billing_cycle instead — still preferring Paystack's own value
       // when it IS present, for whenever recurring subscriptions are
       // wired up for real.
+      // paystack-init-transaction already wrote the cycle just checked out
+      // for onto this row before redirecting — metadata.billing_cycle (also
+      // set there) is only a fallback for the unlikely case that write
+      // didn't stick. Resolved once, used both for the date math below and
+      // written back explicitly so this row is never left on a stale cycle
+      // from before this checkout.
+      const { data: existingSub } = await admin
+        .from('subscriptions')
+        .select('billing_cycle')
+        .eq('organization_id', orgId)
+        .maybeSingle()
+      const billingCycle = data.metadata?.billing_cycle ?? existingSub?.billing_cycle ?? 'monthly'
+
       let nextBilling = data.next_payment_date ? new Date(data.next_payment_date).toISOString() : null
       if (!nextBilling) {
-        const { data: existingSub } = await admin
-          .from('subscriptions')
-          .select('billing_cycle')
-          .eq('organization_id', orgId)
-          .maybeSingle()
         const next = new Date()
-        if (existingSub?.billing_cycle === 'yearly') next.setFullYear(next.getFullYear() + 1)
+        if (billingCycle === 'yearly') next.setFullYear(next.getFullYear() + 1)
+        else if (billingCycle === 'quarterly') next.setMonth(next.getMonth() + 3)
         else next.setMonth(next.getMonth() + 1)
         nextBilling = next.toISOString()
       }
@@ -136,6 +145,7 @@ Deno.serve(async (req: Request) => {
           // switch the org onto that plan once payment is confirmed here,
           // not just re-activate whatever plan_id it already had.
           plan_id: data.metadata?.plan_id ?? undefined,
+          billing_cycle: billingCycle,
           seats,
           paystack_customer_code: data.customer?.customer_code ?? undefined,
           paystack_subscription_code: data.subscription_code ?? data.plan?.plan_code ?? undefined,

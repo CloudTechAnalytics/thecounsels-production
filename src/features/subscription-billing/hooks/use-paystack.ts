@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { paystackService } from '@/features/subscription-billing/services/paystack.service'
 import { env } from '@/shared/config/env'
+import type { BillingCycle } from '@/shared/types/database.types'
 
 /**
  * Starts a Paystack checkout and redirects the whole page there — never
@@ -8,11 +9,19 @@ import { env } from '@/shared/config/env'
  */
 export function useStartCheckout() {
   return useMutation({
-    mutationFn: async ({ organizationId, planId }: { organizationId: string; planId: string }) => {
+    mutationFn: async ({
+      organizationId,
+      planId,
+      billingCycle = 'monthly',
+    }: {
+      organizationId: string
+      planId: string
+      billingCycle?: BillingCycle
+    }) => {
       if (!env.isPaystackConfigured) {
         throw new Error('Payment integration is not configured yet — contact support.')
       }
-      const { authorizationUrl } = await paystackService.initTransaction(organizationId, planId)
+      const { authorizationUrl } = await paystackService.initTransaction(organizationId, planId, billingCycle)
       window.location.href = authorizationUrl
     },
   })

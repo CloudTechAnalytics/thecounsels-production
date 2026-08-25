@@ -8,6 +8,7 @@ import { PlanStep } from '@/features/onboarding/components/plan-step'
 import { useRegisterOrganization } from '@/features/onboarding/hooks/use-onboarding'
 import { useStartCheckout } from '@/features/subscription-billing/hooks/use-paystack'
 import type { FirmSetupValues } from '@/features/onboarding/schemas'
+import type { BillingCycle } from '@/shared/types/database.types'
 import { GetStartedShell } from '@/shared/components/get-started-shell'
 import { Button } from '@/shared/components/ui/button'
 import { toast } from '@/shared/components/ui/sonner'
@@ -119,7 +120,7 @@ export function OnboardingPage() {
     }
   }
 
-  const subscribeNow = async (planId: string) => {
+  const subscribeNow = async (planId: string, billingCycle: BillingCycle) => {
     if (!firmValues) return
     setPendingAction('subscribe')
 
@@ -139,7 +140,7 @@ export function OnboardingPage() {
     try {
       // On success this leaves the SPA entirely (Paystack's hosted
       // checkout) and never resolves normally — the browser navigates away.
-      await checkout.mutateAsync({ organizationId: org.id, planId })
+      await checkout.mutateAsync({ organizationId: org.id, planId, billingCycle })
     } catch (err) {
       // Checkout failed to even start, but register_organization() already
       // created the org + a trial subscription unconditionally (same as

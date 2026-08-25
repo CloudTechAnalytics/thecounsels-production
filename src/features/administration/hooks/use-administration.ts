@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { administrationService } from '@/features/administration/services/administration.service'
 import { planHasFeature, type PlanFeatureKey } from '@/features/administration/lib/plan-features'
+import type { BillingCycle } from '@/shared/types/database.types'
 
 const keys = {
   organizations: ['administration', 'organizations'] as const,
@@ -105,7 +106,8 @@ function useInvalidateSubscription(organizationId: string | null) {
 export function useScheduleDowngrade(organizationId: string | null) {
   const invalidate = useInvalidateSubscription(organizationId)
   return useMutation({
-    mutationFn: (planId: string) => administrationService.scheduleDowngrade(organizationId!, planId),
+    mutationFn: ({ planId, billingCycle }: { planId: string; billingCycle?: BillingCycle }) =>
+      administrationService.scheduleDowngrade(organizationId!, planId, billingCycle),
     onSuccess: invalidate,
   })
 }

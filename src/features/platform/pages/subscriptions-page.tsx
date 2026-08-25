@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { initialsOf, formatNaira, formatMoneyCompact, daysUntil } from '@/shared/lib/format'
+import { monthlyEquivalent } from '@/shared/lib/billing-cycle'
 import { cn } from '@/shared/lib/utils'
 import { toast } from '@/shared/components/ui/sonner'
 
@@ -44,7 +45,7 @@ const PLAN_KEYS = new Set(['starter', 'professional', 'business', 'enterprise'])
 
 function monthlyPrice(row: SubscriptionRow): number {
   if (!row.plan) return 0
-  return row.billing_cycle === 'yearly' ? Number(row.plan.price_yearly) / 12 : Number(row.plan.price_monthly)
+  return monthlyEquivalent(row.billing_cycle, row.plan)
 }
 
 function SubscriptionRowItem({ row }: { row: SubscriptionRow }) {

@@ -17,11 +17,16 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+type BillingCycle = 'monthly' | 'quarterly' | 'yearly'
+const VALID_CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'yearly']
+
 interface Payload {
   organizationId: string
   planId: string
   /** Where Paystack sends the browser back to after checkout. */
   callbackUrl: string
+  /** Defaults to 'monthly' so any caller still on the old two-arg shape keeps working unchanged. */
+  billingCycle?: BillingCycle
 }
 
 function json(body: unknown, status = 200) {
@@ -50,6 +55,9 @@ Deno.serve(async (req: Request) => {
   if (!organizationId || !planId || !callbackUrl) {
     return json({ error: 'organizationId, planId and callbackUrl are required' }, 400)
   }
+  const billingCycle: BillingCycle = VALID_CYCLES.includes(body.billingCycle as BillingCycle)
+    ? (body.billingCycle as BillingCycle)
+    : 'monthly'
 
   // Never a fake success — build the complete flow, but be honest when the
   // real integration hasn't been configured yet.
@@ -78,12 +86,22 @@ Deno.serve(async (req: Request) => {
   const email = org.billing_email || profile?.email
   if (!email) return json({ error: 'No billing email on file for this organization' }, 400)
 
+  const cyclePrice: Record<BillingCycle, unknown> = {
+    monthly: plan.price_monthly,
+    quarterly: plan.price_quarterly,
+    yearly: plan.price_yearly,
+  }
+  const price = cyclePrice[billingCycle]
+  if (price == null) {
+    return json({ error: `This plan has no ${billingCycle} price set — contact support.` }, 400)
+  }
+
   const paystackBody: Record<string, unknown> = {
     email,
-    amount: Math.round(Number(plan.price_monthly) * 100), // kobo
+    amount: Math.round(Number(price) * 100), // kobo
     currency: plan.currency ?? 'NGN',
     callback_url: callbackUrl,
-    metadata: { organization_id: organizationId, plan_id: planId },
+    metadata: { organization_id: organizationId, plan_id: planId, billing_cycle: billingCycle },
   }
   if (plan.paystack_plan_code) paystackBody.plan = plan.paystack_plan_code
 
@@ -97,11 +115,14 @@ Deno.serve(async (req: Request) => {
     return json({ error: psData?.message ?? 'Paystack could not start this transaction' }, 400)
   }
 
-  // Record the pending reference so the webhook can match its callback back
-  // to this org — does NOT touch status; only a verified webhook does that.
+  // Record the pending reference (so the webhook can match its callback back
+  // to this org) and the chosen cycle (so paystack-webhook's next_billing_date
+  // math — which reads billing_cycle off this same row — uses the cycle just
+  // paid for, not whatever it was set to before this checkout started).
+  // Neither touches status; only a verified webhook does that.
   await admin
     .from('subscriptions')
-    .update({ paystack_transaction_reference: psData.data.reference })
+    .update({ paystack_transaction_reference: psData.data.reference, billing_cycle: billingCycle })
     .eq('organization_id', organizationId)
 
   return json({ authorizationUrl: psData.data.authorization_url, reference: psData.data.reference })

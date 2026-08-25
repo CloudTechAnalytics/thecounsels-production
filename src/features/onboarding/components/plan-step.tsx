@@ -6,9 +6,10 @@ import { Card } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { formatNaira } from '@/shared/lib/format'
+import { BILLING_CYCLES, CYCLE_LABEL, CYCLE_SUFFIX, cyclePrice, cycleDiscountPercent } from '@/shared/lib/billing-cycle'
 import { cn } from '@/shared/lib/utils'
 import { APP } from '@/shared/config/env'
-import type { Plan } from '@/shared/types/database.types'
+import type { BillingCycle, Plan } from '@/shared/types/database.types'
 
 const TRIAL = 'trial' as const
 type Selection = typeof TRIAL | string
@@ -77,8 +78,42 @@ function TrialCard({ selected, onSelect, days }: { selected: boolean; onSelect: 
   )
 }
 
-function PlanCard({ plan, selected, onSelect }: { plan: Plan; selected: boolean; onSelect: () => void }) {
+/** Monthly/Quarterly/Yearly segmented control — irrelevant while Trial is
+ * selected (nothing's being charged yet), so the caller only renders this
+ * once a paid tier is picked. */
+function CycleToggle({ cycle, onChange }: { cycle: BillingCycle; onChange: (c: BillingCycle) => void }) {
+  return (
+    <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
+      {BILLING_CYCLES.map((c) => (
+        <button
+          key={c}
+          type="button"
+          onClick={() => onChange(c)}
+          className={cn(
+            'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+            cycle === c ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          {CYCLE_LABEL[c]}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function PlanCard({
+  plan,
+  cycle,
+  selected,
+  onSelect,
+}: {
+  plan: Plan
+  cycle: BillingCycle
+  selected: boolean
+  onSelect: () => void
+}) {
   const recommended = plan.key === 'professional'
+  const discount = cycleDiscountPercent(cycle, plan)
   return (
     <CardShell
       selected={selected}
@@ -89,9 +124,15 @@ function PlanCard({ plan, selected, onSelect }: { plan: Plan; selected: boolean;
       {plan.is_custom ? (
         <p className="mt-1 font-display text-2xl font-semibold">Custom</p>
       ) : (
-        <p className="mt-1 font-display text-2xl font-semibold">
-          {formatNaira(Number(plan.price_monthly))}<span className="text-sm font-normal text-muted-foreground">/month</span>
-        </p>
+        <>
+          <p className="mt-1 font-display text-2xl font-semibold">
+            {formatNaira(cyclePrice(cycle, plan))}
+            <span className="text-sm font-normal text-muted-foreground">{CYCLE_SUFFIX[cycle]}</span>
+          </p>
+          {discount != null && (
+            <Badge variant="secondary" className="mt-1">Save {discount}%</Badge>
+          )}
+        </>
       )}
       {plan.is_custom && <p className="text-xs text-muted-foreground">Tailored pricing — talk to sales</p>}
       <ul className="mt-4 space-y-1.5">
@@ -120,7 +161,7 @@ export function PlanStep({
   subscribeLoading,
 }: {
   onStartTrial: (planId: string) => void
-  onSubscribeNow: (planId: string) => void
+  onSubscribeNow: (planId: string, billingCycle: BillingCycle) => void
   trialLoading: boolean
   subscribeLoading: boolean
 }) {
@@ -131,6 +172,7 @@ export function PlanStep({
   const { data: plans = [], isLoading } = useSelectablePlans()
   const { data: settings } = useRegistrationSettings()
   const [selected, setSelected] = React.useState<Selection | null>(null)
+  const [cycle, setCycle] = React.useState<BillingCycle>('monthly')
 
   // Trial is preselected by default — it's the recommended, no-payment path
   // — unless the landing page's pricing section pointed here with a
@@ -167,16 +209,22 @@ export function PlanStep({
     if (selected === TRIAL) {
       if (trialPlanId) onStartTrial(trialPlanId)
     } else if (selectedPlan) {
-      onSubscribeNow(selectedPlan.id)
+      onSubscribeNow(selectedPlan.id, cycle)
     }
   }
 
   return (
     <div className="space-y-6">
+      {selected !== TRIAL && selectedPlan && !selectedPlan.is_custom && (
+        <div className="flex justify-center">
+          <CycleToggle cycle={cycle} onChange={setCycle} />
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <TrialCard selected={selected === TRIAL} onSelect={() => setSelected(TRIAL)} days={trialDays} />
         {plans.map((plan) => (
-          <PlanCard key={plan.id} plan={plan} selected={plan.id === selected} onSelect={() => setSelected(plan.id)} />
+          <PlanCard key={plan.id} plan={plan} cycle={cycle} selected={plan.id === selected} onSelect={() => setSelected(plan.id)} />
         ))}
       </div>
 

@@ -9,9 +9,11 @@ import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { formatNaira } from '@/shared/lib/format'
+import { BILLING_CYCLES, CYCLE_LABEL, CYCLE_SUFFIX, cyclePrice, cycleDiscountPercent } from '@/shared/lib/billing-cycle'
 import { cn } from '@/shared/lib/utils'
 import { APP } from '@/shared/config/env'
 import { toast } from '@/shared/components/ui/sonner'
+import type { BillingCycle } from '@/shared/types/database.types'
 
 /**
  * Forced stop for an expired/suspended organization (RequireActiveSubscription).
@@ -26,13 +28,14 @@ export function ExpiredSubscriptionPage() {
   const { data: plans, isLoading } = useSelectablePlans()
   const checkout = useStartCheckout()
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
+  const [cycle, setCycle] = React.useState<BillingCycle>('monthly')
 
   const orgId = activeMembership?.organization_id ?? null
 
   const subscribe = async (planId: string) => {
     if (!orgId) return
     try {
-      await checkout.mutateAsync({ organizationId: orgId, planId })
+      await checkout.mutateAsync({ organizationId: orgId, planId, billingCycle: cycle })
     } catch (err) {
       toast.error('Could not start checkout', { description: err instanceof Error ? err.message : undefined })
     }
@@ -62,8 +65,28 @@ export function ExpiredSubscriptionPage() {
         </div>
       ) : (
         <div className="space-y-6">
+          <div className="flex justify-center">
+            <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
+              {BILLING_CYCLES.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCycle(c)}
+                  className={cn(
+                    'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                    cycle === c ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {CYCLE_LABEL[c]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
-            {plans.map((plan) => (
+            {plans.map((plan) => {
+              const discount = cycleDiscountPercent(cycle, plan)
+              return (
               <button
                 key={plan.id}
                 type="button"
@@ -77,9 +100,12 @@ export function ExpiredSubscriptionPage() {
                 <p className="font-display text-base font-semibold">{plan.name}</p>
                 <p className="mt-1 font-display text-2xl font-semibold">
                   {plan.is_custom ? 'Custom' : (
-                    <>{formatNaira(Number(plan.price_monthly))}<span className="text-sm font-normal text-muted-foreground">/month</span></>
+                    <>{formatNaira(cyclePrice(cycle, plan))}<span className="text-sm font-normal text-muted-foreground">{CYCLE_SUFFIX[cycle]}</span></>
                   )}
                 </p>
+                {!plan.is_custom && discount != null && (
+                  <Badge variant="secondary" className="mt-1 w-fit">Save {discount}%</Badge>
+                )}
                 <ul className="mt-4 space-y-1.5">
                   {plan.highlights.slice(0, 4).map((h) => (
                     <li key={h} className="flex items-start gap-1.5 text-xs text-muted-foreground">
@@ -88,7 +114,8 @@ export function ExpiredSubscriptionPage() {
                   ))}
                 </ul>
               </button>
-            ))}
+              )
+            })}
           </div>
 
           {selectedId && (

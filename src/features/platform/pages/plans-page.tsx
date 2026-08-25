@@ -67,7 +67,8 @@ export function PlansPage() {
                   <span className="font-display text-3xl font-semibold">{formatNaira(Number(plan.price_monthly))}</span>
                   <span className="text-sm text-muted-foreground">/month</span>
                   <p className="text-xs text-muted-foreground">
-                    or {formatNaira(Number(plan.price_yearly))}/year
+                    or {plan.price_quarterly != null && `${formatNaira(Number(plan.price_quarterly))}/quarter · `}
+                    {formatNaira(Number(plan.price_yearly))}/year
                   </p>
                 </div>
 

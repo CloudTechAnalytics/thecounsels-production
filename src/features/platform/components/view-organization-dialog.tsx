@@ -5,6 +5,7 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Separator } from '@/shared/components/ui/separator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
 import { initialsOf, formatStorage, formatNaira, titleCase } from '@/shared/lib/format'
+import { monthlyEquivalent } from '@/shared/lib/billing-cycle'
 
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -51,9 +52,10 @@ export function ViewOrganizationDialog({
             <Separator className="my-2" />
             <Row label="Plan" value={sub?.plan?.name ?? titleCase(org.plan)} />
             <Row label="Subscription" value={sub ? <span className="capitalize">{sub.status}</span> : '—'} />
+            <Row label="Billing cycle" value={sub ? <span className="capitalize">{sub.billing_cycle}</span> : '—'} />
             <Row
               label="Monthly value"
-              value={sub?.plan ? formatNaira(sub.billing_cycle === 'yearly' ? Number(sub.plan.price_yearly) / 12 : Number(sub.plan.price_monthly)) : '—'}
+              value={sub?.plan ? formatNaira(monthlyEquivalent(sub.billing_cycle, sub.plan)) : '—'}
             />
             <Row label="Seats" value={sub?.seats} />
             <Row label="Renewal" value={sub?.current_period_end ? format(new Date(sub.current_period_end), 'PP') : '—'} />

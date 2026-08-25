@@ -1,5 +1,5 @@
 import { supabase } from '@/shared/lib/supabase'
-import type { Organization, Plan, Role, Subscription } from '@/shared/types/database.types'
+import type { BillingCycle, Organization, Plan, Role, Subscription } from '@/shared/types/database.types'
 import type {
   InvitationWithRelations,
   MemberWithRelations,
@@ -111,9 +111,19 @@ export const administrationService = {
     return (data ?? null) as unknown as SubscriptionWithPlan | null
   },
 
-  /** Downgrades take effect on the next billing date (schedule_plan_downgrade RPC, migration 0056) — never immediately. */
-  async scheduleDowngrade(organizationId: string, planId: string): Promise<void> {
-    const { error } = await supabase.rpc('schedule_plan_downgrade', { p_org: organizationId, p_plan_id: planId })
+  /**
+   * Downgrades take effect on the next billing date (schedule_plan_downgrade
+   * RPC, migration 0056) — never immediately. billingCycle is optional: pass
+   * it only when the cycle should also change at that same effective date;
+   * omitted (or undefined), the org just keeps its current cycle on the new
+   * plan, same as before this parameter existed.
+   */
+  async scheduleDowngrade(organizationId: string, planId: string, billingCycle?: BillingCycle): Promise<void> {
+    const { error } = await supabase.rpc('schedule_plan_downgrade', {
+      p_org: organizationId,
+      p_plan_id: planId,
+      p_billing_cycle: billingCycle ?? null,
+    })
     if (error) throw error
   },
 

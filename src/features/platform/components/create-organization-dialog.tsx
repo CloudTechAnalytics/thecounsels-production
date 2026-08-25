@@ -223,6 +223,7 @@ export function CreateOrganizationDialog() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="quarterly">Quarterly</SelectItem>
                             <SelectItem value="yearly">Yearly</SelectItem>
                           </SelectContent>
                         </Select>

@@ -13,6 +13,7 @@ import { Label } from '@/shared/components/ui/label'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { formatNaira, daysUntil } from '@/shared/lib/format'
+import { cyclePrice, CYCLE_SUFFIX } from '@/shared/lib/billing-cycle'
 import { toast } from '@/shared/components/ui/sonner'
 import type { BadgeProps } from '@/shared/components/ui/badge'
 
@@ -75,9 +76,9 @@ export function PlanSummary() {
           </div>
           <div className="text-right">
             <p className="font-display text-2xl font-semibold">
-              {plan?.is_custom ? 'Custom' : plan ? formatNaira(Number(plan.price_monthly)) : '—'}
+              {plan?.is_custom ? 'Custom' : plan ? formatNaira(cyclePrice(sub.billing_cycle, plan)) : '—'}
             </p>
-            <p className="text-xs text-muted-foreground">per month</p>
+            <p className="text-xs text-muted-foreground">{plan?.is_custom ? '' : CYCLE_SUFFIX[sub.billing_cycle].replace('/', 'per ')}</p>
           </div>
         </div>
 
@@ -158,7 +159,13 @@ export function PlanSummary() {
 
       {canManage && (
         <>
-          <PlanChangeDialog open={changeOpen} onOpenChange={setChangeOpen} organizationId={activeOrgId!} currentPlan={plan} />
+          <PlanChangeDialog
+            open={changeOpen}
+            onOpenChange={setChangeOpen}
+            organizationId={activeOrgId!}
+            currentPlan={plan}
+            currentCycle={sub.billing_cycle}
+          />
           <ConfirmDialog
             open={confirmCancel}
             onOpenChange={setConfirmCancel}

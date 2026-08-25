@@ -10,10 +10,11 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { initialsOf, formatNaira, formatMoneyCompact } from '@/shared/lib/format'
+import { monthlyEquivalent } from '@/shared/lib/billing-cycle'
 
 function monthly(row: SubscriptionRow): number {
   if (!row.plan) return 0
-  return row.billing_cycle === 'yearly' ? Number(row.plan.price_yearly) / 12 : Number(row.plan.price_monthly)
+  return monthlyEquivalent(row.billing_cycle, row.plan)
 }
 
 export function BillingPage() {

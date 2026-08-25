@@ -21,7 +21,7 @@ export type MembershipStatus = 'invited' | 'active' | 'suspended' | 'disabled'
 export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired'
 export type AccessScope = 'organization' | 'branch' | 'multiple_branches' | 'personal'
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'paused' | 'cancelled' | 'expired' | 'suspended'
-export type BillingCycle = 'monthly' | 'yearly'
+export type BillingCycle = 'monthly' | 'quarterly' | 'yearly'
 export type ClientType = 'individual' | 'corporate'
 export type ClientStatus = 'active' | 'inactive' | 'prospect'
 export type MatterStatus = 'open' | 'pending' | 'in_court' | 'closed' | 'won' | 'lost' | 'appeal'
@@ -422,6 +422,7 @@ export interface Database {
           description: string | null
           currency: string
           price_monthly: number
+          price_quarterly: number | null
           price_yearly: number
           max_users: number | null
           storage_gb: number
@@ -441,6 +442,7 @@ export interface Database {
           description?: string | null
           currency?: string
           price_monthly?: number
+          price_quarterly?: number | null
           price_yearly?: number
           max_users?: number | null
           storage_gb?: number
@@ -1753,6 +1755,7 @@ export interface Database {
           cancellation_reason: string | null
           next_billing_date: string | null
           scheduled_plan_id: string | null
+          scheduled_billing_cycle: BillingCycle | null
           scheduled_change_at: string | null
           last_trial_reminder_days: number | null
           last_payment_at: string | null
@@ -1777,6 +1780,7 @@ export interface Database {
           cancellation_reason?: string | null
           next_billing_date?: string | null
           scheduled_plan_id?: string | null
+          scheduled_billing_cycle?: BillingCycle | null
           scheduled_change_at?: string | null
           last_trial_reminder_days?: number | null
           last_payment_at?: string | null
@@ -2250,7 +2254,7 @@ export interface Database {
         Returns: boolean
       }
       schedule_plan_downgrade: {
-        Args: { p_org: string; p_plan_id: string }
+        Args: { p_org: string; p_plan_id: string; p_billing_cycle?: BillingCycle | null }
         Returns: Database['public']['Tables']['subscriptions']['Row']
       }
       cancel_scheduled_downgrade: {

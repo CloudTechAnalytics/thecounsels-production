@@ -23,6 +23,7 @@ type Draft = {
   name: string
   description: string
   price_monthly: string
+  price_quarterly: string
   price_yearly: string
   max_users: string
   storage_gb: string
@@ -36,6 +37,7 @@ function toDraft(plan?: Plan | null): Draft {
     name: plan?.name ?? '',
     description: plan?.description ?? '',
     price_monthly: plan ? String(plan.price_monthly) : '',
+    price_quarterly: plan?.price_quarterly != null ? String(plan.price_quarterly) : '',
     price_yearly: plan ? String(plan.price_yearly) : '',
     max_users: plan?.max_users != null ? String(plan.max_users) : '',
     storage_gb: plan ? String(plan.storage_gb) : '',
@@ -76,6 +78,7 @@ export function PlanEditorDialog({
         name: draft.name.trim(),
         description: draft.description || null,
         price_monthly: Number(draft.price_monthly) || 0,
+        price_quarterly: draft.price_quarterly === '' ? undefined : Number(draft.price_quarterly) || 0,
         price_yearly: Number(draft.price_yearly) || 0,
         max_users: draft.max_users === '' ? null : Number(draft.max_users),
         storage_gb: Number(draft.storage_gb) || 0,
@@ -114,15 +117,27 @@ export function PlanEditorDialog({
             <Input value={draft.description} onChange={(e) => set('description', e.target.value)} placeholder="For growing firms" />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label>Monthly (₦)</Label>
               <Input type="number" value={draft.price_monthly} onChange={(e) => set('price_monthly', e.target.value)} />
             </div>
             <div className="space-y-1.5">
+              <Label>Quarterly (₦)</Label>
+              <Input
+                type="number"
+                value={draft.price_quarterly}
+                onChange={(e) => set('price_quarterly', e.target.value)}
+                placeholder={draft.price_monthly ? String(Math.round(Number(draft.price_monthly) * 3 * 0.9)) : ''}
+              />
+            </div>
+            <div className="space-y-1.5">
               <Label>Yearly (₦)</Label>
               <Input type="number" value={draft.price_yearly} onChange={(e) => set('price_yearly', e.target.value)} />
             </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Max users</Label>
               <Input type="number" value={draft.max_users} onChange={(e) => set('max_users', e.target.value)} placeholder="∞" />

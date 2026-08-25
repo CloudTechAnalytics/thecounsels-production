@@ -1800,6 +1800,36 @@ export interface Database {
           },
         ]
       }
+      client_error_logs: {
+        Row: {
+          id: string
+          organization_id: string | null
+          user_id: string | null
+          message: string
+          stack: string | null
+          component_stack: string | null
+          url: string | null
+          user_agent: string | null
+          environment: string | null
+          context: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id?: string | null
+          user_id?: string | null
+          message: string
+          stack?: string | null
+          component_stack?: string | null
+          url?: string | null
+          user_agent?: string | null
+          environment?: string | null
+          context?: Json | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['client_error_logs']['Insert']>
+        Relationships: []
+      }
       notifications: {
         Row: {
           id: string

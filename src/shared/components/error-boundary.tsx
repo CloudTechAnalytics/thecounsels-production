@@ -2,7 +2,7 @@ import { Component, type ReactNode } from 'react'
 import { AlertTriangle, RotateCcw } from 'lucide-react'
 import { APP } from '@/shared/config/env'
 import { Button } from '@/shared/components/ui/button'
-import { Sentry } from '@/app/sentry'
+import { logClientError } from '@/shared/lib/error-log'
 
 interface Props {
   children: ReactNode
@@ -28,7 +28,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
-    Sentry.captureException(error, { extra: { componentStack: info.componentStack } })
+    logClientError(error, { componentStack: info.componentStack, source: 'ErrorBoundary' })
   }
 
   render() {

@@ -47,6 +47,25 @@ export const authService = {
     return { needsConfirmation: !data.session }
   },
 
+  /**
+   * Confirms a fresh signUp() using the numeric code from the confirmation
+   * email (see supabase/auth-config's mailer_templates_confirmation_content
+   * — {{ .Token }}) instead of the email's link, as the anti-bot check in
+   * place of CAPTCHA: a bot can't read and retype a code that only exists
+   * in an inbox it doesn't control. Establishes a real session on success —
+   * the caller doesn't need to sign in separately afterward.
+   */
+  async verifySignUpOtp(email: string, token: string): Promise<void> {
+    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' })
+    if (error) throw error
+  },
+
+  /** Requests a fresh code for the signUp() OTP flow above — same rate limit as any other Supabase Auth email. */
+  async resendSignUpOtp(email: string): Promise<void> {
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    if (error) throw error
+  },
+
   async signOut(): Promise<void> {
     const { error } = await supabase.auth.signOut()
     if (error) throw error

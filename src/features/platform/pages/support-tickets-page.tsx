@@ -1,11 +1,11 @@
 import * as React from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { LifeBuoy, Inbox, Timer, CheckCircle2, AlertTriangle, Plus, Search } from 'lucide-react'
-import { useTickets } from '@/features/support/hooks/use-support'
+import { LifeBuoy, Inbox, Timer, CheckCircle2, AlertTriangle, Plus, Search, Trash2 } from 'lucide-react'
+import { useDeleteTicket, useTickets } from '@/features/support/hooks/use-support'
 import { usePlatformOrganizations, usePlatformUsers } from '@/features/platform/hooks/use-platform'
 import { TicketThreadDialog } from '@/features/support/components/ticket-thread-dialog'
 import { NewTicketDialog } from '@/features/support/components/new-ticket-dialog'
-import { OPEN_TICKET_STATUSES, TICKET_PRIORITY_META, TICKET_STATUS_META, TICKET_STATUSES } from '@/features/support/types'
+import { OPEN_TICKET_STATUSES, TICKET_PRIORITY_META, TICKET_STATUS_META, TICKET_STATUSES, type TicketRow } from '@/features/support/types'
 import type { TicketStatus } from '@/shared/types/database.types'
 import { KpiCard } from '@/features/platform/components/kpi-card'
 import { PageHeader } from '@/shared/components/page-header'
@@ -16,6 +16,9 @@ import { Input } from '@/shared/components/ui/input'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { toast } from '@/shared/components/ui/sonner'
+import { errorMessage } from '@/shared/lib/errors'
 
 export function SupportTicketsPage() {
   const [search, setSearch] = React.useState('')
@@ -25,6 +28,8 @@ export function SupportTicketsPage() {
   const { data: platformUsers } = usePlatformUsers()
   const [openTicketId, setOpenTicketId] = React.useState<string | null>(null)
   const [createOpen, setCreateOpen] = React.useState(false)
+  const [toDelete, setToDelete] = React.useState<TicketRow | null>(null)
+  const del = useDeleteTicket()
 
   const all = tickets ?? []
   const open = all.filter((t) => OPEN_TICKET_STATUSES.includes(t.status))
@@ -82,6 +87,7 @@ export function SupportTicketsPage() {
               <TableHead>Status</TableHead>
               <TableHead>Assignee</TableHead>
               <TableHead>Last activity</TableHead>
+              <TableHead className="w-10" />
             </TableRow></TableHeader>
             <TableBody>
               {all.map((t) => (
@@ -96,6 +102,16 @@ export function SupportTicketsPage() {
                   <TableCell className="text-sm text-muted-foreground">{t.assignee ? (t.assignee.full_name ?? t.assignee.email) : 'Unassigned'}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(t.updated_at), { addSuffix: true })}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Delete ticket"
+                      onClick={(e) => { e.stopPropagation(); setToDelete(t) }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -121,6 +137,26 @@ export function SupportTicketsPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         organizations={(orgs ?? []).map((o) => ({ id: o.id, name: o.name }))}
+      />
+
+      <ConfirmDialog
+        open={Boolean(toDelete)}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title="Delete ticket"
+        destructive
+        confirmLabel="Delete"
+        loading={del.isPending}
+        description={<>This permanently deletes <strong>{toDelete?.ticket_number}</strong> and its whole thread, for the firm too. This cannot be undone.</>}
+        onConfirm={async () => {
+          if (!toDelete) return
+          try {
+            await del.mutateAsync({ id: toDelete.id, organizationId: toDelete.organization_id, ticketNumber: toDelete.ticket_number })
+            toast.success('Ticket deleted')
+            setToDelete(null)
+          } catch (err) {
+            toast.error('Could not delete ticket', { description: errorMessage(err) })
+          }
+        }}
       />
     </div>
   )

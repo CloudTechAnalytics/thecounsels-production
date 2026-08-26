@@ -42,3 +42,12 @@ export function useAddTicketMessage() {
     onSuccess: invalidate,
   })
 }
+
+export function useDeleteTicket() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (args: { id: string; organizationId: string; ticketNumber: string | null }) =>
+      supportService.deleteTicket(args.id, args.organizationId, args.ticketNumber),
+    onSuccess: invalidate,
+  })
+}

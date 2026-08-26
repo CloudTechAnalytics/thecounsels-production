@@ -1,21 +1,26 @@
 import * as React from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { LifeBuoy, Plus } from 'lucide-react'
-import { useTickets } from '@/features/support/hooks/use-support'
+import { LifeBuoy, Plus, Trash2 } from 'lucide-react'
+import { useDeleteTicket, useTickets } from '@/features/support/hooks/use-support'
 import { NewTicketDialog } from '@/features/support/components/new-ticket-dialog'
 import { TicketThreadDialog } from '@/features/support/components/ticket-thread-dialog'
-import { TICKET_PRIORITY_META, TICKET_STATUS_META } from '@/features/support/types'
+import { TICKET_PRIORITY_META, TICKET_STATUS_META, type TicketRow } from '@/features/support/types'
 import { Card } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { toast } from '@/shared/components/ui/sonner'
+import { errorMessage } from '@/shared/lib/errors'
 
 /** Firm Settings → Support: raise tickets with CloudTech and follow the thread. */
 export function FirmSupportPanel({ organizationId }: { organizationId: string }) {
   const { data: tickets, isLoading } = useTickets({ organizationId })
   const [createOpen, setCreateOpen] = React.useState(false)
   const [openTicketId, setOpenTicketId] = React.useState<string | null>(null)
+  const [toDelete, setToDelete] = React.useState<TicketRow | null>(null)
+  const del = useDeleteTicket()
 
   return (
     <div>
@@ -36,6 +41,7 @@ export function FirmSupportPanel({ organizationId }: { organizationId: string })
               <TableHead>Priority</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last activity</TableHead>
+              <TableHead className="w-10" />
             </TableRow></TableHeader>
             <TableBody>
               {tickets.map((t) => (
@@ -48,6 +54,16 @@ export function FirmSupportPanel({ organizationId }: { organizationId: string })
                   <TableCell><Badge variant={TICKET_STATUS_META[t.status].variant}>{TICKET_STATUS_META[t.status].label}</Badge></TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(t.updated_at), { addSuffix: true })}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Delete ticket"
+                      onClick={(e) => { e.stopPropagation(); setToDelete(t) }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -63,6 +79,26 @@ export function FirmSupportPanel({ organizationId }: { organizationId: string })
 
       <NewTicketDialog open={createOpen} onOpenChange={setCreateOpen} organizationId={organizationId} />
       <TicketThreadDialog ticketId={openTicketId} onOpenChange={(o) => !o && setOpenTicketId(null)} />
+
+      <ConfirmDialog
+        open={Boolean(toDelete)}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title="Delete ticket"
+        destructive
+        confirmLabel="Delete"
+        loading={del.isPending}
+        description={<>This permanently deletes <strong>{toDelete?.ticket_number}</strong> and its whole thread. This cannot be undone.</>}
+        onConfirm={async () => {
+          if (!toDelete) return
+          try {
+            await del.mutateAsync({ id: toDelete.id, organizationId, ticketNumber: toDelete.ticket_number })
+            toast.success('Ticket deleted')
+            setToDelete(null)
+          } catch (err) {
+            toast.error('Could not delete ticket', { description: errorMessage(err) })
+          }
+        }}
+      />
     </div>
   )
 }

@@ -94,4 +94,19 @@ export const supportService = {
     const { error } = await supabase.from('support_ticket_messages').insert({ ticket_id: ticketId, body: body.trim() })
     if (error) throw error
   },
+
+  /** Either side can delete — platform staff or any member of the firm
+   * that raised it (0131). Messages cascade via the FK, no separate call
+   * needed. */
+  async deleteTicket(id: string, organizationId: string, ticketNumber: string | null): Promise<void> {
+    const { error } = await supabase.from('support_tickets').delete().eq('id', id)
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'support.ticket_deleted',
+      p_entity_type: 'support_ticket',
+      p_entity_id: id,
+      p_summary: `Support ticket ${ticketNumber ?? ''} deleted`,
+    })
+  },
 }

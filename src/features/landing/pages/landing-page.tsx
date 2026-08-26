@@ -28,6 +28,7 @@ import { Button } from '@/shared/components/ui/button'
 import { APP } from '@/shared/config/env'
 import { cn } from '@/shared/lib/utils'
 import { useAuth } from '@/features/auth/context/auth-provider'
+import { CounselMark } from '@/shared/components/counsel-mark'
 
 const CONTACT_EMAIL = 'cloudtechanalytics.consultant@gmail.com'
 const CONTACT_PHONE_DISPLAY = '+234 813 386 0143'
@@ -333,9 +334,7 @@ function DashboardPreview() {
         <div className="flex h-72 sm:h-80">
           <div className="hidden w-36 shrink-0 border-r border-border bg-sidebar p-3 sm:block">
             <div className="mb-4 flex items-center gap-2 px-1">
-              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                <Scale className="h-3.5 w-3.5" />
-              </span>
+              <CounselMark variant="small" className="h-6 w-6" />
               <span className="text-[10px] font-semibold text-sidebar-foreground">{APP.product}</span>
             </div>
             <div className="space-y-1">
@@ -426,9 +425,7 @@ export function LandingPage() {
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-gold">
-              <Scale className="h-5 w-5" />
-            </span>
+            <CounselMark className="h-9 w-9" />
             <p className="font-display text-lg font-semibold text-foreground">{APP.product}</p>
           </div>
 
@@ -859,9 +856,7 @@ export function LandingPage() {
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                  <Scale className="h-4 w-4" />
-                </span>
+                <CounselMark variant="small" className="h-8 w-8" />
                 <div className="leading-tight">
                   <p className="font-display font-semibold">{APP.product}</p>
                   <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{APP.brand}</p>

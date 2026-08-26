@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Scale, ShieldCheck, Sparkles } from 'lucide-react'
+import { ShieldCheck, Sparkles } from 'lucide-react'
 import { APP } from '@/shared/config/env'
 import { ThemeToggle } from '@/shared/components/theme-toggle'
+import { CounselMark } from '@/shared/components/counsel-mark'
 
 /** Split-screen luxury auth layout: brand panel + form panel. */
 export function AuthShell({
@@ -34,9 +35,7 @@ export function AuthShell({
           }}
         />
         <Link to="/welcome" className="relative flex items-center gap-3 transition-opacity hover:opacity-80">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15 text-sidebar-accent ring-1 ring-sidebar-border">
-            <Scale className="h-6 w-6" />
-          </span>
+          <CounselMark className="h-11 w-11" />
           <div className="leading-tight">
             <p className="font-display text-lg font-semibold">{APP.product}</p>
             <p className="text-xs text-sidebar-muted">{APP.brand}</p>
@@ -82,9 +81,7 @@ export function AuthShell({
           className="w-full max-w-md"
         >
           <Link to="/welcome" className="mb-8 flex items-center gap-3 transition-opacity hover:opacity-80 lg:hidden">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
-              <Scale className="h-5 w-5" />
-            </span>
+            <CounselMark className="h-10 w-10" />
             <div className="leading-tight">
               <p className="font-display text-base font-semibold">{APP.product}</p>
               <p className="text-xs text-muted-foreground">{APP.brand}</p>

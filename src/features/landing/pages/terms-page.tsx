@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { Scale } from 'lucide-react'
 import { APP } from '@/shared/config/env'
+import { CounselMark } from '@/shared/components/counsel-mark'
 
 const EFFECTIVE_DATE = 'August 20, 2026'
 const CONTACT_EMAIL = 'cloudtechanalytics.consultant@gmail.com'
@@ -35,9 +35,7 @@ export function TermsPage() {
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
           <Link to="/welcome" className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Scale className="h-4 w-4" />
-            </span>
+            <CounselMark variant="small" className="h-8 w-8" />
             <span className="font-display text-base font-semibold">{APP.product}</span>
           </Link>
           <Link to="/auth/register" className="text-sm font-medium text-primary hover:underline">

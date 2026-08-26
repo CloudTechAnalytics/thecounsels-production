@@ -1,10 +1,10 @@
 import { NavLink } from 'react-router-dom'
-import { Scale } from 'lucide-react'
 import { NAVIGATION, type NavItem } from '@/app/navigation'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { initialsOf } from '@/shared/lib/format'
+import { CounselMark } from '@/shared/components/counsel-mark'
 import { cn } from '@/shared/lib/utils'
 
 function useVisible() {
@@ -29,15 +29,17 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <aside className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex h-16 items-center gap-3 px-5">
-        <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-primary/15 text-sm font-semibold text-sidebar-accent ring-1 ring-sidebar-border">
-          {org?.logo_url ? (
+        {org?.logo_url ? (
+          <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-primary/15 text-sm font-semibold text-sidebar-accent ring-1 ring-sidebar-border">
             <img src={org.logo_url} alt="" className="h-full w-full object-cover" />
-          ) : org ? (
-            initialsOf(org.name, 'OR')
-          ) : (
-            <Scale className="h-5 w-5" />
-          )}
-        </span>
+          </span>
+        ) : org ? (
+          <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-primary/15 text-sm font-semibold text-sidebar-accent ring-1 ring-sidebar-border">
+            {initialsOf(org.name, 'OR')}
+          </span>
+        ) : (
+          <CounselMark className="h-9 w-9" />
+        )}
         <div className="min-w-0 leading-tight">
           <p className="truncate font-display text-[15px] font-semibold">{org?.name ?? 'The Counsel'}</p>
           <p className="text-[11px] text-sidebar-muted">Powered by The Counsel</p>

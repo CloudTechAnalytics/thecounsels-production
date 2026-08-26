@@ -56,9 +56,12 @@ export function TermsPage() {
           organization.
         </p>
         <p className="mt-3 text-sm text-muted-foreground">
-          Please also read our Privacy Policy, which explains how we collect, use, and protect personal
-          data, including in relation to the Nigeria Data Protection Regulation (NDPR) and Nigeria Data
-          Protection Act (NDPA).
+          Please also read our{' '}
+          <Link to="/privacy" className="font-medium text-primary hover:underline">
+            Privacy Policy
+          </Link>
+          , which explains how we collect, use, and protect personal data, including in relation to the
+          Nigeria Data Protection Regulation (NDPR) and Nigeria Data Protection Act (NDPA).
         </p>
 
         <Section n={1} title="Definitions">
@@ -184,8 +187,11 @@ export function TermsPage() {
             privilege and confidentiality obligations owed by your Organization to its own clients. We
             will treat all Client Data as confidential, access it only where necessary to provide
             support you have requested or to maintain the security and integrity of the Service, and we
-            will not disclose it to third parties except as described in our Privacy Policy or as
-            required by law.
+            will not disclose it to third parties except as described in our{' '}
+            <Link to="/privacy" className="font-medium text-primary hover:underline">
+              Privacy Policy
+            </Link>{' '}
+            or as required by law.
           </p>
           <p>
             You are responsible for ensuring that your Organization has the right to submit any Client
@@ -196,8 +202,11 @@ export function TermsPage() {
 
         <Section n={8} title="Data Protection">
           <p>
-            We process personal data in accordance with our Privacy Policy and applicable Nigerian data
-            protection law, including the NDPR and NDPA. Row-level security is applied throughout the
+            We process personal data in accordance with our{' '}
+            <Link to="/privacy" className="font-medium text-primary hover:underline">
+              Privacy Policy
+            </Link>{' '}
+            and applicable Nigerian data protection law, including the NDPR and NDPA. Row-level security is applied throughout the
             Service so that one Organization's data is not accessible to another Organization.
           </p>
           <p>
@@ -357,8 +366,11 @@ export function TermsPage() {
             continue in full force and effect. Our failure to enforce any provision is not a waiver of
             our right to do so later. You may not assign these Terms without our written consent; we may
             assign these Terms in connection with a merger, acquisition, or sale of assets. These Terms,
-            together with our Privacy Policy, constitute the entire agreement between you and CloudTech
-            Analytics regarding the Service.
+            together with our{' '}
+            <Link to="/privacy" className="font-medium text-primary hover:underline">
+              Privacy Policy
+            </Link>
+            , constitute the entire agreement between you and CloudTech Analytics regarding the Service.
           </p>
         </Section>
 

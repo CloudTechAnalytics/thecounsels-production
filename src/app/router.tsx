@@ -17,6 +17,7 @@ import {
 import type { PlanFeatureKey } from '@/features/administration/lib/plan-features'
 import { LandingPage } from '@/features/landing/pages/landing-page'
 import { TermsPage } from '@/features/landing/pages/terms-page'
+import { PrivacyPage } from '@/features/landing/pages/privacy-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { RegisterPage } from '@/features/auth/pages/register-page'
 import { AuthCallbackPage } from '@/features/auth/pages/auth-callback-page'
@@ -121,6 +122,7 @@ export const router = createBrowserRouter([
   // Public marketing page; unauthenticated visitors to '/' land here.
   { path: '/welcome', element: <LandingPage /> },
   { path: '/terms', element: <TermsPage /> },
+  { path: '/privacy', element: <PrivacyPage /> },
   // Workspace-branded login — temporary stand-in for {slug}.thecounsels.org
   // until wildcard subdomains are configured (see LoginPage's own comment).
   // Purely cosmetic: real auth + membership scoping is unchanged either way.

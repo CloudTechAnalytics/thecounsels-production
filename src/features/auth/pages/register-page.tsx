@@ -310,6 +310,16 @@ export function RegisterPage() {
                       onClick={(e) => e.stopPropagation()}
                     >
                       Terms &amp; Conditions
+                    </a>{' '}
+                    and{' '}
+                    <a
+                      href="/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-primary hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Privacy Policy
                     </a>
                   </span>
                 </label>

@@ -944,6 +944,10 @@ export function LandingPage() {
             <p>
               © {year} {APP.brand}. All rights reserved.
             </p>
+            <div className="flex items-center gap-4">
+              <a href="/terms" className="transition-colors hover:text-primary">Terms &amp; Conditions</a>
+              <a href="/privacy" className="transition-colors hover:text-primary">Privacy Policy</a>
+            </div>
             <p>Built for firms practicing under Nigerian law.</p>
           </div>
         </div>

@@ -12,9 +12,30 @@ import { env } from '@/shared/config/env'
 // needing a timeout bolted onto each individual hook/query.
 const FETCH_TIMEOUT_MS = 20_000
 
+// Edge Function invocations (Postgrest/Auth/Storage/Realtime never hit this
+// path) proxy to Gemini for the AI features — measured directly against
+// Google's live API, a plain "say OK" call took over 20s on the Flash
+// model's current serving latency. That's not a stall to fail fast on, it's
+// real (if slow) processing — so these get materially more headroom than
+// the rest of the app's traffic instead of raising the ceiling everywhere,
+// which would make a genuinely broken request anywhere else in the app
+// hang far longer before failing. See each AI function's own
+// GEMINI_TIMEOUT_MS for how this budget is spent server-side.
+const FUNCTIONS_FETCH_TIMEOUT_MS = 45_000
+// ask-assistant specifically can call Gemini TWICE in one request
+// (tool-selection, then the final answer) — double the single-call
+// functions' own worst case, so it gets a longer ceiling than the rest.
+const ASSISTANT_FETCH_TIMEOUT_MS = 60_000
+
 function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+  const timeoutMs = url.includes('/functions/v1/ask-assistant')
+    ? ASSISTANT_FETCH_TIMEOUT_MS
+    : url.includes('/functions/v1/')
+      ? FUNCTIONS_FETCH_TIMEOUT_MS
+      : FETCH_TIMEOUT_MS
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
   // Respect a caller-supplied signal (Supabase does pass one in places) —
   // abort ours the moment theirs does, so we never hold a request open

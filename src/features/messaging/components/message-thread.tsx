@@ -28,6 +28,7 @@ export function MessageThread({
   onLoadMore,
   isLoadingMore,
   onDelete,
+  pendingReply,
 }: {
   messages: ThreadMessage[]
   currentUserId: string | null
@@ -36,11 +37,15 @@ export function MessageThread({
   onLoadMore?: () => void
   isLoadingMore?: boolean
   onDelete?: (id: string) => void
+  /** AI threads only — shows a lightweight "still thinking" bubble while a
+   * reply is in flight. A slow-but-real Gemini call can take 20-30s; without
+   * this the composer just goes quiet and looks stuck rather than working. */
+  pendingReply?: boolean
 }) {
   const bottomRef = React.useRef<HTMLDivElement>(null)
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' })
-  }, [messages.length])
+  }, [messages.length, pendingReply])
 
   if (isLoading) {
     return (
@@ -50,7 +55,7 @@ export function MessageThread({
     )
   }
 
-  if (messages.length === 0) {
+  if (messages.length === 0 && !pendingReply) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/12 text-primary">
@@ -101,6 +106,16 @@ export function MessageThread({
           </div>
         )
       })}
+      {pendingReply && (
+        <div className="flex items-end gap-2">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/12 text-[10px] font-semibold text-primary">AI</span>
+          <div className="flex items-center gap-1 rounded-lg bg-muted px-3 py-2.5">
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:-0.3s]" />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:-0.15s]" />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60" />
+          </div>
+        </div>
+      )}
       <div ref={bottomRef} />
     </div>
   )

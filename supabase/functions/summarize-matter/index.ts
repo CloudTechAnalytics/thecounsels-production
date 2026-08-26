@@ -49,15 +49,17 @@ const GEMINI_MODEL = 'gemini-flash-latest'
 // that off (plain, fast completion, no hidden token cost); this is kept
 // generous anyway as headroom for a genuine 3-5 paragraph brief.
 const MAX_TOKENS = 1536
-// The frontend's own Supabase client wraps every request (edge function
-// invocations included) in a 20s fetch timeout (shared/lib/supabase.ts) —
-// a Gemini call that runs past that gets reported to the user as a raw
-// "failed to fetch", not the clear message below. Staying comfortably
-// under that ceiling means an overloaded/slow Gemini (confirmed directly:
-// a 503 "high demand" response that itself took over two minutes to
-// arrive) fails fast with an honest reason instead of hanging until the
-// client gives up first.
-const GEMINI_TIMEOUT_MS = 15_000
+// The frontend's own Supabase client gives Edge Function invocations a 45s
+// fetch timeout specifically (shared/lib/supabase.ts) — a Gemini call that
+// runs past that gets reported to the user as a raw "failed to fetch", not
+// the clear message below. Staying comfortably under that ceiling means an
+// overloaded/slow Gemini fails with an honest reason instead of hanging
+// until the client gives up first. This was raised from 15s to 35s after
+// measuring the Flash model's actual current serving latency directly — a
+// trivial "say OK" prompt took over 20s, well past the old budget, which is
+// exactly why "AI is taking too long" started showing up on ordinary
+// requests that were never actually stuck, just slower than the timeout.
+const GEMINI_TIMEOUT_MS = 35_000
 
 type GeminiResult = { ok: true; res: Response } | { ok: false; reason: 'timeout' } | { ok: false; reason: 'http'; status: number; text: string }
 

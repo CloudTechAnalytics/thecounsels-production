@@ -37,11 +37,12 @@ const GEMINI_MODEL = 'gemini-flash-latest'
 const MAX_TOKENS = 1536
 const HISTORY_LIMIT = 20
 // See summarize-matter/index.ts's own comment — the frontend's Supabase
-// client wraps every request in a 20s fetch timeout, so this needs to
-// fail fast and clearly well inside that, not hang until the client gives
-// up first (confirmed directly: a Gemini 503 "high demand" response took
-// over two minutes to even arrive).
-const GEMINI_TIMEOUT_MS = 15_000
+// client gives Edge Function calls a 45s fetch timeout, so this needs to
+// fail clearly well inside that, not hang until the client gives up first.
+// Raised from 15s to 35s after measuring the Flash model's actual current
+// latency directly (a trivial prompt took 20s+) — the old budget was
+// tripping on ordinary slow-but-real responses, not just genuine stalls.
+const GEMINI_TIMEOUT_MS = 35_000
 
 type GeminiResult = { ok: true; res: Response } | { ok: false; reason: 'timeout' } | { ok: false; reason: 'http'; status: number; text: string }
 

@@ -44,12 +44,16 @@ const GEMINI_MODEL = 'gemini-flash-latest'
 const MAX_TOKENS = 2048
 const HISTORY_LIMIT = 20
 // See summarize-matter/index.ts's own comment for the full reasoning — the
-// frontend's Supabase client wraps every request in a 20s fetch timeout.
-// This function can call Gemini TWICE in one request (tool-selection, then
-// the final answer once tool results are in), so each call gets a shorter
-// budget than the single-call functions do, leaving room for both plus the
-// tool queries in between.
-const GEMINI_TIMEOUT_MS = 8_000
+// frontend's Supabase client gives this function specifically a 60s fetch
+// timeout (shared/lib/supabase.ts), longer than the other AI functions'
+// 45s, because this one can call Gemini TWICE in one request (tool-
+// selection, then the final answer once tool results are in). Each call
+// gets a budget sized for that: up to 2×18s of Gemini time plus the tool
+// queries and response formatting in between, comfortably under 60s.
+// Raised from the original 8s after measuring the Flash model's actual
+// current latency directly — a trivial single call alone took 20s+, so 8s
+// per call (16s total) was failing on ordinary, non-broken responses.
+const GEMINI_TIMEOUT_MS = 18_000
 
 const ASSIGNEE_ENUM = ['anyone', 'me'] as const
 

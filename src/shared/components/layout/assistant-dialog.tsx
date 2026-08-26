@@ -67,7 +67,7 @@ export function AssistantDialog() {
             <p className="font-display text-sm font-semibold">Assistant</p>
             <p className="text-xs text-muted-foreground">Ask about hearings, tasks and appointments across the firm.</p>
           </div>
-          <MessageThread messages={messages} currentUserId={userId} isLoading={isLoading} />
+          <MessageThread messages={messages} currentUserId={userId} isLoading={isLoading} pendingReply={send.isPending} />
           <MessageComposer onSend={onSend} disabled={send.isPending} />
         </DialogContent>
       </Dialog>

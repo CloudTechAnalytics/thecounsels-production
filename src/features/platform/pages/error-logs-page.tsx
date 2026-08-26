@@ -17,11 +17,11 @@ import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
 
 const ALL = 'all'
-const ENVIRONMENTS = ['production', 'staging', 'development'] as const
+const ENVIRONMENTS = ['production', 'testing', 'development'] as const
 
 function EnvBadge({ env }: { env: string | null }) {
   if (!env) return <Badge variant="muted">unknown</Badge>
-  return <Badge variant={env === 'production' ? 'destructive' : env === 'staging' ? 'warning' : 'muted'}>{env}</Badge>
+  return <Badge variant={env === 'production' ? 'destructive' : env === 'testing' ? 'warning' : 'muted'}>{env}</Badge>
 }
 
 function ErrorDetailDialog({ row, onOpenChange }: { row: ClientErrorLogRow | null; onOpenChange: (o: boolean) => void }) {

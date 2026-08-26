@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Outlet } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Menu, ShieldCheck } from 'lucide-react'
+import { Menu, RefreshCw, ShieldCheck } from 'lucide-react'
 import { PlatformSidebar } from '@/shared/components/layout/platform-sidebar'
 import { PlatformNotifications } from '@/shared/components/layout/platform-notifications'
 import { UserMenu } from '@/shared/components/layout/user-menu'
@@ -51,6 +51,9 @@ export function PlatformLayout() {
             <ShieldCheck className="h-3.5 w-3.5" /> Platform Console
           </Badge>
           <div className="ml-auto flex items-center gap-1.5">
+            <Button variant="ghost" size="icon" onClick={() => window.location.reload()} aria-label="Refresh page" title="Refresh page">
+              <RefreshCw className="h-5 w-5" />
+            </Button>
             <ThemeToggle />
             <PlatformNotifications />
             <UserMenu settingsPath="/platform/settings" />

@@ -24,7 +24,14 @@ export function GlobalSearch() {
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey)) {
+      // e.key is undefined on some real devices during IME composition —
+      // Samsung's stock Android keyboard in particular is a known source
+      // of keydown events with no key set at all. This listener is global
+      // (window, not a focused element), so it sees every keystroke in the
+      // app; optional chaining turns that into a silent no-op instead of
+      // crashing (confirmed live via the platform Error Logs viewer —
+      // "Cannot read properties of undefined (reading 'toLowerCase')").
+      if (e.key?.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         setOpen(true)
       }

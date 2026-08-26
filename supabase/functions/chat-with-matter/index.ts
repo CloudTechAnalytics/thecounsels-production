@@ -36,6 +36,37 @@ function json(body: unknown, status = 200) {
 const GEMINI_MODEL = 'gemini-flash-latest'
 const MAX_TOKENS = 1536
 const HISTORY_LIMIT = 20
+// See summarize-matter/index.ts's own comment — the frontend's Supabase
+// client wraps every request in a 20s fetch timeout, so this needs to
+// fail fast and clearly well inside that, not hang until the client gives
+// up first (confirmed directly: a Gemini 503 "high demand" response took
+// over two minutes to even arrive).
+const GEMINI_TIMEOUT_MS = 15_000
+
+type GeminiResult = { ok: true; res: Response } | { ok: false; reason: 'timeout' } | { ok: false; reason: 'http'; status: number; text: string }
+
+async function callGemini(model: string, apiKey: string, requestBody: unknown): Promise<GeminiResult> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS)
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(requestBody), signal: controller.signal },
+    )
+    clearTimeout(timeoutId)
+    if (!res.ok) return { ok: false, reason: 'http', status: res.status, text: await res.text().catch(() => '') }
+    return { ok: true, res }
+  } catch {
+    clearTimeout(timeoutId)
+    return { ok: false, reason: 'timeout' }
+  }
+}
+
+function geminiFailureMessage(result: Extract<GeminiResult, { ok: false }>): string {
+  if (result.reason === 'timeout') return 'AI is taking too long to respond right now — this is usually temporary. Please try again in a moment.'
+  if (result.status === 503 || result.status === 429) return 'AI is experiencing high demand right now. Please try again in a moment.'
+  return 'Could not get a reply right now. Please try again.'
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -154,26 +185,18 @@ Deno.serve(async (req: Request) => {
     { role: 'user', parts: [{ text: message }] },
   ]
 
-  const aiRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        contents,
-        generationConfig: { maxOutputTokens: MAX_TOKENS, thinkingConfig: { thinkingBudget: 0 } },
-      }),
-    },
-  )
+  const result = await callGemini(GEMINI_MODEL, GEMINI_API_KEY, {
+    systemInstruction: { parts: [{ text: systemInstruction }] },
+    contents,
+    generationConfig: { maxOutputTokens: MAX_TOKENS, thinkingConfig: { thinkingBudget: 0 } },
+  })
 
-  if (!aiRes.ok) {
-    const errText = await aiRes.text().catch(() => '')
-    console.error('Gemini API error:', aiRes.status, errText)
-    return json({ error: 'Could not get a reply right now. Please try again.' }, 502)
+  if (!result.ok) {
+    console.error('Gemini request failed:', result.reason === 'http' ? `${result.status} ${result.text}` : 'timeout')
+    return json({ error: geminiFailureMessage(result) }, 502)
   }
 
-  const aiData = await aiRes.json()
+  const aiData = await result.res.json()
   const parts: { text?: string }[] = aiData.candidates?.[0]?.content?.parts ?? []
   const reply: string = parts.map((p) => p.text ?? '').join('').trim()
   if (!reply) return json({ error: 'The AI did not return a reply. Please try again.' }, 502)

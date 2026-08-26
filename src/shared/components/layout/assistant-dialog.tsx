@@ -8,6 +8,7 @@ import type { ThreadMessage } from '@/features/messaging/types'
 import { Dialog, DialogContent, DialogTitle } from '@/shared/components/ui/dialog'
 import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
+import { logClientError } from '@/shared/lib/error-log'
 
 // Same sentinel-author trick MatterAiChatPanel uses to reuse MessageThread
 // as-is — anything whose author id isn't the signed-in user's left-aligns.
@@ -41,6 +42,7 @@ export function AssistantDialog() {
     try {
       await send.mutateAsync(body)
     } catch (err) {
+      logClientError(err, { source: 'ask-assistant', context: { organizationId: activeOrgId } })
       toast.error('Could not get a reply', { description: errorMessage(err) })
       throw err
     }

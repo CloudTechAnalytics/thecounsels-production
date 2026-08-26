@@ -9,6 +9,7 @@ import type { MatterRow } from '@/features/matters/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { toast } from '@/shared/components/ui/sonner'
+import { logClientError } from '@/shared/lib/error-log'
 
 export function MatterAiSummaryCard({ matter, onNavigateTab }: { matter: MatterRow; onNavigateTab: (tab: 'ai-chat') => void }) {
   const { activeOrgId } = useAuth()
@@ -25,6 +26,7 @@ export function MatterAiSummaryCard({ matter, onNavigateTab }: { matter: MatterR
     try {
       await summarize.mutateAsync()
     } catch (err) {
+      logClientError(err, { source: 'summarize-matter', context: { matterId: matter.id } })
       toast.error('Could not generate summary', { description: err instanceof Error ? err.message : 'Please try again.' })
     }
   }

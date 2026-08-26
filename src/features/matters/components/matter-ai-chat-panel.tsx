@@ -7,6 +7,7 @@ import type { ThreadMessage } from '@/features/messaging/types'
 import { Card } from '@/shared/components/ui/card'
 import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
+import { logClientError } from '@/shared/lib/error-log'
 
 // Sentinel author for AI replies — reuses MessageThread as-is (it was
 // explicitly built data-model-agnostic, "shared by both channel and DM
@@ -39,6 +40,7 @@ export function MatterAiChatPanel({ matterId, readOnly }: { matterId: string; re
     try {
       await send.mutateAsync(body)
     } catch (err) {
+      logClientError(err, { source: 'chat-with-matter', context: { matterId } })
       toast.error('Could not get a reply', { description: errorMessage(err) })
       throw err
     }

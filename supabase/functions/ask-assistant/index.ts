@@ -43,6 +43,13 @@ function json(body: unknown, status = 200) {
 const GEMINI_MODEL = 'gemini-flash-latest'
 const MAX_TOKENS = 2048
 const HISTORY_LIMIT = 20
+// See summarize-matter/index.ts's own comment for the full reasoning — the
+// frontend's Supabase client wraps every request in a 20s fetch timeout.
+// This function can call Gemini TWICE in one request (tool-selection, then
+// the final answer once tool results are in), so each call gets a shorter
+// budget than the single-call functions do, leaving room for both plus the
+// tool queries in between.
+const GEMINI_TIMEOUT_MS = 8_000
 
 const ASSIGNEE_ENUM = ['anyone', 'me'] as const
 
@@ -172,26 +179,42 @@ Deno.serve(async (req: Request) => {
     { role: 'user', parts: [{ text: message }] },
   ]
 
+  let geminiFailureReason: string | null = null
+
   async function callGemini() {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemInstruction }] },
-          contents,
-          tools: TOOLS,
-          generationConfig: { maxOutputTokens: MAX_TOKENS },
-        }),
-      },
-    )
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '')
-      console.error('Gemini API error:', res.status, errText)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS)
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            contents,
+            tools: TOOLS,
+            generationConfig: { maxOutputTokens: MAX_TOKENS },
+          }),
+          signal: controller.signal,
+        },
+      )
+      clearTimeout(timeoutId)
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '')
+        console.error('Gemini API error:', res.status, errText)
+        geminiFailureReason = res.status === 503 || res.status === 429
+          ? 'AI is experiencing high demand right now. Please try again in a moment.'
+          : 'Could not get a reply right now. Please try again.'
+        return null
+      }
+      return res.json()
+    } catch {
+      clearTimeout(timeoutId)
+      console.error('Gemini request timed out')
+      geminiFailureReason = 'AI is taking too long to respond right now — this is usually temporary. Please try again in a moment.'
       return null
     }
-    return res.json()
   }
 
   async function runTool(name: string, args: Record<string, unknown>): Promise<unknown> {
@@ -292,7 +315,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const first = await callGemini()
-  if (!first) return json({ error: 'Could not get a reply right now. Please try again.' }, 502)
+  if (!first) return json({ error: geminiFailureReason ?? 'Could not get a reply right now. Please try again.' }, 502)
 
   const firstParts: Array<{ text?: string } | FunctionCallPart> = first.candidates?.[0]?.content?.parts ?? []
   const calls = firstParts.filter((p): p is FunctionCallPart => 'functionCall' in p)
@@ -311,7 +334,7 @@ Deno.serve(async (req: Request) => {
     contents.push({ role: 'model', parts: firstParts })
     contents.push({ role: 'user', parts: responses })
     const second = await callGemini()
-    if (!second) return json({ error: 'Could not get a reply right now. Please try again.' }, 502)
+    if (!second) return json({ error: geminiFailureReason ?? 'Could not get a reply right now. Please try again.' }, 502)
     finalData = second
   }
 

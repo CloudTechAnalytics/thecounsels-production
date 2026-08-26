@@ -49,6 +49,41 @@ const GEMINI_MODEL = 'gemini-flash-latest'
 // that off (plain, fast completion, no hidden token cost); this is kept
 // generous anyway as headroom for a genuine 3-5 paragraph brief.
 const MAX_TOKENS = 1536
+// The frontend's own Supabase client wraps every request (edge function
+// invocations included) in a 20s fetch timeout (shared/lib/supabase.ts) —
+// a Gemini call that runs past that gets reported to the user as a raw
+// "failed to fetch", not the clear message below. Staying comfortably
+// under that ceiling means an overloaded/slow Gemini (confirmed directly:
+// a 503 "high demand" response that itself took over two minutes to
+// arrive) fails fast with an honest reason instead of hanging until the
+// client gives up first.
+const GEMINI_TIMEOUT_MS = 15_000
+
+type GeminiResult = { ok: true; res: Response } | { ok: false; reason: 'timeout' } | { ok: false; reason: 'http'; status: number; text: string }
+
+async function callGemini(model: string, apiKey: string, requestBody: unknown): Promise<GeminiResult> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS)
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(requestBody), signal: controller.signal },
+    )
+    clearTimeout(timeoutId)
+    if (!res.ok) return { ok: false, reason: 'http', status: res.status, text: await res.text().catch(() => '') }
+    return { ok: true, res }
+  } catch {
+    clearTimeout(timeoutId)
+    return { ok: false, reason: 'timeout' }
+  }
+}
+
+/** 503 (overloaded) and 429 (rate-limited) both mean "temporary, try again shortly" — Google's own 503 message says so explicitly. */
+function geminiFailureMessage(result: Extract<GeminiResult, { ok: false }>): string {
+  if (result.reason === 'timeout') return 'AI is taking too long to respond right now — this is usually temporary. Please try again in a moment.'
+  if (result.status === 503 || result.status === 429) return 'AI is experiencing high demand right now. Please try again in a moment.'
+  return 'Could not generate a summary right now. Please try again.'
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -148,25 +183,17 @@ Deno.serve(async (req: Request) => {
     lines.join('\n'),
   ].join('\n')
 
-  const aiRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: MAX_TOKENS, thinkingConfig: { thinkingBudget: 0 } },
-      }),
-    },
-  )
+  const result = await callGemini(GEMINI_MODEL, GEMINI_API_KEY, {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { maxOutputTokens: MAX_TOKENS, thinkingConfig: { thinkingBudget: 0 } },
+  })
 
-  if (!aiRes.ok) {
-    const errText = await aiRes.text().catch(() => '')
-    console.error('Gemini API error:', aiRes.status, errText)
-    return json({ error: 'Could not generate a summary right now. Please try again.' }, 502)
+  if (!result.ok) {
+    console.error('Gemini request failed:', result.reason === 'http' ? `${result.status} ${result.text}` : 'timeout')
+    return json({ error: geminiFailureMessage(result) }, 502)
   }
 
-  const aiData = await aiRes.json()
+  const aiData = await result.res.json()
   const parts: { text?: string }[] = aiData.candidates?.[0]?.content?.parts ?? []
   const summary: string = parts.map((p) => p.text ?? '').join('').trim()
   if (!summary) return json({ error: 'The AI did not return a summary. Please try again.' }, 502)

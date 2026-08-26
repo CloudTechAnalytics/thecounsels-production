@@ -40,7 +40,8 @@ export type TimeEntryStatus = 'draft' | 'submitted' | 'approved' | 'invoiced' | 
 export type TicketStatus = 'open' | 'in_progress' | 'waiting' | 'resolved' | 'closed'
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type NotificationPriority = 'info' | 'reminder' | 'warning' | 'urgent'
-export type NotificationCategory = 'matters' | 'clients' | 'hearings' | 'billing' | 'tasks' | 'documents' | 'notes' | 'messaging' | 'hr' | 'appointments'
+export type NotificationCategory = 'matters' | 'clients' | 'hearings' | 'billing' | 'tasks' | 'documents' | 'notes' | 'messaging' | 'hr' | 'appointments' | 'support'
+export type SupportSessionStatus = 'pending' | 'active' | 'denied' | 'ended'
 export type RoleKey =
   | 'platform_owner'
   | 'platform_admin'
@@ -843,6 +844,10 @@ export interface Database {
           organization_id: string
           admin_id: string | null
           reason: string | null
+          status: SupportSessionStatus
+          granted_by: string | null
+          granted_at: string | null
+          denied_at: string | null
           started_at: string
           expires_at: string
           ended_at: string | null
@@ -853,6 +858,10 @@ export interface Database {
           organization_id: string
           admin_id?: string | null
           reason?: string | null
+          status?: SupportSessionStatus
+          granted_by?: string | null
+          granted_at?: string | null
+          denied_at?: string | null
           started_at?: string
           expires_at: string
           ended_at?: string | null
@@ -2128,10 +2137,15 @@ export interface Database {
       soft_delete_organization: { Args: { p_org: string }; Returns: undefined }
       restore_organization: { Args: { p_org: string }; Returns: undefined }
       hard_delete_organization: { Args: { p_org: string }; Returns: undefined }
-      start_support_session: {
+      request_support_session: {
         Args: { p_org: string; p_reason: string }
         Returns: Database['public']['Tables']['support_sessions']['Row']
       }
+      grant_support_session: {
+        Args: { p_id: string }
+        Returns: Database['public']['Tables']['support_sessions']['Row']
+      }
+      deny_support_session: { Args: { p_id: string }; Returns: undefined }
       end_support_session: { Args: { p_id: string }; Returns: undefined }
       set_platform_access: { Args: { p_user: string; p_role: string; p_is_admin: boolean }; Returns: undefined }
       notify_user: {

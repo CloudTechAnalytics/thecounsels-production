@@ -1,6 +1,6 @@
 import { supabase } from '@/shared/lib/supabase'
 import type { TicketPriority, TicketStatus } from '@/shared/types/database.types'
-import type { TicketDetail, TicketMessage, TicketRow } from '@/features/support/types'
+import type { SupportSessionRow, TicketDetail, TicketMessage, TicketRow } from '@/features/support/types'
 
 const TICKET_SELECT = `*,
   organization:organizations(id, name, slug, logo_url),
@@ -108,5 +108,31 @@ export const supportService = {
       p_entity_id: id,
       p_summary: `Support ticket ${ticketNumber ?? ''} deleted`,
     })
+  },
+
+  /** Firm side — pending support-access requests waiting on this org's own
+   * admin to grant or deny (0133). RLS already scopes support_sessions to
+   * is_platform_admin() or is_org_admin(organization_id), so a non-admin
+   * firm member simply gets none back rather than an error. */
+  async listPendingSessions(organizationId: string): Promise<SupportSessionRow[]> {
+    const { data, error } = await supabase
+      .from('support_sessions')
+      .select('*, admin:profiles!support_sessions_admin_id_fkey(id, full_name, email)')
+      .eq('organization_id', organizationId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    return (data ?? []) as unknown as SupportSessionRow[]
+  },
+
+  async grantSupportSession(id: string): Promise<SupportSessionRow> {
+    const { data, error } = await supabase.rpc('grant_support_session', { p_id: id })
+    if (error) throw error
+    return data as unknown as SupportSessionRow
+  },
+
+  async denySupportSession(id: string): Promise<void> {
+    const { error } = await supabase.rpc('deny_support_session', { p_id: id })
+    if (error) throw error
   },
 }

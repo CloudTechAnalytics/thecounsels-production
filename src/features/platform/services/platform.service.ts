@@ -393,10 +393,13 @@ export const platformService = {
     if (error) throw error
   },
 
-  async startSupportSession(orgId: string, reason: string): Promise<{ id: string; expires_at: string }> {
-    const { data, error } = await supabase.rpc('start_support_session', { p_org: orgId, p_reason: reason })
+  /** Only requests access now — the firm's own admin has to grant it (0133)
+   * before this actually goes active. See SupportSessionDialog/
+   * useSupportSessionGrantListener for the wait-then-enter flow. */
+  async requestSupportSession(orgId: string, reason: string): Promise<{ id: string; organization_id: string; status: string }> {
+    const { data, error } = await supabase.rpc('request_support_session', { p_org: orgId, p_reason: reason })
     if (error) throw error
-    return data as { id: string; expires_at: string }
+    return data as { id: string; organization_id: string; status: string }
   },
 
   async endSupportSession(sessionId: string): Promise<void> {

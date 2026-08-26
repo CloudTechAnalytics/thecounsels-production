@@ -5,6 +5,7 @@ import { Sidebar } from '@/shared/components/layout/sidebar'
 import { Topbar } from '@/shared/components/layout/topbar'
 import { NoOrganizationState } from '@/shared/components/layout/no-organization-state'
 import { SupportModeBanner } from '@/shared/components/layout/support-mode-banner'
+import { SupportAccessRequestBanner } from '@/shared/components/layout/support-access-request-banner'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useMessagingBadgeRealtime } from '@/features/messaging/hooks/use-messaging'
 import { useNotificationPreferences } from '@/features/notifications/hooks/use-notifications'
@@ -67,6 +68,10 @@ export function OrganizationLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <SupportModeBanner />
+        {/* Not while a platform admin is browsing via support mode — this
+            is for the firm's own members deciding whether to let someone
+            in, not something to show a visitor mid-session. */}
+        {!supportOrgId && <SupportAccessRequestBanner />}
         <Topbar onOpenSidebar={() => setMobileOpen(true)} />
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1800px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">

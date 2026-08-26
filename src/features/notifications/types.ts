@@ -23,6 +23,7 @@ export const NOTIFICATION_CATEGORY_META: Record<NotificationCategory, { label: s
   notes: { label: 'Notes' },
   messaging: { label: 'Messages' },
   hr: { label: 'HR' },
+  support: { label: 'Support' },
 }
 
 /** Every trigger wired so far links to the parent matter; category-based fallbacks
@@ -40,6 +41,10 @@ export function resolveNotificationHref(n: Pick<NotificationRow, 'entity_type' |
   if (n.entity_type === 'hr_request') return '/hr/requests'
   if (n.entity_type === 'employee_onboarding') return '/hr/employees'
   if (n.entity_type === 'hr_announcement') return '/hr/announcements'
+  // Support-session request/grant/deny (0133) — the banner that actually
+  // handles this is global (organization-layout.tsx), so any page works;
+  // land on the dashboard rather than a dead-end settings tab.
+  if (n.entity_type === 'support_session') return '/'
   switch (n.category) {
     case 'clients': return '/clients'
     case 'hearings': return '/hearings'

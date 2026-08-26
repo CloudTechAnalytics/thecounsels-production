@@ -1,5 +1,23 @@
 import type { BadgeProps } from '@/shared/components/ui/badge'
-import type { TicketPriority, TicketStatus } from '@/shared/types/database.types'
+import type { SupportSessionStatus, TicketPriority, TicketStatus } from '@/shared/types/database.types'
+
+/** A support-access request/session (0133) — request_support_session()
+ * creates it 'pending'; the firm's own admin grants or denies it. */
+export interface SupportSessionRow {
+  id: string
+  organization_id: string
+  admin_id: string | null
+  reason: string | null
+  status: SupportSessionStatus
+  granted_by: string | null
+  granted_at: string | null
+  denied_at: string | null
+  started_at: string
+  expires_at: string
+  ended_at: string | null
+  created_at: string
+  admin: { id: string; full_name: string | null; email: string } | null
+}
 
 export interface TicketPerson {
   id: string

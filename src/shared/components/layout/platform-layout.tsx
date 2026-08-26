@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, RefreshCw, ShieldCheck } from 'lucide-react'
 import { PlatformSidebar } from '@/shared/components/layout/platform-sidebar'
 import { PlatformNotifications } from '@/shared/components/layout/platform-notifications'
+import { SupportAccessWaitingBanner } from '@/features/platform/components/support-access-waiting-banner'
 import { UserMenu } from '@/shared/components/layout/user-menu'
 import { ThemeToggle } from '@/shared/components/theme-toggle'
 import { Button } from '@/shared/components/ui/button'
@@ -43,6 +44,7 @@ export function PlatformLayout() {
       </AnimatePresence>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <SupportAccessWaitingBanner />
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border/70 bg-background/85 px-4 backdrop-blur sm:px-6">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5" />

@@ -1,8 +1,7 @@
 import * as React from 'react'
-import { useNavigate } from 'react-router-dom'
 import { AlertTriangle } from 'lucide-react'
-import { useAuth } from '@/features/auth/context/auth-provider'
 import { platformService } from '@/features/platform/services/platform.service'
+import { trackPendingSupportRequest } from '@/features/platform/components/support-access-waiting-banner'
 import { Button } from '@/shared/components/ui/button'
 import { Label } from '@/shared/components/ui/label'
 import { Textarea } from '@/shared/components/ui/textarea'
@@ -16,6 +15,10 @@ import {
 } from '@/shared/components/ui/dialog'
 import { toast } from '@/shared/components/ui/sonner'
 
+/** Requests support access — no longer enters immediately (0133). The
+ * firm's own admin has to grant it; SupportAccessWaitingBanner (mounted in
+ * PlatformLayout) picks up the pending request and enters the workspace
+ * automatically once granted. */
 export function SupportSessionDialog({
   org,
   open,
@@ -25,8 +28,6 @@ export function SupportSessionDialog({
   open: boolean
   onOpenChange: (o: boolean) => void
 }) {
-  const { startSupport } = useAuth()
-  const navigate = useNavigate()
   const [reason, setReason] = React.useState('')
   const [loading, setLoading] = React.useState(false)
 
@@ -34,20 +35,20 @@ export function SupportSessionDialog({
     if (open) setReason('')
   }, [open])
 
-  const begin = async () => {
+  const request = async () => {
     if (!reason.trim()) {
       toast.error('Enter a reason for support access')
       return
     }
     setLoading(true)
     try {
-      const session = await platformService.startSupportSession(org.id, reason.trim())
-      sessionStorage.setItem('counsel.support_session', session.id)
-      sessionStorage.setItem('counsel.support_expires', session.expires_at)
-      await startSupport(org.id)
-      navigate('/', { replace: true })
+      const session = await platformService.requestSupportSession(org.id, reason.trim())
+      trackPendingSupportRequest(session.id, org.name)
+      toast.success('Access requested', { description: `Waiting for ${org.name} to grant access.` })
+      onOpenChange(false)
     } catch (err) {
-      toast.error('Could not start support session', { description: err instanceof Error ? err.message : undefined })
+      toast.error('Could not request support access', { description: err instanceof Error ? err.message : undefined })
+    } finally {
       setLoading(false)
     }
   }
@@ -57,11 +58,11 @@ export function SupportSessionDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-destructive" /> Start support session
+            <AlertTriangle className="h-5 w-5 text-destructive" /> Request support access
           </DialogTitle>
           <DialogDescription>
-            You are about to access <strong>{org.name}</strong>'s workspace for support purposes. This is a
-            30-minute, fully audited session — the firm can see that you accessed their workspace and why.
+            This asks <strong>{org.name}</strong> to grant you access to their workspace for support purposes.
+            You'll be let in automatically once they approve — a 30-minute, fully audited session from then on.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5">
@@ -76,7 +77,7 @@ export function SupportSessionDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button variant="destructive" loading={loading} onClick={begin}>Enter workspace</Button>
+          <Button variant="destructive" loading={loading} onClick={request}>Request access</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

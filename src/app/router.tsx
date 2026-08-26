@@ -68,6 +68,7 @@ import { AnalyticsPage } from '@/features/platform/pages/analytics-page'
 import { RevenueAnalyticsPage } from '@/features/platform/pages/revenue-analytics-page'
 import { OrganizationUsersPage } from '@/features/platform/pages/organization-users-page'
 import { AuditLogsPage } from '@/features/platform/pages/audit-logs-page'
+import { ErrorLogsPage } from '@/features/platform/pages/error-logs-page'
 import { PlatformUsersPage } from '@/features/platform/pages/platform-users-page'
 import { PlatformSettingsPage } from '@/features/platform/pages/platform-settings-page'
 import { SupportTicketsPage } from '@/features/platform/pages/support-tickets-page'
@@ -185,6 +186,7 @@ export const router = createBrowserRouter([
                   { path: 'analytics', element: <AnalyticsPage /> },
                   { path: 'tickets', element: <SupportTicketsPage /> },
                   { path: 'audit', element: <AuditLogsPage /> },
+                  { path: 'errors', element: <ErrorLogsPage /> },
                   { path: 'health', element: <SystemHealthPage /> },
                   { path: 'plans', element: <PlansPage /> },
                   { path: 'users', element: <PlatformUsersPage /> },

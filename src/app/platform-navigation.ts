@@ -8,6 +8,7 @@ import {
   BarChart3,
   LifeBuoy,
   ScrollText,
+  Bug,
   Activity,
   Tags,
   ShieldCheck,
@@ -53,6 +54,7 @@ export const PLATFORM_NAVIGATION: PlatformNavSection[] = [
     items: [
       { label: 'Support Tickets', to: '/platform/tickets', icon: LifeBuoy },
       { label: 'Audit Logs', to: '/platform/audit', icon: ScrollText },
+      { label: 'Error Logs', to: '/platform/errors', icon: Bug },
       { label: 'System Health', to: '/platform/health', icon: Activity },
     ],
   },

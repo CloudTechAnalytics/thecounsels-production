@@ -10,12 +10,14 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useHearings } from '@/features/hearings/hooks/use-hearings'
 import { useTasks } from '@/features/tasks/hooks/use-tasks'
 import {
+  useClearAllNotifications,
   useDeleteNotification,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
   useSetNotificationArchived,
 } from '@/features/notifications/hooks/use-notifications'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { NotificationPreferencesCard } from '@/features/notifications/components/notification-preferences-card'
 import { NOTIFICATIONS_PAGE_SIZE, type NotificationFilters } from '@/features/notifications/services/notifications.service'
 import { NOTIFICATION_CATEGORY_META, NOTIFICATION_PRIORITY_META, resolveNotificationHref } from '@/features/notifications/types'
@@ -144,6 +146,7 @@ function NotificationsList() {
   const [priority, setPriority] = React.useState<NotificationPriority | 'all'>('all')
   const [archived, setArchived] = React.useState(false)
   const [page, setPage] = React.useState(1)
+  const [confirmClear, setConfirmClear] = React.useState(false)
 
   const filters: NotificationFilters = { search: search || undefined, category, priority, archived }
   const { data, isLoading } = useNotifications(activeOrgId, filters, page)
@@ -151,6 +154,7 @@ function NotificationsList() {
   const markAllRead = useMarkAllNotificationsRead(activeOrgId)
   const setArchivedMut = useSetNotificationArchived(activeOrgId)
   const del = useDeleteNotification(activeOrgId)
+  const clearAll = useClearAllNotifications(activeOrgId)
 
   const rows = data?.rows ?? []
   const total = data?.total ?? 0
@@ -186,6 +190,11 @@ function NotificationsList() {
         {!archived && (
           <Button variant="outline" size="sm" className="shrink-0" disabled={!hasUnread || markAllRead.isPending} onClick={() => markAllRead.mutate()}>
             <CheckCheck className="h-4 w-4" /> Mark all as read
+          </Button>
+        )}
+        {total > 0 && (
+          <Button variant="outline" size="sm" className="shrink-0 text-destructive hover:text-destructive" onClick={() => setConfirmClear(true)}>
+            <Trash2 className="h-4 w-4" /> Clear all
           </Button>
         )}
       </div>
@@ -265,6 +274,20 @@ function NotificationsList() {
           </p>
         )}
       </Card>
+
+      <ConfirmDialog
+        open={confirmClear}
+        onOpenChange={setConfirmClear}
+        title="Clear all notifications"
+        destructive
+        confirmLabel="Clear all"
+        loading={clearAll.isPending}
+        description="This permanently deletes every notification in your list, read or unread, archived or not. This cannot be undone."
+        onConfirm={async () => {
+          await clearAll.mutateAsync()
+          setConfirmClear(false)
+        }}
+      />
     </div>
   )
 }

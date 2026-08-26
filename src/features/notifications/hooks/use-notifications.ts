@@ -96,6 +96,11 @@ export function useDeleteNotification(orgId: string | null) {
   return useMutation({ mutationFn: (id: string) => notificationsService.remove(id), onSuccess: invalidate })
 }
 
+export function useClearAllNotifications(orgId: string | null) {
+  const invalidate = useInvalidate(orgId)
+  return useMutation({ mutationFn: () => notificationsService.removeAll(orgId!), onSuccess: invalidate })
+}
+
 export function useNotificationPreferences(userId: string | null) {
   return useQuery({
     queryKey: keys.preferences(userId ?? 'none'),

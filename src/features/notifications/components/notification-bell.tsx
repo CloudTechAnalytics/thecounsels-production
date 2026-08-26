@@ -1,8 +1,10 @@
+import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
-import { Bell, Check, CheckCheck, X } from 'lucide-react'
+import { Bell, Check, CheckCheck, Trash2, X } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import {
+  useClearAllNotifications,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotificationPreferences,
@@ -16,6 +18,7 @@ import { fireBrowserNotification } from '@/features/notifications/lib/browser-pu
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/components/ui/dropdown-menu'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { cn } from '@/shared/lib/utils'
 import type { NotificationRow } from '@/shared/types/database.types'
 
@@ -23,6 +26,7 @@ export function NotificationBell() {
   const navigate = useNavigate()
   const { activeOrgId, profile } = useAuth()
   const userId = profile?.id ?? null
+  const [confirmClear, setConfirmClear] = React.useState(false)
 
   const { data: unreadCount } = useUnreadNotificationCount(activeOrgId)
   const { data: recent, isLoading } = useRecentNotifications(activeOrgId)
@@ -30,6 +34,7 @@ export function NotificationBell() {
   const markRead = useMarkNotificationRead(activeOrgId)
   const markAllRead = useMarkAllNotificationsRead(activeOrgId)
   const archive = useSetNotificationArchived(activeOrgId)
+  const clearAll = useClearAllNotifications(activeOrgId)
 
   useNotificationsRealtime(activeOrgId, userId, (row: NotificationRow) => {
     if (prefs?.browser_enabled) {
@@ -46,6 +51,7 @@ export function NotificationBell() {
   }
 
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
@@ -63,16 +69,27 @@ export function NotificationBell() {
             <p className="text-sm font-semibold">Notifications</p>
             {Boolean(unreadCount) && <Badge variant="default">{unreadCount} unread</Badge>}
           </div>
-          {Boolean(unreadCount) && (
-            <button
-              type="button"
-              disabled={markAllRead.isPending}
-              onClick={() => markAllRead.mutate()}
-              className="flex items-center gap-1 text-xs font-medium text-primary hover:underline disabled:opacity-50"
-            >
-              <CheckCheck className="h-3.5 w-3.5" /> Mark all read
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {Boolean(unreadCount) && (
+              <button
+                type="button"
+                disabled={markAllRead.isPending}
+                onClick={() => markAllRead.mutate()}
+                className="flex items-center gap-1 text-xs font-medium text-primary hover:underline disabled:opacity-50"
+              >
+                <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+              </button>
+            )}
+            {recent && recent.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setConfirmClear(true)}
+                className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Clear all
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="max-h-96 overflow-y-auto">
@@ -137,5 +154,20 @@ export function NotificationBell() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+
+    <ConfirmDialog
+      open={confirmClear}
+      onOpenChange={setConfirmClear}
+      title="Clear all notifications"
+      destructive
+      confirmLabel="Clear all"
+      loading={clearAll.isPending}
+      description="This permanently deletes every notification in your list, read or unread, archived or not. This cannot be undone."
+      onConfirm={async () => {
+        await clearAll.mutateAsync()
+        setConfirmClear(false)
+      }}
+    />
+    </>
   )
 }

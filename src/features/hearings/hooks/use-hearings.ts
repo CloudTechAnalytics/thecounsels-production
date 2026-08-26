@@ -45,6 +45,15 @@ export function useSetHearingStatus(organizationId: string | null) {
   })
 }
 
+export function useAdjournHearing(organizationId: string | null) {
+  const invalidate = useInvalidate(organizationId)
+  return useMutation({
+    mutationFn: ({ id, title, newHearingAt, reason }: { id: string; title: string; newHearingAt: string; reason: string }) =>
+      hearingsService.adjourn(id, organizationId!, title, newHearingAt, reason),
+    onSuccess: invalidate,
+  })
+}
+
 export function useDeleteHearing(organizationId: string | null) {
   const invalidate = useInvalidate(organizationId)
   return useMutation({

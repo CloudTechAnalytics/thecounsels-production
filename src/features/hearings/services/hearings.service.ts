@@ -98,6 +98,33 @@ export const hearingsService = {
     })
   },
 
+  /** Adjourn = reschedule, not just a status label. Sets status to
+   * 'adjourned' AND the new date together, in one action — no more
+   * "mark adjourned, then remember to separately go edit the date"
+   * two-step flow. Reminder flags reset automatically (0129 trigger)
+   * since hearing_at changes. Reason is prepended to notes rather than a
+   * dedicated column — kept simple, still visible on the hearing card. */
+  async adjourn(id: string, organizationId: string, title: string, newHearingAt: string, reason: string): Promise<void> {
+    const { data: current, error: fetchErr } = await supabase.from('hearings').select('notes').eq('id', id).single()
+    if (fetchErr) throw fetchErr
+    const note = reason.trim()
+      ? `Adjourned to ${new Date(newHearingAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}: ${reason.trim()}`
+      : null
+    const notes = [note, current?.notes].filter(Boolean).join('\n\n') || null
+    const { error } = await supabase
+      .from('hearings')
+      .update({ status: 'adjourned', hearing_at: new Date(newHearingAt).toISOString(), notes })
+      .eq('id', id)
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'hearing.updated',
+      p_entity_type: 'hearing',
+      p_entity_id: id,
+      p_summary: `Adjourned "${title}"${reason.trim() ? ` — ${reason.trim()}` : ''}`,
+    })
+  },
+
   async remove(id: string, organizationId: string, title: string): Promise<void> {
     const { error } = await supabase.from('hearings').delete().eq('id', id)
     if (error) throw error

@@ -1,9 +1,11 @@
+import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { MoreHorizontal, Pencil, Trash2, MapPin, Scale } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, MapPin, Scale, CalendarClock } from 'lucide-react'
 import { HEARING_STATUS_META, HEARING_STATUSES, type HearingRow } from '@/features/hearings/types'
 import { isMatterClosed } from '@/features/matters/types'
 import { useSetHearingStatus } from '@/features/hearings/hooks/use-hearings'
+import { AdjournHearingDialog } from '@/features/hearings/components/adjourn-hearing-dialog'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -33,6 +35,7 @@ export function HearingCard({
 }) {
   const { activeOrgId } = useAuth()
   const setStatus = useSetHearingStatus(activeOrgId)
+  const [adjournOpen, setAdjournOpen] = React.useState(false)
   // A closed matter's hearings have no leadership bypass, unlike the
   // matter itself — hearings_update/_delete RLS blocks everyone once
   // matter_is_open() is false, no exceptions. Hide the menu to match,
@@ -55,7 +58,14 @@ export function HearingCard({
             options={HEARING_STATUSES}
             meta={HEARING_STATUS_META}
             disabled={!showEdit}
-            onChange={(status) => setStatus.mutate({ id: h.id, status, title: h.title })}
+            onChange={(status) => {
+              // Adjourned isn't just a label — it means a new date. Route
+              // through the dedicated dialog instead of silently keeping
+              // the old (now wrong) date, same reasoning as the explicit
+              // "Adjourn hearing" menu action below.
+              if (status === 'adjourned') setAdjournOpen(true)
+              else setStatus.mutate({ id: h.id, status, title: h.title })
+            }}
           />
           <Badge variant="outline" className="capitalize">{h.type}</Badge>
         </div>
@@ -79,6 +89,9 @@ export function HearingCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {showEdit && h.status !== 'held' && h.status !== 'cancelled' && (
+              <DropdownMenuItem onClick={() => setAdjournOpen(true)}><CalendarClock /> Adjourn hearing</DropdownMenuItem>
+            )}
             {showEdit && <DropdownMenuItem onClick={onEdit}><Pencil /> Edit / record outcome</DropdownMenuItem>}
             {showDelete && (
               <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onDelete}>
@@ -88,6 +101,8 @@ export function HearingCard({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+
+      {showEdit && <AdjournHearingDialog hearing={h} open={adjournOpen} onOpenChange={setAdjournOpen} />}
     </Card>
   )
 }

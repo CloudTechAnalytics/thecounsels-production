@@ -99,6 +99,15 @@ export const notificationsService = {
     if (error) throw error
   },
 
+  /** Deletes every notification (read/unread, archived or not) for this
+   * user in this org — RLS already scopes deletes to user_id = auth.uid(),
+   * the org filter here just keeps this from touching a user's
+   * notifications in a different firm they also belong to. */
+  async removeAll(organizationId: string): Promise<void> {
+    const { error } = await supabase.from('notifications').delete().eq('organization_id', organizationId)
+    if (error) throw error
+  },
+
   async getPreferences(userId: string): Promise<NotificationPreferences> {
     const { data, error } = await supabase.from('notification_preferences').select('*').eq('user_id', userId).maybeSingle()
     if (error) throw error

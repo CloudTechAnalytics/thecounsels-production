@@ -107,6 +107,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const isPlatformAdmin = Boolean(profile?.is_platform_admin)
 
+      // The other half of the "freshly-issued JWT" gotcha above: sometimes
+      // PostgREST doesn't error on a too-fresh token, it just silently
+      // evaluates auth.uid() as null for that one request — RLS then
+      // filters memberships down to zero rows instead of throwing, so the
+      // isTransientAuthError retry below never even runs. From here that's
+      // indistinguishable from a genuinely membership-less brand-new user
+      // (about to be routed to /onboarding) — retrying once costs that
+      // legitimate case one harmless extra 800ms before landing on the same
+      // "no memberships" result, and fixes the real bug: a just-registered
+      // org's own creator intermittently landing with an empty
+      // memberships/permissions state (every permission check silently
+      // false — "Managing Partner can't do X" — until their next full
+      // sign-in happened to land on a settled token).
+      if (!isRetry && !isPlatformAdmin && memberships.length === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 800))
+        return load(userId, true)
+      }
+
       // Support Mode: a platform admin operating inside a firm's workspace.
       const supportOrgId = isPlatformAdmin ? sessionStorage.getItem(SUPPORT_KEY) : null
       if (supportOrgId) {

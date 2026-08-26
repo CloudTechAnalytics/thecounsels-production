@@ -2010,6 +2010,8 @@ export interface Database {
           user_b: string
           user_a_last_read_at: string | null
           user_b_last_read_at: string | null
+          user_a_hidden_at: string | null
+          user_b_hidden_at: string | null
           last_message_at: string | null
           created_at: string
         }
@@ -2020,6 +2022,8 @@ export interface Database {
           user_b: string
           user_a_last_read_at?: string | null
           user_b_last_read_at?: string | null
+          user_a_hidden_at?: string | null
+          user_b_hidden_at?: string | null
           last_message_at?: string | null
           created_at?: string
         }
@@ -2071,6 +2075,7 @@ export interface Database {
       mark_channel_read: { Args: { p_channel: string }; Returns: undefined }
       delete_channel: { Args: { p_channel: string }; Returns: undefined }
       mark_dm_read: { Args: { p_conversation: string }; Returns: undefined }
+      hide_dm_conversation: { Args: { p_conversation: string }; Returns: undefined }
       get_unread_message_count: { Args: { p_org: string }; Returns: number }
       clear_audit_log: { Args: Record<string, never>; Returns: undefined }
       create_organization: {

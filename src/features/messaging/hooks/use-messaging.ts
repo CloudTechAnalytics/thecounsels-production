@@ -107,6 +107,14 @@ export function useConversations(orgId: string | null, userId: string | null) {
   })
 }
 
+export function useHideConversation(orgId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (conversationId: string) => messagingService.hideConversation(conversationId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.conversations(orgId ?? 'none') }),
+  })
+}
+
 export function useGetOrCreateConversation(orgId: string | null) {
   const qc = useQueryClient()
   return useMutation({

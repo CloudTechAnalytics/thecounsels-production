@@ -108,17 +108,32 @@ export const messagingService = {
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
     if (error) throw error
-    return ((data ?? []) as unknown as Array<DirectConversation & { a: ConversationRow['other']; b: ConversationRow['other'] }>).map(
-      (row) => {
+    return ((data ?? []) as unknown as Array<DirectConversation & { a: ConversationRow['other']; b: ConversationRow['other'] }>)
+      .map((row) => {
         const iAmA = row.user_a === userId
         const lastRead = iAmA ? row.user_a_last_read_at : row.user_b_last_read_at
+        const hiddenAt = iAmA ? row.user_a_hidden_at : row.user_b_hidden_at
         return {
           ...row,
           other: iAmA ? row.b : row.a,
           unread: Boolean(row.last_message_at) && (!lastRead || new Date(row.last_message_at!) > new Date(lastRead)),
+          // Deleting a DM (hide_dm_conversation) only hides it for the
+          // person who deleted it, and only until the next message — a
+          // conversation with no activity since being hidden stays hidden;
+          // one with a newer message (from either side) reappears on its
+          // own, WhatsApp/Slack-style, without needing to be explicitly
+          // "restored".
+          hidden: Boolean(hiddenAt) && (!row.last_message_at || new Date(row.last_message_at) <= new Date(hiddenAt!)),
         }
-      },
-    )
+      })
+      .filter((row) => !row.hidden)
+  },
+
+  /** Removes a conversation from the caller's own DM list — never deletes
+   * it or its messages for the other participant. See migration 0123. */
+  async hideConversation(conversationId: string): Promise<void> {
+    const { error } = await supabase.rpc('hide_dm_conversation', { p_conversation: conversationId })
+    if (error) throw error
   },
 
   async getOrCreateConversation(organizationId: string, otherUserId: string): Promise<DirectConversation> {

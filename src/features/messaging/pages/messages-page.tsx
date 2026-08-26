@@ -14,6 +14,7 @@ import {
   useDeleteDirectMessage,
   useDirectMessages,
   useDmRealtime,
+  useHideConversation,
   useMarkChannelRead,
   useMarkDmRead,
   useSendChannelMessage,
@@ -26,7 +27,7 @@ import { MessageThread } from '@/features/messaging/components/message-thread'
 import { MessageComposer } from '@/features/messaging/components/message-composer'
 import { NewChannelDialog } from '@/features/messaging/components/new-channel-dialog'
 import { NewDmDialog } from '@/features/messaging/components/new-dm-dialog'
-import { toThreadMessage, type ChannelRow } from '@/features/messaging/types'
+import { toThreadMessage, type ChannelRow, type ConversationRow } from '@/features/messaging/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -131,10 +132,12 @@ export function MessagesPage() {
   const archiveChannel = useArchiveChannel(activeOrgId)
   const unarchiveChannel = useUnarchiveChannel(activeOrgId)
   const deleteChannel = useDeleteChannel(activeOrgId)
+  const hideConversation = useHideConversation(activeOrgId)
 
   const [newChannelOpen, setNewChannelOpen] = React.useState(false)
   const [newDmOpen, setNewDmOpen] = React.useState(false)
   const [toDelete, setToDelete] = React.useState<ChannelRow | null>(null)
+  const [toDeleteConversation, setToDeleteConversation] = React.useState<ConversationRow | null>(null)
 
   const selectChannel = (id: string) => setParams({ c: id })
   const selectConversation = (id: string) => setParams({ dm: id })
@@ -181,6 +184,17 @@ export function MessagesPage() {
       setToDelete(null)
     } catch (err) {
       toast.error('Could not delete channel', { description: errorMessage(err) })
+    }
+  }
+  const doDeleteConversation = async () => {
+    if (!toDeleteConversation) return
+    try {
+      await hideConversation.mutateAsync(toDeleteConversation.id)
+      toast.success(`Chat with ${toDeleteConversation.other?.full_name ?? 'this person'} deleted`)
+      if (activeConversationId === toDeleteConversation.id) setParams({}, { replace: true })
+      setToDeleteConversation(null)
+    } catch (err) {
+      toast.error('Could not delete chat', { description: errorMessage(err) })
     }
   }
 
@@ -238,7 +252,12 @@ export function MessagesPage() {
             {conversationsLoading ? (
               <div className="space-y-1.5 px-1">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-7 w-full" />)}</div>
             ) : (
-              <DmList conversations={conversations ?? []} activeId={activeConversationId} onSelect={selectConversation} />
+              <DmList
+                conversations={conversations ?? []}
+                activeId={activeConversationId}
+                onSelect={selectConversation}
+                onDelete={setToDeleteConversation}
+              />
             )}
           </div>
         </Card>
@@ -285,6 +304,21 @@ export function MessagesPage() {
           </>
         }
         onConfirm={doDelete}
+      />
+
+      <ConfirmDialog
+        open={Boolean(toDeleteConversation)}
+        onOpenChange={(o) => !o && setToDeleteConversation(null)}
+        title="Delete chat"
+        confirmLabel="Delete"
+        loading={hideConversation.isPending}
+        description={
+          <>
+            This removes your chat with <strong>{toDeleteConversation?.other?.full_name ?? 'this person'}</strong> from your
+            list. They can still see it on their side, and it'll come back if either of you sends a new message.
+          </>
+        }
+        onConfirm={doDeleteConversation}
       />
     </div>
   )

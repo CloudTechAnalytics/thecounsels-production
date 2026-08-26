@@ -29,4 +29,13 @@ export const assistantService = {
   sendMessage(organizationId: string, message: string): Promise<{ reply: string }> {
     return invokeEdgeFunction('ask-assistant', { organizationId, message })
   },
+  /** Clears this user's own assistant history for this org (0127 — DELETE
+   * is self-service, unlike INSERT above). Filtered to organization_id
+   * explicitly: the RLS policy only scopes by user_id, not org, so an
+   * unfiltered delete here would wipe this user's history across every
+   * firm they belong to. */
+  async clearMessages(organizationId: string): Promise<void> {
+    const { error } = await supabase.from('assistant_messages').delete().eq('organization_id', organizationId)
+    if (error) throw error
+  },
 }

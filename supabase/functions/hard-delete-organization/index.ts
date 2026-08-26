@@ -6,8 +6,18 @@
 //     is owned by supabase_auth_admin, not the migrations role — so account
 //     cleanup happens here, via the service-role Auth Admin API, exactly like
 //     admin-create-user's own rollback already does.
-//   • Only after accounts are purged do we call the RPC to remove the org row
-//     itself, which cascades through every org-scoped table.
+//   • The org row is deleted FIRST, member account purging SECOND — the
+//     reverse of how this used to run. Purging was a fully sequential loop
+//     of individual Auth Admin API calls; for an org with more than a
+//     handful of members that could run long enough to hit the client's
+//     20s fetch timeout, meaning the one step that must not fail (actually
+//     removing the org) never got a chance to run at all, while some
+//     accounts might already be gone. Deleting the org first — fast, one
+//     statement, now verified server-side (migration 0124 makes the RPC
+//     raise instead of silently no-op-ing) — guarantees the core promise of
+//     this action lands before anything slower and more failure-prone
+//     runs. Account purging afterward is real best-effort cleanup: if it
+//     partially fails, the org is still gone either way.
 //
 // Deploy:  supabase functions deploy hard-delete-organization
 // ============================================================================
@@ -80,10 +90,14 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Move the organization to Trash before deleting it permanently' }, 400)
   }
 
-  // Accounts that exist only for this org (never touching platform staff or
-  // anyone who also belongs to another organization) get purged via the Auth
-  // Admin API — the only reliable way to remove an auth.users row. profiles.id
-  // cascades from auth.users, so this takes memberships/staff data/etc. with it.
+  // Figure out which members exist only for this org (never touching
+  // platform staff or anyone who also belongs to another organization)
+  // BEFORE deleting anything — deleting the org cascades memberships away,
+  // so this is the only window where that membership data is queryable.
+  // Purging their auth.users rows is the only reliable way to remove a
+  // login account; profiles.id cascades from auth.users, so it takes
+  // memberships/staff data/etc. with it too — but that happens after the
+  // org itself is gone (see file header for why the order matters).
   const { data: orgMembers, error: memberErr } = await admin
     .from('memberships')
     .select('user_id')
@@ -91,29 +105,33 @@ Deno.serve(async (req: Request) => {
   if (memberErr) return json({ error: memberErr.message }, 400)
 
   const memberIds = [...new Set((orgMembers ?? []).map((m) => m.user_id))]
-  let purged = 0
-  const failed: string[] = []
-
+  let exclusiveIds: string[] = []
   if (memberIds.length > 0) {
     const { data: profiles } = await admin.from('profiles').select('id, is_platform_admin').in('id', memberIds)
     const { data: allMemberships } = await admin.from('memberships').select('user_id, organization_id').in('user_id', memberIds)
 
-    const exclusiveIds = memberIds.filter((id) => {
+    exclusiveIds = memberIds.filter((id) => {
       if (profiles?.find((p) => p.id === id)?.is_platform_admin) return false
       return !allMemberships?.some((m) => m.user_id === id && m.organization_id !== organizationId)
     })
-
-    for (const userId of exclusiveIds) {
-      const { error: delErr } = await admin.auth.admin.deleteUser(userId)
-      if (delErr) failed.push(userId)
-      else purged += 1
-    }
   }
 
-  // Anyone left (platform staff, or a member of another org too) simply loses
-  // this membership — it cascades away with the org row below.
+  // The step that must not fail, first: removes the org row and cascades
+  // through every org-scoped table. hard_delete_organization now raises if
+  // it didn't actually delete a row (migration 0124), instead of the
+  // silent no-op this used to be able to do.
   const { error: rpcErr } = await caller.rpc('hard_delete_organization', { p_org: organizationId })
   if (rpcErr) return json({ error: rpcErr.message }, 400)
+
+  // Best-effort cleanup, second, in parallel rather than one at a time —
+  // the org is already gone regardless of how this goes.
+  const results = await Promise.allSettled(exclusiveIds.map((userId) => admin.auth.admin.deleteUser(userId)))
+  let purged = 0
+  const failed: string[] = []
+  results.forEach((result, i) => {
+    if (result.status === 'fulfilled' && !result.value.error) purged += 1
+    else failed.push(exclusiveIds[i])
+  })
 
   // Log against organization_id = null so this platform-level record survives
   // the org row it's about — a log tied to the now-deleted org would cascade

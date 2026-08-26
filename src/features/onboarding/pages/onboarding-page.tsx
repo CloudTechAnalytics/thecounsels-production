@@ -14,6 +14,7 @@ import { Button } from '@/shared/components/ui/button'
 import { toast } from '@/shared/components/ui/sonner'
 import { APP } from '@/shared/config/env'
 import { errorMessage } from '@/shared/lib/errors'
+import { logClientError } from '@/shared/lib/error-log'
 
 type Step = 'firm' | 'plan' | 'welcome'
 const STEP_INDEX: Record<Step, number> = { firm: 0, plan: 1, welcome: 2 }
@@ -149,9 +150,12 @@ export function OnboardingPage() {
       // unintended trial user, since RequireNoOrganization now sees an
       // active membership. Route through the same "sign in to continue"
       // screen instead, so nothing happens silently.
+      const reason = errorMessage(err, 'Unknown error')
       console.error('Checkout failed to start:', err)
+      logClientError(err, { source: 'onboarding.subscribeNow', context: { organizationId: org.id, planId, billingCycle } })
+      toast.error('Could not start checkout', { description: reason })
       setWelcomeMessage(
-        "We couldn't start checkout, so your workspace was created on a free 30-day trial instead. " +
+        `We couldn't start checkout (${reason}), so your workspace was created on a free 30-day trial instead. ` +
           'Sign in to continue — you can subscribe any time from Firm Settings.',
       )
       setStep('welcome')

@@ -12,7 +12,7 @@ const ACTIVE_ORG_KEY = 'counsel.active_org'
  */
 export function logClientError(
   error: unknown,
-  extra?: { componentStack?: string; source?: string },
+  extra?: { componentStack?: string; source?: string; context?: Record<string, unknown> },
 ) {
   const message = error instanceof Error ? error.message : String(error)
   const stack = error instanceof Error ? error.stack : undefined
@@ -36,7 +36,7 @@ export function logClientError(
       url: typeof window !== 'undefined' ? window.location.href.slice(0, 2000) : null,
       user_agent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 500) : null,
       environment: import.meta.env.VITE_APP_ENV ?? import.meta.env.MODE,
-      context: extra?.source ? { source: extra.source } : null,
+      context: extra?.source || extra?.context ? { source: extra?.source, ...extra?.context } : null,
     })
     // Best-effort: a broken error-logger must never throw or loop back
     // into itself. Swallow silently rather than console.error-ing, which

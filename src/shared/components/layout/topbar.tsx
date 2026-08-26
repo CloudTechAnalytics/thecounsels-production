@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Check, LogOut, Menu, Settings, UserCircle, Users2, ArrowLeft, MapPin } from 'lucide-react'
+import { Check, LogOut, Menu, RefreshCw, Settings, UserCircle, Users2, ArrowLeft, MapPin } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { useBackToWorkspaceTarget } from '@/shared/hooks/use-back-to-workspace-target'
@@ -44,6 +44,9 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
       <div className="ml-auto flex items-center gap-2">
         {hasFeature('ai_summarization') && <AssistantDialog />}
         <SubscriptionStatusPill />
+        <Button variant="ghost" size="icon" onClick={() => window.location.reload()} aria-label="Refresh page" title="Refresh page">
+          <RefreshCw className="h-5 w-5" />
+        </Button>
         <ThemeToggle />
         <NotificationBell />
 

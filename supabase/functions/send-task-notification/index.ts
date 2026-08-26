@@ -40,7 +40,7 @@ function json(body: unknown, status = 200) {
 const GOLD = '#B38A3E'
 const INK = '#1c1917'
 const MUTED = '#78716c'
-const SITE_URL = Deno.env.get('SITE_URL') ?? 'https://thecounsel.app'
+const SITE_URL = Deno.env.get('SITE_URL') ?? 'https://thecounsels.org'
 
 function esc(s: string | null | undefined): string {
   return (s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string)
@@ -218,7 +218,7 @@ function buildHearingWhatsAppMessage(type: string, h: HearingContext): string {
 async function sendEmailNotification(params: { to: string; subject: string; html: string }): Promise<{ ok: boolean; error?: string }> {
   const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
   if (!RESEND_API_KEY) return { ok: false, error: 'Email is not configured.' }
-  const from = Deno.env.get('RESEND_FROM_EMAIL') ?? 'The Counsel <notifications@thecounsel.app>'
+  const from = Deno.env.get('RESEND_FROM_EMAIL') ?? 'The Counsel <notifications@thecounsels.org>'
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',

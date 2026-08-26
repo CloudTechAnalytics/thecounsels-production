@@ -120,7 +120,7 @@ export const router = createBrowserRouter([
   // Public marketing page; unauthenticated visitors to '/' land here.
   { path: '/welcome', element: <LandingPage /> },
   { path: '/terms', element: <TermsPage /> },
-  // Workspace-branded login — temporary stand-in for {slug}.thecounsel.app
+  // Workspace-branded login — temporary stand-in for {slug}.thecounsels.org
   // until wildcard subdomains are configured (see LoginPage's own comment).
   // Purely cosmetic: real auth + membership scoping is unchanged either way.
   { path: '/w/:slug', element: <RedirectIfAuthenticated><LoginPage /></RedirectIfAuthenticated> },

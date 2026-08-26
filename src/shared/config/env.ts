@@ -45,7 +45,7 @@ export const APP = {
   brand: 'CloudTech Legal Suite',
   product: 'The Counsel',
   tagline: 'Enterprise Legal Practice Management',
-  /** Used only for the onboarding wizard's cosmetic organization-handle preview — not a real domain/mailbox. */
-  domain: 'thecounsel.app',
+  /** Used for the onboarding wizard's cosmetic organization-handle preview (wildcard subdomains aren't wired up yet, so this is a preview only, not a live mailbox) — matches the real production domain, docs/ARCHITECTURE.md. */
+  domain: 'thecounsels.org',
   contactEmail: 'cloudtechanalytics.consultant@gmail.com',
 } as const

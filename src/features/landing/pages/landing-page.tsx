@@ -69,7 +69,7 @@ const SEGMENTS = [
   {
     icon: User,
     title: 'Solo practitioners',
-    text: 'Every hat, one hub — track matters, bill clients and manage hearings without the overhead of a team.',
+    text: 'One hub for every hat: track matters, bill clients and manage hearings without the overhead of a team.',
   },
   {
     icon: Users,
@@ -92,12 +92,12 @@ const TRUST = [
   {
     icon: ShieldCheck,
     title: 'Security',
-    text: 'Row-level tenant isolation, role-based permissions and an audit log on every action — your data is scoped to your firm, and no one else’s.',
+    text: 'Row-level tenant isolation, role-based permissions and an audit log on every action. Your data is scoped to your firm, and no one else’s.',
   },
   {
     icon: PhoneCall,
     title: 'Real support',
-    text: 'Reach a real person by email or phone when you need help — not a ticket queue that goes quiet.',
+    text: 'Reach a real person by email or phone when you need help, not a ticket queue that goes quiet.',
   },
   {
     icon: UploadCloud,
@@ -107,7 +107,7 @@ const TRUST = [
   {
     icon: ClipboardCheck,
     title: 'Guided provisioning',
-    text: 'Accounts, roles and permissions are set up by our team before your first login — no self-serve setup to get wrong.',
+    text: 'Accounts, roles and permissions are set up by our team before your first login, so there’s no self-serve setup to get wrong.',
   },
 ]
 
@@ -115,7 +115,7 @@ const FEATURES = [
   {
     icon: Briefcase,
     title: 'Matters & case tracking',
-    text: 'Every engagement numbered, statused and timelined — from first instruction to judgment, with a full audit trail.',
+    text: 'Every engagement numbered, statused and timelined, from first instruction to judgment, with a full audit trail.',
   },
   {
     icon: Banknote,
@@ -125,7 +125,7 @@ const FEATURES = [
   {
     icon: Gavel,
     title: 'Hearings & calendar',
-    text: 'Court dates, mentions and rulings on one calendar — with reminders before anything falls through.',
+    text: 'Court dates, mentions and rulings on one calendar, with reminders before anything falls through.',
   },
   {
     icon: FolderLock,
@@ -135,7 +135,7 @@ const FEATURES = [
   {
     icon: BarChart3,
     title: 'Reports & insights',
-    text: 'Collections, productivity, workload balance — plus one-click Excel exports your partners will actually read.',
+    text: 'Collections, productivity and workload balance, plus one-click Excel exports your partners will actually read.',
   },
   {
     icon: ShieldCheck,
@@ -158,7 +158,7 @@ const STEPS = [
   {
     icon: Sparkles,
     title: 'See the whole firm',
-    text: 'Partners get live dashboards, risk insights and exportable reports — no spreadsheet stitching.',
+    text: 'Partners get live dashboards, risk insights and exportable reports. No spreadsheet stitching.',
   },
 ]
 
@@ -216,7 +216,7 @@ const COMPLIANCE = [
 const FAQS = [
   {
     q: 'Who can create an account?',
-    a: 'Anyone — start a free trial in a few minutes from the "Start Free" button above. You create your firm, become its Managing Partner, and invite your team from inside the app. No sales call required.',
+    a: 'Anyone. Start a free trial in a few minutes from the "Start Free" button above. You create your firm, become its Managing Partner, and invite your team from inside the app. No sales call required.',
   },
   {
     q: 'Is our data secure?',
@@ -228,11 +228,11 @@ const FAQS = [
   },
   {
     q: 'Does billing work in naira?',
-    a: 'Yes — time, disbursements and invoices are tracked and billed in naira by default.',
+    a: 'Yes. Time, disbursements and invoices are tracked and billed in naira by default.',
   },
   {
     q: 'Can we change plans later?',
-    a: 'Yes — your Managing Partner can upgrade, downgrade or subscribe any time from Firm Settings. Upgrades apply immediately; downgrades take effect on your next billing date.',
+    a: 'Yes. Your Managing Partner can upgrade, downgrade or subscribe any time from Firm Settings. Upgrades apply immediately; downgrades take effect on your next billing date.',
   },
 ]
 
@@ -422,7 +422,7 @@ export function LandingPage() {
         initial={{ y: -24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
-        className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md"
+        className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background"
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2.5">
@@ -504,7 +504,7 @@ export function LandingPage() {
             </motion.h1>
             <motion.p variants={fadeUp} className="mt-6 max-w-lg text-lg leading-relaxed text-muted-foreground">
               No task, deadline, or follow-up should ever get buried in someone's inbox or a
-              spreadsheet. The Counsel keeps every matter — from first filing to final invoice —
+              spreadsheet. The Counsel keeps every matter, from first filing to final invoice,
               visible, assigned, and on schedule.
             </motion.p>
             <motion.div variants={fadeUp} className="mt-9 flex flex-wrap items-center gap-4">
@@ -548,7 +548,7 @@ export function LandingPage() {
       <section className="mx-auto max-w-3xl px-6 py-20 text-center">
         <Reveal>
           <motion.p variants={fadeUp} className="font-display text-2xl font-medium leading-snug text-foreground sm:text-3xl">
-            Legal work is detail work. The Counsel exists so your team spends that care on cases —
+            Legal work is detail work. The Counsel exists so your team spends that care on cases,
             not on spreadsheets, shared drives, and missed filing dates.
           </motion.p>
         </Reveal>
@@ -563,9 +563,9 @@ export function LandingPage() {
               Everything your firm needs, at a glance
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Open your dashboard and see what matters — active matters, this week's hearings, revenue,
-              and every client's latest activity — the moment you log in. No spreadsheets to reconcile,
-              no separate tools to check.
+              Open your dashboard and see what matters the moment you log in: active matters,
+              this week's hearings, revenue, and every client's latest activity. No spreadsheets
+              to reconcile, no separate tools to check.
             </p>
             <ul className="mt-6 space-y-3">
               {[
@@ -595,8 +595,8 @@ export function LandingPage() {
             One workspace. The whole practice.
           </motion.h2>
           <motion.p variants={fadeUp} className="mt-4 text-muted-foreground">
-            Purpose-built modules that talk to each other — so a logged hour becomes an invoice, and an
-            invoice becomes insight.
+            Purpose-built modules that talk to each other, so a logged hour becomes an invoice,
+            and an invoice becomes insight.
           </motion.p>
         </Reveal>
 
@@ -657,7 +657,7 @@ export function LandingPage() {
             Built for every kind of practice
           </motion.h2>
           <motion.p variants={fadeUp} className="mt-4 text-muted-foreground">
-            From a single-desk practice to a multi-partner chambers — the same system scales with you.
+            From a single-desk practice to a multi-partner chambers, the same system scales with you.
           </motion.p>
         </Reveal>
 
@@ -813,12 +813,7 @@ export function LandingPage() {
       </section>
 
       {/* ── CTA band / Contact ──────────────────────────────── */}
-      <section id="contact" className="relative overflow-hidden bg-background text-foreground">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-70"
-          style={{ background: 'radial-gradient(40rem 20rem at 50% 120%, hsl(var(--primary) / 0.25), transparent)' }}
-        />
+      <section id="contact" className="relative overflow-hidden border-t border-border bg-background text-foreground">
         <Reveal className="relative mx-auto max-w-3xl px-6 py-24 text-center">
           <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
             Contact
@@ -873,8 +868,8 @@ export function LandingPage() {
                 </div>
               </div>
               <p className="mt-4 max-w-[220px] text-sm leading-relaxed text-muted-foreground">
-                One secure workspace for matters, billing, hearings, documents and reports — built
-                for modern law firms.
+                One secure workspace for matters, billing, hearings, documents and reports.
+                Built for modern law firms.
               </p>
             </div>
 

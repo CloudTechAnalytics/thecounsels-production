@@ -15,4 +15,4 @@ Disallow: /messages
 Disallow: /notifications
 Disallow: /onboarding
 
-Sitemap: https://thecounsel.app/sitemap.xml
+Sitemap: https://thecounsels.org/sitemap.xml

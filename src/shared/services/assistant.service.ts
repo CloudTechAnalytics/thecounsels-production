@@ -33,9 +33,21 @@ export const assistantService = {
    * is self-service, unlike INSERT above). Filtered to organization_id
    * explicitly: the RLS policy only scopes by user_id, not org, so an
    * unfiltered delete here would wipe this user's history across every
-   * firm they belong to. */
+   * firm they belong to.
+   *
+   * .select('id') on the delete so we know how many rows actually went —
+   * a delete whose filter/RLS matches zero rows is NOT a Postgrest error,
+   * it's a normal 200 with an empty result, so without this check a real
+   * failure to delete anything looks identical to success: the UI clears
+   * its local cache, but nothing changed server-side, and the history
+   * reappears the next time this list refetches. Surfacing that as a real
+   * error here — instead of a silent no-op "success" — is what actually
+   * lets this get diagnosed if it happens again. */
   async clearMessages(organizationId: string): Promise<void> {
-    const { error } = await supabase.from('assistant_messages').delete().eq('organization_id', organizationId)
+    const { data, error } = await supabase.from('assistant_messages').delete().eq('organization_id', organizationId).select('id')
     if (error) throw error
+    if (!data || data.length === 0) {
+      throw new Error('Nothing was actually cleared. Please refresh the page and try again.')
+    }
   },
 }

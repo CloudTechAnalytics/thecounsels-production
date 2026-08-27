@@ -40,6 +40,11 @@ export function useClearAssistantMessages(organizationId: string | null) {
   const key = ['assistant-messages', organizationId]
   return useMutation({
     mutationFn: () => assistantService.clearMessages(organizationId!),
-    onSuccess: () => qc.setQueryData(key, []),
+    // Refetch instead of optimistically trusting the delete happened —
+    // clearMessages() now throws if it didn't actually delete anything
+    // (see its own comment), but invalidating here too means the UI
+    // always ends up showing genuine server state either way, not a
+    // local assumption that could've silently diverged from it.
+    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
   })
 }

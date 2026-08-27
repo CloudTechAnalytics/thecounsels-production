@@ -19,7 +19,7 @@ const AI_AUTHOR: ThreadMessage['author'] = { id: 'ai-assistant', full_name: 'Ass
 /** Cross-cutting schedule/workload AI assistant — "show upcoming hearings
  * this week with client names and advocates." Distinct from the per-matter
  * AI (which is scoped to one matter's own context): this one decides what
- * to look up via Gemini tool calling (ask-assistant Edge Function),
+ * to look up via Groq tool calling (ask-assistant Edge Function),
  * across hearings/tasks/appointments only. Entry point is a topbar button
  * next to GlobalSearch, gated the same way the HR workspace link is —
  * only shown when the org's plan includes ai_summarization. */

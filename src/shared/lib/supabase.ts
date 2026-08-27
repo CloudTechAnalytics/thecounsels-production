@@ -13,16 +13,18 @@ import { env } from '@/shared/config/env'
 const FETCH_TIMEOUT_MS = 20_000
 
 // Edge Function invocations (Postgrest/Auth/Storage/Realtime never hit this
-// path) proxy to Gemini for the AI features — measured directly against
-// Google's live API, a plain "say OK" call took over 20s on the Flash
-// model's current serving latency. That's not a stall to fail fast on, it's
-// real (if slow) processing — so these get materially more headroom than
-// the rest of the app's traffic instead of raising the ceiling everywhere,
-// which would make a genuinely broken request anywhere else in the app
-// hang far longer before failing. See each AI function's own
-// GEMINI_TIMEOUT_MS for how this budget is spent server-side.
+// path) proxy to Groq for the AI features — this is real (if occasionally
+// slow) processing, not a stall to fail fast on, so these get materially
+// more headroom than the rest of the app's traffic instead of raising the
+// ceiling everywhere, which would make a genuinely broken request anywhere
+// else in the app hang far longer before failing. Kept generous even
+// though Groq's actual measured latency is dramatically lower than
+// Gemini's ever was (300ms-1s vs Gemini's routine 2-20s) — there's no
+// downside to a ceiling this far above the real case, only a downside to
+// cutting it too close on a small sample. See each AI function's own
+// GROQ_TIMEOUT_MS for how this budget is spent server-side.
 const FUNCTIONS_FETCH_TIMEOUT_MS = 45_000
-// ask-assistant specifically can call Gemini TWICE in one request
+// ask-assistant specifically can call Groq TWICE in one request
 // (tool-selection, then the final answer) — double the single-call
 // functions' own worst case, so it gets a longer ceiling than the rest.
 const ASSISTANT_FETCH_TIMEOUT_MS = 60_000

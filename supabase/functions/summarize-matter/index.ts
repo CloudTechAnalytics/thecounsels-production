@@ -1,22 +1,25 @@
 // ============================================================================
 // Edge Function: summarize-matter
 // Generates an AI summary of a matter (status, client, key dates, open
-// tasks, hearings) via Google's Gemini API — chosen specifically because
-// its free tier requires no billing/credit card to start (Anthropic and
-// OpenAI both require a funded account, even at low volume). Business/
-// Enterprise plans only — enforced HERE, server-side, via the service-role
-// client reading the org's actual plan; the frontend's own gate only
-// controls what's *shown*, same principle as every other access check in
-// this app (never trust the client).
+// tasks, hearings) via Groq's OpenAI-compatible chat completions API.
+// Business/Enterprise plans only — enforced HERE, server-side, via the
+// service-role client reading the org's actual plan; the frontend's own
+// gate only controls what's *shown*, same principle as every other access
+// check in this app (never trust the client).
+//
+// Switched from Gemini to Groq (confirmed with the user — cost-driven):
+// Gemini's free tier turned out to be 5 requests/minute SHARED ACROSS THE
+// WHOLE PLATFORM (confirmed live via a diagnostic burst test — 6 calls
+// succeeded, the 7th through 11th all got an immediate 429), and its paid
+// tier ($0.75/$3.75 per 1M in/out tokens) was pricier than the alternative.
+// Groq's free tier is 30 RPM/day limits in the thousands (no card needed),
+// and its paid tier for openai/gpt-oss-120b ($0.15/$0.60 per 1M tokens) is
+// roughly 5x cheaper than Gemini's. Also just plain faster in practice —
+// confirmed live: 300ms-1s responses vs Gemini's routine 2-20s.
 //
 // Deploy:  supabase functions deploy summarize-matter
-// Secrets: supabase secrets set GEMINI_API_KEY=...
-//   Get a free key at https://aistudio.google.com/apikey — no card needed.
-//   Free tier is rate-limited (requests/minute and /day); if generation
-//   starts failing under real load, that's the first thing to check.
-// GEMINI_MODEL uses the "-latest" alias (see its own comment below) so a
-// retired dated model string shouldn't cause this again — if generation
-// still fails, it's most likely the API key or a rate limit, not the model.
+// Secrets: supabase secrets set GROQ_API_KEY=...
+//   Get a free key at https://console.groq.com/keys — no card needed.
 // ============================================================================
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.46.1'
 
@@ -30,50 +33,33 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 }
 
-// gemini-2.0-flash, then gemini-2.5-flash, were each retired for new users
-// in turn (both confirmed via a live 404 from Google's API) — the "-latest"
-// alias this was switched to specifically to dodge that turned out to have
-// its own failure mode, worse than a clean 404: confirmed live (a
-// diagnostic Edge Function isolating DNS/TLS/key/model one at a time) that
-// generativelanguage.googleapis.com just hangs indefinitely on
-// gemini-flash-latest:generateContent — no response, no error, nothing —
-// while the same call against a real model name (gemini-3.6-flash, what
-// Google's own 404 on the old model pointed to) answers in ~2s. Back to a
-// pinned exact model name; when this one eventually gets retired in turn,
-// the fix is the same as always — GEMINI_API_KEY/quota first, then check
-// https://ai.google.dev/gemini-api/docs/models for the current Flash-tier
-// model name (free-tier-friendly, not a paid Pro model).
-const GEMINI_MODEL = 'gemini-3.6-flash'
-// 2.5+/3.x Flash models "think" before answering by default, and those
-// reasoning tokens are drawn from this same maxOutputTokens budget — a low
-// limit can get fully consumed by invisible thinking before a single
-// visible token is written, producing exactly what looks like a truncated
-// response cut off after a couple of words. thinkingBudget: 0 below turns
-// that off (plain, fast completion, no hidden token cost); this is kept
-// generous anyway as headroom for a genuine 3-5 paragraph brief.
+// Confirmed live against the real key (a disposable diagnostic Edge
+// Function): this exact model ID is active, supports tools/json_mode/
+// structured_outputs, 131k context, $0.15/$0.60 per 1M in/out tokens — the
+// cheapest full-capability model Groq offers. If this ever gets retired,
+// GET https://api.groq.com/openai/v1/models (Bearer auth) lists what's
+// current — same "measure, don't guess" lesson as the Gemini model saga.
+const GROQ_MODEL = 'openai/gpt-oss-120b'
 const MAX_TOKENS = 1536
-// The frontend's own Supabase client gives Edge Function invocations a 45s
-// fetch timeout specifically (shared/lib/supabase.ts) — a Gemini call that
-// runs past that gets reported to the user as a raw "failed to fetch", not
-// the clear message below. Staying comfortably under that ceiling means an
-// overloaded/slow Gemini fails with an honest reason instead of hanging
-// until the client gives up first. This was raised from 15s to 35s after
-// measuring the Flash model's actual current serving latency directly — a
-// trivial "say OK" prompt took over 20s, well past the old budget, which is
-// exactly why "AI is taking too long" started showing up on ordinary
-// requests that were never actually stuck, just slower than the timeout.
-const GEMINI_TIMEOUT_MS = 35_000
+// Groq's LPU inference is dramatically faster than Gemini's ever was
+// (measured 300ms-1s for trivial prompts, vs Gemini's routine 2-20s) — this
+// timeout is still sized with real headroom for a genuine multi-paragraph
+// summary under real load, not just the trivial case measured, but doesn't
+// need Gemini's old 35s budget.
+const GROQ_TIMEOUT_MS = 20_000
 
-type GeminiResult = { ok: true; res: Response } | { ok: false; reason: 'timeout' } | { ok: false; reason: 'http'; status: number; text: string }
+type GroqResult = { ok: true; res: Response } | { ok: false; reason: 'timeout' } | { ok: false; reason: 'http'; status: number; text: string }
 
-async function callGemini(model: string, apiKey: string, requestBody: unknown): Promise<GeminiResult> {
+async function callGroq(apiKey: string, requestBody: unknown): Promise<GroqResult> {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS)
+  const timeoutId = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS)
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(requestBody), signal: controller.signal },
-    )
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    })
     clearTimeout(timeoutId)
     if (!res.ok) return { ok: false, reason: 'http', status: res.status, text: await res.text().catch(() => '') }
     return { ok: true, res }
@@ -83,8 +69,8 @@ async function callGemini(model: string, apiKey: string, requestBody: unknown): 
   }
 }
 
-/** 503 (overloaded) and 429 (rate-limited) both mean "temporary, try again shortly" — Google's own 503 message says so explicitly. */
-function geminiFailureMessage(result: Extract<GeminiResult, { ok: false }>): string {
+/** 503 (overloaded) and 429 (rate-limited) both mean "temporary, try again shortly". */
+function groqFailureMessage(result: Extract<GroqResult, { ok: false }>): string {
   if (result.reason === 'timeout') return 'AI is taking too long to respond right now — this is usually temporary. Please try again in a moment.'
   if (result.status === 503 || result.status === 429) return 'AI is experiencing high demand right now. Please try again in a moment.'
   return 'Could not generate a summary right now. Please try again.'
@@ -97,7 +83,7 @@ Deno.serve(async (req: Request) => {
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
   const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const ANON = Deno.env.get('SUPABASE_ANON_KEY')!
-  const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
+  const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY')
 
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return json({ error: 'Missing authorization' }, 401)
@@ -128,7 +114,7 @@ Deno.serve(async (req: Request) => {
   if (matterErr) console.error('Matter lookup failed in summarize-matter:', matterErr)
   if (matterErr || !matter) return json({ error: 'Matter not found, or you do not have access to it' }, 404)
 
-  if (!GEMINI_API_KEY) return json({ error: 'AI summarization is not configured yet — contact support.' }, 400)
+  if (!GROQ_API_KEY) return json({ error: 'AI summarization is not configured yet — contact support.' }, 400)
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { autoRefreshToken: false, persistSession: false } })
 
@@ -179,28 +165,29 @@ Deno.serve(async (req: Request) => {
       : ['- none']),
   ].filter((l): l is string => l !== null)
 
-  const prompt = [
+  const systemPrompt = [
     'You are a legal practice assistant. Summarize the following matter for a lawyer who needs a quick, accurate refresher before a call or hearing.',
     'Write 3-5 short paragraphs: current status, what has happened, what is outstanding/due next, and anything risky or time-sensitive.',
-    'Plain text only — this is displayed as-is with no markdown rendering. No **bold**, no # headings, no * or - bullet symbols. Separate points with a plain line break instead.',
+    'Plain text only — this is displayed as-is with no markdown rendering. No **bold**, no # headings, no * or - bullet symbols, no | tables. Separate points with a plain line break instead.',
     'Be factual and concise. Do not invent facts not present below.',
-    '',
-    lines.join('\n'),
   ].join('\n')
 
-  const result = await callGemini(GEMINI_MODEL, GEMINI_API_KEY, {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { maxOutputTokens: MAX_TOKENS, thinkingConfig: { thinkingBudget: 0 } },
+  const result = await callGroq(GROQ_API_KEY, {
+    model: GROQ_MODEL,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: lines.join('\n') },
+    ],
+    max_tokens: MAX_TOKENS,
   })
 
   if (!result.ok) {
-    console.error('Gemini request failed:', result.reason === 'http' ? `${result.status} ${result.text}` : 'timeout')
-    return json({ error: geminiFailureMessage(result) }, 502)
+    console.error('Groq request failed:', result.reason === 'http' ? `${result.status} ${result.text}` : 'timeout')
+    return json({ error: groqFailureMessage(result) }, 502)
   }
 
   const aiData = await result.res.json()
-  const parts: { text?: string }[] = aiData.candidates?.[0]?.content?.parts ?? []
-  const summary: string = parts.map((p) => p.text ?? '').join('').trim()
+  const summary: string = (aiData.choices?.[0]?.message?.content ?? '').trim()
   if (!summary) return json({ error: 'The AI did not return a summary. Please try again.' }, 502)
 
   const generatedAt = new Date().toISOString()

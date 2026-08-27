@@ -38,8 +38,9 @@ export function MessageThread({
   isLoadingMore?: boolean
   onDelete?: (id: string) => void
   /** AI threads only — shows a lightweight "still thinking" bubble while a
-   * reply is in flight. A slow-but-real Gemini call can take 20-30s; without
-   * this the composer just goes quiet and looks stuck rather than working. */
+   * reply is in flight. Usually fast (Groq's LPU inference typically
+   * replies in well under a second), but without this any reply — however
+   * brief — leaves the composer looking stuck rather than working. */
   pendingReply?: boolean
 }) {
   const bottomRef = React.useRef<HTMLDivElement>(null)

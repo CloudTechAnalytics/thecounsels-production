@@ -25,7 +25,7 @@ export function useSendMatterAiChatMessage(matterId: string | undefined) {
     // Echo the user's own message into the thread immediately — the actual
     // insert only happens server-side once the AI reply is ready (see the
     // service's own comment), which used to mean the question sat invisible
-    // in the composer for the entire Gemini round-trip before appearing at
+    // in the composer for the entire AI round-trip before appearing at
     // the same instant as the reply. This is purely a local render, not a
     // write — reconciled with the real row (or rolled back) below.
     onMutate: async (message: string) => {

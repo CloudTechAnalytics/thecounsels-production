@@ -159,10 +159,10 @@ export function PrivacyPage() {
         <Section n={6} title="AI Features">
           <p>
             Plans that include AI features (matter summaries, AI chat, the scheduling assistant) send the
-            relevant matter or query content to a third-party AI model provider (currently Google's Gemini
-            API) in order to generate a response. That content is processed by the provider to return a
-            result to you and is subject to that provider's own data-handling terms for API access, which
-            do not include using API-submitted content to train their own consumer-facing models. We do not
+            relevant matter or query content to a third-party AI model provider (currently Groq) in order
+            to generate a response. That content is processed by the provider to return a result to you and
+            is subject to that provider's own data-handling terms for API access, which do not include using
+            API-submitted content to train their own models. We do not
             send more than what's needed to answer the specific request (e.g. a matter's own status, tasks,
             and hearings — not your whole Organization's data at once). See Section 11 of our Terms for the
             "review before relying on it" limits on AI output itself.
@@ -176,7 +176,7 @@ export function PrivacyPage() {
             <li><strong className="text-foreground">Vercel</strong> — hosting for the web application itself.</li>
             <li><strong className="text-foreground">Paystack</strong> — payment processing for subscriptions.</li>
             <li><strong className="text-foreground">Resend</strong> — delivery of transactional emails (notifications, reminders, receipts).</li>
-            <li><strong className="text-foreground">Google (Gemini API)</strong> — AI features, as described in Section 6, where your Organization's plan includes them.</li>
+            <li><strong className="text-foreground">Groq</strong> — AI features, as described in Section 6, where your Organization's plan includes them.</li>
             <li><strong className="text-foreground">WhatsApp messaging providers</strong> (Twilio or Meta, whichever is configured) — only if you personally enable WhatsApp reminders and provide a number.</li>
           </ul>
           <p>

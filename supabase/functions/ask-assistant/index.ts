@@ -4,10 +4,10 @@
 // week with client names and advocates" — distinct from the existing
 // per-matter AI (summarize-matter/chat-with-matter, 0070/0102), which
 // pre-fetches ONE matter's own context and never decides what to look up.
-// This one uses Gemini function/tool calling to decide, per question,
-// which of 3 tools to call (hearings/tasks/appointments), then answers in
-// plain language. v1 is deliberately scoped to schedule/workload questions
-// only — not clients, billing, or matter content.
+// This one uses tool calling to decide, per question, which of 3 tools to
+// call (hearings/tasks/appointments), then answers in plain language. v1 is
+// deliberately scoped to schedule/workload questions only — not clients,
+// billing, or matter content.
 //
 // *** IMPORTANT — the one deliberate departure from summarize-matter's/
 // chat-with-matter's own pattern: every tool-lookup query below runs
@@ -17,16 +17,17 @@
 // pattern from the other two AI functions — that would let a user ask the
 // assistant about hearings/tasks/appointments their own role can't see. ***
 //
-// Thinking is left ON here (thinkingConfig omitted) — current Gemini docs
-// say thinking measurably improves function-calling accuracy. This is a
-// deliberate, informed reversal of summarize-matter's/chat-with-matter's
-// own thinkingBudget: 0 (which exists to avoid a *different* problem —
-// thinking eating a small, fixed output budget on a one-shot answer).
+// See summarize-matter/index.ts's own comment for why this is Groq, not
+// Gemini (cost — Gemini's free tier was 5 requests/minute shared across
+// the whole platform, and its paid tier was pricier than Groq's).
+// openai/gpt-oss-120b's tool-calling was confirmed live (a disposable
+// diagnostic Edge Function) against this exact 3-tool shape before this
+// was written — real tool_calls back, correctly-formed JSON arguments.
 //
 // Deploy:  supabase functions deploy ask-assistant
 //   (no --no-verify-jwt — called directly from the browser with the
 //   signed-in user's own session, same as chat-with-matter.)
-// Secrets: none new — GEMINI_API_KEY is already project-scoped.
+// Secrets: none new — GROQ_API_KEY is already project-scoped.
 // ============================================================================
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.46.1'
 
@@ -40,76 +41,78 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 }
 
-// See summarize-matter/index.ts's own comment — pinned to a real model
-// name, not the "-latest" alias (confirmed live: that alias hangs
-// indefinitely on this account rather than erroring or actually
-// resolving to the current model).
-const GEMINI_MODEL = 'gemini-3.6-flash'
+// See summarize-matter/index.ts's own comment — confirmed live against the
+// real key, cheapest full-capability Groq model, tool-calling confirmed
+// separately for this exact shape.
+const GROQ_MODEL = 'openai/gpt-oss-120b'
 const MAX_TOKENS = 2048
 const HISTORY_LIMIT = 20
-// See summarize-matter/index.ts's own comment for the full reasoning — the
-// frontend's Supabase client gives this function specifically a 60s fetch
-// timeout (shared/lib/supabase.ts), longer than the other AI functions'
-// 45s, because this one can call Gemini TWICE in one request (tool-
-// selection, then the final answer once tool results are in). Each call
-// gets a budget sized for that: up to 2×18s of Gemini time plus the tool
-// queries and response formatting in between, comfortably under 60s.
-// Raised from the original 8s after measuring the Flash model's actual
-// current latency directly — a trivial single call alone took 20s+, so 8s
-// per call (16s total) was failing on ordinary, non-broken responses.
-const GEMINI_TIMEOUT_MS = 18_000
+// This can call Groq TWICE in one request (tool-selection, then the final
+// answer once tool results are in). Groq's LPU inference is dramatically
+// faster than Gemini's ever was (measured 300ms-1s for a tool-calling
+// round trip, vs Gemini routinely taking 20s+ for a single call) — the
+// frontend's own 60s fetch timeout (shared/lib/supabase.ts) has enormous
+// headroom here now, but each call still gets a real per-call budget
+// rather than trusting Groq to always be fast under real load.
+const GROQ_TIMEOUT_MS = 20_000
 
 const ASSIGNEE_ENUM = ['anyone', 'me'] as const
 
 const TOOLS = [
   {
-    functionDeclarations: [
-      {
-        name: 'lookup_hearings',
-        description: 'Look up court hearings (mentions, rulings, appearances) in a date range, with the matter, client and assigned advocates for each.',
-        parameters: {
-          type: 'object',
-          properties: {
-            from_date: { type: 'string', description: 'Start date, inclusive, ISO 8601 (yyyy-mm-dd or full timestamp).' },
-            to_date: { type: 'string', description: 'End date, inclusive, ISO 8601.' },
-            status: { type: 'string', enum: ['scheduled', 'held', 'adjourned', 'cancelled'], description: 'Optional status filter.' },
-          },
-          required: ['from_date', 'to_date'],
+    type: 'function',
+    function: {
+      name: 'lookup_hearings',
+      description: 'Look up court hearings (mentions, rulings, appearances) in a date range, with the matter, client and assigned advocates for each.',
+      parameters: {
+        type: 'object',
+        properties: {
+          from_date: { type: 'string', description: 'Start date, inclusive, ISO 8601 (yyyy-mm-dd or full timestamp).' },
+          to_date: { type: 'string', description: 'End date, inclusive, ISO 8601.' },
+          status: { type: 'string', enum: ['scheduled', 'held', 'adjourned', 'cancelled'], description: 'Optional status filter.' },
         },
+        required: ['from_date', 'to_date'],
       },
-      {
-        name: 'lookup_tasks',
-        description: 'Look up tasks due in a date range, with status, priority, matter and assignee for each.',
-        parameters: {
-          type: 'object',
-          properties: {
-            from_date: { type: 'string', description: 'Start due-date, inclusive, ISO 8601 (yyyy-mm-dd).' },
-            to_date: { type: 'string', description: 'End due-date, inclusive, ISO 8601 (yyyy-mm-dd).' },
-            status: { type: 'string', enum: ['todo', 'in_progress', 'done', 'cancelled'], description: 'Optional status filter.' },
-            assignee: { type: 'string', enum: ASSIGNEE_ENUM as unknown as string[], description: '"me" to filter to the asking user\'s own tasks, "anyone" (default) for everyone\'s.' },
-          },
-          required: ['from_date', 'to_date'],
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'lookup_tasks',
+      description: 'Look up tasks due in a date range, with status, priority, matter and assignee for each.',
+      parameters: {
+        type: 'object',
+        properties: {
+          from_date: { type: 'string', description: 'Start due-date, inclusive, ISO 8601 (yyyy-mm-dd).' },
+          to_date: { type: 'string', description: 'End due-date, inclusive, ISO 8601 (yyyy-mm-dd).' },
+          status: { type: 'string', enum: ['todo', 'in_progress', 'done', 'cancelled'], description: 'Optional status filter.' },
+          assignee: { type: 'string', enum: ASSIGNEE_ENUM as unknown as string[], description: '"me" to filter to the asking user\'s own tasks, "anyone" (default) for everyone\'s.' },
         },
+        required: ['from_date', 'to_date'],
       },
-      {
-        name: 'lookup_appointments',
-        description: 'Look up client meetings and other non-court appointments in a date range, with client, matter and the assigned staff member for each.',
-        parameters: {
-          type: 'object',
-          properties: {
-            from_date: { type: 'string', description: 'Start date, inclusive, ISO 8601.' },
-            to_date: { type: 'string', description: 'End date, inclusive, ISO 8601.' },
-            status: { type: 'string', enum: ['scheduled', 'completed', 'cancelled', 'no_show'], description: 'Optional status filter.' },
-            assignee: { type: 'string', enum: ASSIGNEE_ENUM as unknown as string[], description: '"me" to filter to the asking user\'s own appointments, "anyone" (default) for everyone\'s.' },
-          },
-          required: ['from_date', 'to_date'],
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'lookup_appointments',
+      description: 'Look up client meetings and other non-court appointments in a date range, with client, matter and the assigned staff member for each.',
+      parameters: {
+        type: 'object',
+        properties: {
+          from_date: { type: 'string', description: 'Start date, inclusive, ISO 8601.' },
+          to_date: { type: 'string', description: 'End date, inclusive, ISO 8601.' },
+          status: { type: 'string', enum: ['scheduled', 'completed', 'cancelled', 'no_show'], description: 'Optional status filter.' },
+          assignee: { type: 'string', enum: ASSIGNEE_ENUM as unknown as string[], description: '"me" to filter to the asking user\'s own appointments, "anyone" (default) for everyone\'s.' },
         },
+        required: ['from_date', 'to_date'],
       },
-    ],
+    },
   },
 ]
 
-type FunctionCallPart = { functionCall: { name: string; id?: string; args?: Record<string, unknown> } }
+type ToolCall = { id: string; type: 'function'; function: { name: string; arguments: string } }
+type ChatMessage = { role: string; content: string | null; tool_calls?: ToolCall[]; tool_call_id?: string; name?: string }
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -118,7 +121,7 @@ Deno.serve(async (req: Request) => {
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
   const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const ANON = Deno.env.get('SUPABASE_ANON_KEY')!
-  const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
+  const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY')
 
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return json({ error: 'Missing authorization' }, 401)
@@ -153,7 +156,7 @@ Deno.serve(async (req: Request) => {
     .maybeSingle()
   if (!membership) return json({ error: 'You are not an active member of this organization' }, 403)
 
-  if (!GEMINI_API_KEY) return json({ error: 'The assistant is not configured yet — contact support.' }, 400)
+  if (!GROQ_API_KEY) return json({ error: 'The assistant is not configured yet — contact support.' }, 400)
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { autoRefreshToken: false, persistSession: false } })
 
@@ -172,46 +175,41 @@ Deno.serve(async (req: Request) => {
     .limit(HISTORY_LIMIT)
 
   const todayIso = new Date().toISOString().slice(0, 10)
-  const systemInstruction = [
+  const systemPrompt = [
     'You are a legal practice assistant that answers schedule and workload questions for the firm staff member asking — hearings, tasks and appointments only.',
-    'Plain text only — this is displayed as-is with no markdown rendering. No **bold**, no # headings, no * or - bullet symbols; use plain sentences or simple "Name — detail" lines instead.',
+    'Plain text only — this is displayed as-is with no markdown rendering. No **bold**, no # headings, no * or - bullet symbols, no | tables; use plain sentences or simple "Name — detail" lines instead.',
     `Today's date is ${todayIso}.`,
     'Use the lookup_hearings, lookup_tasks and lookup_appointments tools to find real data before answering anything about dates, names, or counts — never guess or invent them.',
     'If asked about anything outside schedule/workload (clients, billing, matter documents or content, firm settings, etc.), say that is outside what you can help with here and suggest the relevant page instead.',
     'Only report what the tools return — the tools already only return what this user is permitted to see, so if something is missing from the results, say you found nothing rather than assuming access was the issue.',
   ].join('\n')
 
+  // Stored roles ('user' / 'assistant') already match OpenAI-compatible
+  // vocabulary directly — unlike Gemini, no 'model' translation needed.
   const orderedHistory = (history ?? []).slice().reverse()
-  const contents: Array<{ role: string; parts: unknown[] }> = [
-    ...orderedHistory.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-    { role: 'user', parts: [{ text: message }] },
+  const messages: ChatMessage[] = [
+    { role: 'system', content: systemPrompt },
+    ...orderedHistory.map((m) => ({ role: m.role, content: m.content })),
+    { role: 'user', content: message },
   ]
 
-  let geminiFailureReason: string | null = null
+  let groqFailureReason: string | null = null
 
-  async function callGemini() {
+  async function callGroq() {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS)
+    const timeoutId = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS)
     try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemInstruction }] },
-            contents,
-            tools: TOOLS,
-            generationConfig: { maxOutputTokens: MAX_TOKENS },
-          }),
-          signal: controller.signal,
-        },
-      )
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: GROQ_MODEL, messages, tools: TOOLS, tool_choice: 'auto', max_tokens: MAX_TOKENS }),
+        signal: controller.signal,
+      })
       clearTimeout(timeoutId)
       if (!res.ok) {
         const errText = await res.text().catch(() => '')
-        console.error('Gemini API error:', res.status, errText)
-        geminiFailureReason = res.status === 503 || res.status === 429
+        console.error('Groq API error:', res.status, errText)
+        groqFailureReason = res.status === 503 || res.status === 429
           ? 'AI is experiencing high demand right now. Please try again in a moment.'
           : 'Could not get a reply right now. Please try again.'
         return null
@@ -219,8 +217,8 @@ Deno.serve(async (req: Request) => {
       return res.json()
     } catch {
       clearTimeout(timeoutId)
-      console.error('Gemini request timed out')
-      geminiFailureReason = 'AI is taking too long to respond right now — this is usually temporary. Please try again in a moment.'
+      console.error('Groq request timed out')
+      groqFailureReason = 'AI is taking too long to respond right now — this is usually temporary. Please try again in a moment.'
       return null
     }
   }
@@ -322,32 +320,31 @@ Deno.serve(async (req: Request) => {
     return { error: `Unknown tool: ${name}` }
   }
 
-  const first = await callGemini()
-  if (!first) return json({ error: geminiFailureReason ?? 'Could not get a reply right now. Please try again.' }, 502)
+  const first = await callGroq()
+  if (!first) return json({ error: groqFailureReason ?? 'Could not get a reply right now. Please try again.' }, 502)
 
-  const firstParts: Array<{ text?: string } | FunctionCallPart> = first.candidates?.[0]?.content?.parts ?? []
-  const calls = firstParts.filter((p): p is FunctionCallPart => 'functionCall' in p)
+  const firstMessage: ChatMessage = first.choices?.[0]?.message ?? { role: 'assistant', content: '' }
+  const calls: ToolCall[] = firstMessage.tool_calls ?? []
 
   let finalData = first
   if (calls.length > 0) {
-    const responses = await Promise.all(
-      calls.map(async (c) => ({
-        functionResponse: {
-          name: c.functionCall.name,
-          ...(c.functionCall.id ? { id: c.functionCall.id } : {}),
-          response: { result: await runTool(c.functionCall.name, c.functionCall.args ?? {}) },
-        },
-      })),
-    )
-    contents.push({ role: 'model', parts: firstParts })
-    contents.push({ role: 'user', parts: responses })
-    const second = await callGemini()
-    if (!second) return json({ error: geminiFailureReason ?? 'Could not get a reply right now. Please try again.' }, 502)
+    messages.push(firstMessage)
+    for (const c of calls) {
+      let args: Record<string, unknown> = {}
+      try {
+        args = JSON.parse(c.function.arguments || '{}')
+      } catch {
+        // Malformed JSON from the model — treat as no args rather than fail the whole request.
+      }
+      const result = await runTool(c.function.name, args)
+      messages.push({ role: 'tool', tool_call_id: c.id, name: c.function.name, content: JSON.stringify(result) })
+    }
+    const second = await callGroq()
+    if (!second) return json({ error: groqFailureReason ?? 'Could not get a reply right now. Please try again.' }, 502)
     finalData = second
   }
 
-  const finalParts: { text?: string }[] = finalData.candidates?.[0]?.content?.parts ?? []
-  const reply: string = finalParts.map((p) => p.text ?? '').join('').trim()
+  const reply: string = (finalData.choices?.[0]?.message?.content ?? '').trim()
   if (!reply) return json({ error: 'The assistant did not return a reply. Please try again.' }, 502)
 
   const { error: insertErr } = await admin.from('assistant_messages').insert([

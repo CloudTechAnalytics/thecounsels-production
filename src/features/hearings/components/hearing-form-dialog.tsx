@@ -1,10 +1,17 @@
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { UserPlus, X } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useClients } from '@/features/clients/hooks/use-clients'
-import { useMatters } from '@/features/matters/hooks/use-matters'
-import { useCreateHearing, useUpdateHearing } from '@/features/hearings/hooks/use-hearings'
+import { useMatters, useFirmMembers } from '@/features/matters/hooks/use-matters'
+import {
+  useCreateHearing,
+  useUpdateHearing,
+  useHearingSupportingLawyers,
+  useAddHearingSupportingLawyer,
+  useRemoveHearingSupportingLawyer,
+} from '@/features/hearings/hooks/use-hearings'
 import { hearingSchema, type HearingFormValues } from '@/features/hearings/schemas'
 import { HEARING_TYPES, HEARING_STATUS_META, type HearingRow } from '@/features/hearings/types'
 import { Button } from '@/shared/components/ui/button'
@@ -25,6 +32,8 @@ import { toast } from '@/shared/components/ui/sonner'
 import { friendlyErrorMessage } from '@/shared/lib/errors'
 import { isMatterClosed } from '@/features/matters/types'
 import { BranchPicker } from '@/features/branches/components/branch-picker'
+import { memberInBranch, memberLabel } from '@/shared/lib/member-picker'
+import { initialsOf } from '@/shared/lib/format'
 
 const NONE = '__none__'
 
@@ -48,7 +57,75 @@ function toDefaults(hearing?: HearingRow | null, presetDate?: string, presetMatt
     notes: hearing?.notes ?? '',
     outcome: hearing?.outcome ?? '',
     branchId: hearing?.branch_id ?? '',
+    assignedLawyerId: hearing?.assigned_lawyer_id ?? '',
   }
+}
+
+/** Live add/remove for hearing_supporting_lawyers (0140) — only meaningful
+ * once the hearing actually exists (needs a real hearing_id to insert
+ * against), same reasoning MatterTeamCard's own team list only appears on
+ * an existing matter, never during creation. */
+function SupportingLawyersSection({ hearingId, branchId }: { hearingId: string; branchId: string }) {
+  const { activeOrgId, profile } = useAuth()
+  const { data: members } = useFirmMembers(activeOrgId)
+  const { data: supporting, isLoading } = useHearingSupportingLawyers(hearingId)
+  const add = useAddHearingSupportingLawyer(activeOrgId, hearingId, profile?.id ?? null)
+  const remove = useRemoveHearingSupportingLawyer(hearingId)
+  const [picked, setPicked] = React.useState('')
+
+  const supportingIds = new Set((supporting ?? []).map((s) => s.user_id))
+  const available = (members ?? []).filter((m) => memberInBranch(m, branchId) && !supportingIds.has(m.user_id))
+
+  const handleAdd = async () => {
+    if (!picked) return
+    try {
+      await add.mutateAsync(picked)
+      setPicked('')
+    } catch (err) {
+      toast.error('Could not add', { description: friendlyErrorMessage(err) })
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <FormLabel>Supporting lawyers</FormLabel>
+      {isLoading ? null : supporting && supporting.length > 0 ? (
+        <ul className="space-y-1.5">
+          {supporting.map((s) => (
+            <li key={s.id} className="flex items-center gap-2.5 rounded-md border border-border px-2.5 py-1.5">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/12 text-[10px] font-semibold text-primary">
+                {initialsOf(s.user?.full_name, 'U')}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm">{s.user?.full_name ?? 'Unknown'}</span>
+              <button
+                type="button"
+                aria-label={`Remove ${s.user?.full_name ?? 'lawyer'}`}
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => remove.mutate(s.user_id)}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">No supporting lawyers added.</p>
+      )}
+      <div className="flex gap-2">
+        <Select value={picked} onValueChange={setPicked}>
+          <SelectTrigger className="flex-1"><SelectValue placeholder="Add a supporting lawyer…" /></SelectTrigger>
+          <SelectContent>
+            {available.map((m) => (
+              <SelectItem key={m.id} value={m.user_id}>{memberLabel(m)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button type="button" variant="outline" size="icon" disabled={!picked || add.isPending} onClick={handleAdd} aria-label="Add">
+          <UserPlus className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 export function HearingFormDialog({
@@ -67,6 +144,7 @@ export function HearingFormDialog({
   const { activeOrgId, profile } = useAuth()
   useClients(activeOrgId, {}) // warm cache
   const { data: allMatters } = useMatters(activeOrgId, {})
+  const { data: members } = useFirmMembers(activeOrgId)
   // A closed matter is read-only — scheduling/editing a hearing under one
   // would always fail, so it's excluded from fresh selection. Editing an
   // existing hearing whose matter is already closed still shows that
@@ -80,12 +158,23 @@ export function HearingFormDialog({
 
   const form = useForm<HearingFormValues>({ resolver: zodResolver(hearingSchema), defaultValues: toDefaults(hearing) })
   const matterIdWatch = form.watch('matterId')
+  const branchIdWatch = form.watch('branchId') ?? ''
+  // A matter-linked hearing inherits that matter's own branch for
+  // filtering who's eligible as Assigned/Supporting Lawyer; a standalone
+  // hearing uses its own branch field directly.
+  const selectedMatter = matters.find((m) => m.id === matterIdWatch)
+  const effectiveBranchId = selectedMatter?.branch_id ?? branchIdWatch
+  const lawyerOptions = (members ?? []).filter((m) => memberInBranch(m, effectiveBranchId))
   React.useEffect(() => {
     if (open) form.reset(toDefaults(hearing, presetDate, presetMatterId))
   }, [open, hearing, presetDate, presetMatterId, form])
 
   const onSubmit = async (values: HearingFormValues) => {
-    const clean = { ...values, matterId: values.matterId === NONE ? '' : values.matterId }
+    const clean = {
+      ...values,
+      matterId: values.matterId === NONE ? '' : values.matterId,
+      assignedLawyerId: values.assignedLawyerId === NONE ? '' : values.assignedLawyerId,
+    }
     try {
       if (hearing) await update.mutateAsync({ id: hearing.id, values: clean })
       else await create.mutateAsync(clean)
@@ -244,6 +333,29 @@ export function HearingFormDialog({
               />
             </div>
 
+            <FormField
+              control={form.control}
+              name="assignedLawyerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Assigned Lawyer</FormLabel>
+                  <Select value={field.value || NONE} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Who's representing at this hearing" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={NONE}>Unassigned</SelectItem>
+                      {lawyerOptions.map((m) => (
+                        <SelectItem key={m.id} value={m.user_id}>{memberLabel(m)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+
             {(!matterIdWatch || matterIdWatch === NONE) && (
               <FormField
                 control={form.control}
@@ -255,6 +367,13 @@ export function HearingFormDialog({
                   </FormItem>
                 )}
               />
+            )}
+
+            {hearing && (
+              <>
+                <Separator />
+                <SupportingLawyersSection hearingId={hearing.id} branchId={effectiveBranchId} />
+              </>
             )}
 
             <Separator />

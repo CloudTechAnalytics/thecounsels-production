@@ -12,6 +12,7 @@ export const hearingSchema = z.object({
   notes: z.string().optional(),
   outcome: z.string().optional(),
   branchId: z.string().optional(),
+  assignedLawyerId: z.string().optional(),
 })
 
 export type HearingFormValues = z.infer<typeof hearingSchema>

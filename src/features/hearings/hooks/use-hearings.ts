@@ -61,3 +61,27 @@ export function useDeleteHearing(organizationId: string | null) {
     onSuccess: invalidate,
   })
 }
+
+export function useHearingSupportingLawyers(hearingId: string | undefined) {
+  return useQuery({
+    queryKey: ['hearing-supporting-lawyers', hearingId],
+    enabled: Boolean(hearingId),
+    queryFn: () => hearingsService.listSupportingLawyers(hearingId!),
+  })
+}
+
+export function useAddHearingSupportingLawyer(organizationId: string | null, hearingId: string, assignedBy: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => hearingsService.addSupportingLawyer(organizationId!, hearingId, userId, assignedBy),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hearing-supporting-lawyers', hearingId] }),
+  })
+}
+
+export function useRemoveHearingSupportingLawyer(hearingId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => hearingsService.removeSupportingLawyer(hearingId, userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hearing-supporting-lawyers', hearingId] }),
+  })
+}

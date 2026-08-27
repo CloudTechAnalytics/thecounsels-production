@@ -7,6 +7,7 @@ import { useCreateMatter, useUpdateMatter, useFirmMembers } from '@/features/mat
 import { matterSchema, type MatterFormValues } from '@/features/matters/schemas'
 import { PRACTICE_AREAS, PRIORITIES, MATTER_STATUSES, MATTER_STATUS_META, type MatterRow } from '@/features/matters/types'
 import { BranchPicker } from '@/features/branches/components/branch-picker'
+import { memberInBranch, memberLabel } from '@/shared/lib/member-picker'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
@@ -44,6 +45,7 @@ function toDefaults(matter?: MatterRow | null): MatterFormValues {
     status: matter?.status ?? 'open',
     priority: (matter?.priority as MatterFormValues['priority']) ?? 'medium',
     leadLawyerId: matter?.lead_lawyer_id ?? '',
+    responsiblePartnerId: matter?.responsible_partner_id ?? '',
     opposingCounsel: matter?.opposing_counsel ?? '',
     court: matter?.court ?? '',
     judge: matter?.judge ?? '',
@@ -51,6 +53,7 @@ function toDefaults(matter?: MatterRow | null): MatterFormValues {
     branchId: matter?.branch_id ?? '',
   }
 }
+
 
 export function MatterFormDialog({
   matter,
@@ -68,6 +71,9 @@ export function MatterFormDialog({
   const update = useUpdateMatter(activeOrgId)
 
   const form = useForm<MatterFormValues>({ resolver: zodResolver(matterSchema), defaultValues: toDefaults(matter) })
+  const branchIdWatch = form.watch('branchId') ?? ''
+  const lawyerOptions = (members ?? []).filter((m) => memberInBranch(m, branchIdWatch))
+  const partnerOptions = lawyerOptions.filter((m) => m.role?.key === 'partner' || m.role?.key === 'managing_partner')
   React.useEffect(() => {
     if (open) form.reset(toDefaults(matter))
   }, [open, matter, form])
@@ -78,6 +84,7 @@ export function MatterFormDialog({
       clientId: values.clientId === NONE ? '' : values.clientId,
       practiceArea: values.practiceArea === NONE ? '' : values.practiceArea,
       leadLawyerId: values.leadLawyerId === NONE ? '' : values.leadLawyerId,
+      responsiblePartnerId: values.responsiblePartnerId === NONE ? '' : values.responsiblePartnerId,
     }
     try {
       if (matter) await update.mutateAsync({ id: matter.id, values: clean })
@@ -165,7 +172,7 @@ export function MatterFormDialog({
               />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="status"
@@ -212,6 +219,24 @@ export function MatterFormDialog({
                   </FormItem>
                 )}
               />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="branchId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Branch</FormLabel>
+                  <BranchPicker organizationId={activeOrgId} value={field.value ?? ''} onChange={field.onChange} mode="form" restrictToViewer />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Filtered to the branch picked above — pick a branch first
+                and these narrow to people who actually work there (plus
+                org-wide leadership, always eligible regardless of branch). */}
+            <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="leadLawyerId"
@@ -226,9 +251,33 @@ export function MatterFormDialog({
                       </FormControl>
                       <SelectContent>
                         <SelectItem value={NONE}>Unassigned</SelectItem>
-                        {members?.map((m) => (
+                        {lawyerOptions.map((m) => (
                           <SelectItem key={m.id} value={m.user_id}>
-                            {m.profile?.full_name ?? m.profile?.email}
+                            {memberLabel(m)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="responsiblePartnerId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Responsible Partner</FormLabel>
+                    <Select value={field.value || NONE} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Assign" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={NONE}>Unassigned</SelectItem>
+                        {partnerOptions.map((m) => (
+                          <SelectItem key={m.id} value={m.user_id}>
+                            {memberLabel(m)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -237,18 +286,6 @@ export function MatterFormDialog({
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="branchId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Branch</FormLabel>
-                  <BranchPicker organizationId={activeOrgId} value={field.value ?? ''} onChange={field.onChange} mode="form" restrictToViewer />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <Separator />
             <div className="grid gap-4 sm:grid-cols-3">

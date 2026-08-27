@@ -11,7 +11,7 @@ import {
 } from '@/features/matters/types'
 
 const MATTER_SELECT =
-  '*, client:clients(id, display_name, type), lead_lawyer:profiles!matters_lead_lawyer_id_fkey(id, full_name, avatar_url)'
+  '*, client:clients(id, display_name, type), lead_lawyer:profiles!matters_lead_lawyer_id_fkey(id, full_name, avatar_url), responsible_partner:profiles!matters_responsible_partner_id_fkey(id, full_name, avatar_url)'
 
 export interface MatterFilters {
   search?: string
@@ -29,6 +29,7 @@ function toRow(values: MatterFormValues) {
     status: values.status,
     priority: values.priority,
     lead_lawyer_id: values.leadLawyerId || null,
+    responsible_partner_id: values.responsiblePartnerId || null,
     opposing_counsel: values.opposingCounsel?.trim() || null,
     court: values.court?.trim() || null,
     judge: values.judge?.trim() || null,

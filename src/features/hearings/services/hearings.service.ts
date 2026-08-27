@@ -1,9 +1,10 @@
 import { supabase } from '@/shared/lib/supabase'
 import type { HearingStatus } from '@/shared/types/database.types'
 import type { HearingFormValues } from '@/features/hearings/schemas'
-import type { HearingRow } from '@/features/hearings/types'
+import type { HearingRow, HearingSupportingLawyerRow } from '@/features/hearings/types'
 
-const SELECT = '*, matter:matters(id, title, matter_number, status)'
+const SELECT =
+  '*, matter:matters(id, title, matter_number, status), assigned_lawyer:profiles!hearings_assigned_lawyer_id_fkey(id, full_name, avatar_url)'
 
 export interface HearingFilters {
   search?: string
@@ -29,6 +30,7 @@ function toRow(values: HearingFormValues) {
     // Only meaningful for standalone (matterId-less) hearings — see the
     // identical note in tasks.service.ts's toRow().
     branch_id: values.matterId ? null : values.branchId || null,
+    assigned_lawyer_id: values.assignedLawyerId || null,
   }
 }
 
@@ -123,6 +125,30 @@ export const hearingsService = {
       p_entity_id: id,
       p_summary: `Adjourned "${title}"${reason.trim() ? ` — ${reason.trim()}` : ''}`,
     })
+  },
+
+  // Supporting lawyers — plural, mirrors matters.service.ts's
+  // listAssignments/assignMember/unassignMember exactly (0140).
+  async listSupportingLawyers(hearingId: string): Promise<HearingSupportingLawyerRow[]> {
+    const { data, error } = await supabase
+      .from('hearing_supporting_lawyers')
+      .select('*, user:profiles!hearing_supporting_lawyers_user_id_fkey(id, full_name, avatar_url)')
+      .eq('hearing_id', hearingId)
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    return (data ?? []) as unknown as HearingSupportingLawyerRow[]
+  },
+
+  async addSupportingLawyer(organizationId: string, hearingId: string, userId: string, assignedBy: string | null): Promise<void> {
+    const { error } = await supabase
+      .from('hearing_supporting_lawyers')
+      .insert({ organization_id: organizationId, hearing_id: hearingId, user_id: userId, assigned_by: assignedBy })
+    if (error) throw error
+  },
+
+  async removeSupportingLawyer(hearingId: string, userId: string): Promise<void> {
+    const { error } = await supabase.from('hearing_supporting_lawyers').delete().eq('hearing_id', hearingId).eq('user_id', userId)
+    if (error) throw error
   },
 
   async remove(id: string, organizationId: string, title: string): Promise<void> {

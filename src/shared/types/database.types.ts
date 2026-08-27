@@ -592,6 +592,7 @@ export interface Database {
           practice_area: string | null
           status: MatterStatus
           lead_lawyer_id: string | null
+          responsible_partner_id: string | null
           opposing_counsel: string | null
           court: string | null
           judge: string | null
@@ -613,6 +614,7 @@ export interface Database {
           practice_area?: string | null
           status?: MatterStatus
           lead_lawyer_id?: string | null
+          responsible_partner_id?: string | null
           opposing_counsel?: string | null
           court?: string | null
           judge?: string | null
@@ -1360,6 +1362,7 @@ export interface Database {
           notes: string | null
           created_by: string | null
           branch_id: string | null
+          assigned_lawyer_id: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -1377,6 +1380,7 @@ export interface Database {
           notes?: string | null
           created_by?: string | null
           branch_id?: string | null
+          assigned_lawyer_id?: string | null
         }
         Update: Partial<Database['public']['Tables']['hearings']['Insert']>
         Relationships: [
@@ -1388,6 +1392,26 @@ export interface Database {
             referencedColumns: ['id']
           },
         ]
+      }
+      hearing_supporting_lawyers: {
+        Row: {
+          id: string
+          organization_id: string
+          hearing_id: string
+          user_id: string
+          assigned_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          hearing_id: string
+          user_id: string
+          assigned_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['hearing_supporting_lawyers']['Insert']>
+        Relationships: []
       }
       appointments: {
         Row: {

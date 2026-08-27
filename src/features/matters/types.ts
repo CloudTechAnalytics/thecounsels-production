@@ -4,6 +4,7 @@ import type { Client, Matter, MatterAssignment, MatterEvent, MatterNote, MatterS
 export interface MatterRow extends Matter {
   client: Pick<Client, 'id' | 'display_name' | 'type'> | null
   lead_lawyer: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
+  responsible_partner: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
 }
 
 export interface MatterAssignmentRow extends MatterAssignment {

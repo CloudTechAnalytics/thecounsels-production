@@ -60,6 +60,7 @@ export type RoleKey =
   | 'hr_administrator'
   | 'hr_manager'
   | 'hr_officer'
+  | 'it_administrator'
 
 type Timestamps = {
   created_at: string

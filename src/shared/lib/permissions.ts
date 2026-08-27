@@ -101,6 +101,7 @@ export const ROLE_META: Record<RoleKey, { label: string; rank: number; group: st
   finance: { label: 'Finance', rank: 65, group: 'Operations' },
   hr: { label: 'HR', rank: 66, group: 'Operations' },
   hr_officer: { label: 'HR Officer', rank: 67, group: 'HR' },
+  it_administrator: { label: 'IT Administrator', rank: 68, group: 'IT' },
   secretary: { label: 'Secretary', rank: 70, group: 'Support' },
   receptionist: { label: 'Receptionist', rank: 80, group: 'Support' },
 }

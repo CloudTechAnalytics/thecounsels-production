@@ -1,5 +1,5 @@
 import { formatDistanceToNow, format } from 'date-fns'
-import { Download, FileJson, Loader2 } from 'lucide-react'
+import { Download, FileSpreadsheet, Loader2 } from 'lucide-react'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useDataExportRequests, useRequestDataExport } from '@/features/administration/hooks/use-data-export'
 import { dataExportService } from '@/features/administration/services/data-export.service'
@@ -72,7 +72,7 @@ export function DataExportPanel({ organizationId }: { organizationId: string | n
             }
           }}
         >
-          <FileJson className="h-4 w-4" /> {active ? 'Export in progress…' : 'Request export'}
+          <FileSpreadsheet className="h-4 w-4" /> {active ? 'Export in progress…' : 'Request export'}
         </Button>
       </Card>
 
@@ -86,7 +86,7 @@ export function DataExportPanel({ organizationId }: { organizationId: string | n
                 {r.status === 'processing' ? (
                   <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
                 ) : (
-                  <FileJson className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <FileSpreadsheet className="h-4 w-4 shrink-0 text-muted-foreground" />
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">

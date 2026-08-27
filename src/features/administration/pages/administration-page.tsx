@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Building2, Users, ShieldCheck, CreditCard, LifeBuoy, HardDrive, MapPin, FileJson } from 'lucide-react'
+import { Building2, Users, ShieldCheck, CreditCard, LifeBuoy, HardDrive, MapPin, FileSpreadsheet } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { MembersPanel } from '@/features/administration/components/members-panel'
@@ -21,7 +21,7 @@ const TABS = [
   { key: 'roles', label: 'Roles & Permissions', icon: ShieldCheck },
   { key: 'plan', label: 'Plan & Billing', icon: CreditCard },
   { key: 'storage', label: 'Storage', icon: HardDrive },
-  { key: 'export', label: 'Data Export', icon: FileJson },
+  { key: 'export', label: 'Data Export', icon: FileSpreadsheet },
   { key: 'support', label: 'Support', icon: LifeBuoy },
 ] as const
 type Tab = (typeof TABS)[number]['key']

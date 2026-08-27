@@ -68,7 +68,7 @@ export function StorageManagement({ organizationId }: { organizationId: string |
             Storage almost full — {formatStorage(usedBytes)} of {formatStorage(limitBytes)} used. Uploads may soon be blocked.
           </p>
         ) : percent >= 75 ? (
-          <p className="mt-4 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-foreground">
+          <p className="mt-4 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
             You've used {percent.toFixed(0)}% of your storage allowance. Consider removing unused files or upgrading your plan.
           </p>
         ) : null}

@@ -7,7 +7,7 @@ import { PasswordStrength } from '@/features/auth/components/password-strength'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { resetPasswordSchema, type ResetPasswordValues } from '@/features/auth/schemas'
 import { Button } from '@/shared/components/ui/button'
-import { Input } from '@/shared/components/ui/input'
+import { PasswordInput } from '@/shared/components/ui/password-input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
@@ -51,7 +51,7 @@ export function ChangePasswordPage() {
       title="Set your password"
       subtitle="You signed in with a temporary password. Choose a new one to continue."
     >
-      <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning-foreground">
+      <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
         <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
         <p>For your security, this is required before you can access your workspace.</p>
       </div>
@@ -64,7 +64,7 @@ export function ChangePasswordPage() {
               <FormItem>
                 <FormLabel>New password</FormLabel>
                 <FormControl>
-                  <Input type="password" autoComplete="new-password" placeholder="••••••••••" {...field} />
+                  <PasswordInput autoComplete="new-password" placeholder="••••••••••" {...field} />
                 </FormControl>
                 <PasswordStrength value={passwordValue} />
                 <FormMessage />
@@ -78,7 +78,7 @@ export function ChangePasswordPage() {
               <FormItem>
                 <FormLabel>Confirm password</FormLabel>
                 <FormControl>
-                  <Input type="password" autoComplete="new-password" placeholder="••••••••••" {...field} />
+                  <PasswordInput autoComplete="new-password" placeholder="••••••••••" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

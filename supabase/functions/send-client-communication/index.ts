@@ -69,7 +69,7 @@ function emailShell(firmName: string, subject: string, html: string): string {
   </body></html>`
 }
 
-async function sendEmail(params: { to: string; subject: string; html: string }): Promise<{ ok: boolean; error?: string }> {
+async function sendEmail(params: { to: string; cc?: string[]; subject: string; html: string }): Promise<{ ok: boolean; error?: string }> {
   const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
   if (!RESEND_API_KEY) return { ok: false, error: 'Email is not configured.' }
   const from = Deno.env.get('RESEND_FROM_EMAIL') ?? 'The Counsel <notifications@thecounsels.org>'
@@ -77,7 +77,13 @@ async function sendEmail(params: { to: string; subject: string; html: string }):
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to: [params.to], subject: params.subject, html: params.html }),
+      body: JSON.stringify({
+        from,
+        to: [params.to],
+        ...(params.cc && params.cc.length > 0 ? { cc: params.cc } : {}),
+        subject: params.subject,
+        html: params.html,
+      }),
     })
     if (!res.ok) {
       const body = await res.text()
@@ -122,8 +128,30 @@ Deno.serve(async (req: Request) => {
   const { data: org } = await admin.from('organizations').select('name').eq('id', comm.organization_id).maybeSingle()
   const firmName = org?.name ?? 'The Counsel'
 
+  // Copy the matter's own team on client-facing correspondence — the
+  // lawyers actually working the matter should see what went out to the
+  // client, not find out secondhand. lead_lawyer_id + matter_assignments
+  // is the same "matter team" MatterTeamCard shows ("beyond the lead
+  // lawyer, who else can access this matter"); no matter_id (a client-
+  // level message) means no team to copy. The sender themself is excluded
+  // — they already have their own copy of what they just sent.
+  let cc: string[] = []
+  if (comm.matter_id) {
+    const { data: matter } = await admin.from('matters').select('lead_lawyer_id').eq('id', comm.matter_id).maybeSingle()
+    const { data: assignments } = await admin.from('matter_assignments').select('user_id').eq('matter_id', comm.matter_id)
+    const teamIds = new Set<string>([
+      ...(matter?.lead_lawyer_id ? [matter.lead_lawyer_id] : []),
+      ...(assignments ?? []).map((a) => a.user_id),
+    ])
+    teamIds.delete(comm.sent_by)
+    if (teamIds.size > 0) {
+      const { data: profiles } = await admin.from('profiles').select('email').in('id', [...teamIds])
+      cc = (profiles ?? []).map((p) => p.email).filter((e): e is string => Boolean(e))
+    }
+  }
+
   const html = emailShell(firmName, comm.subject, bodyHtml(comm.body))
-  const result = await sendEmail({ to: comm.recipient_email, subject: comm.subject, html })
+  const result = await sendEmail({ to: comm.recipient_email, cc, subject: comm.subject, html })
   if (!result.ok) return fail(result.error ?? 'Email send failed')
 
   await admin.from('client_communications').update({ status: 'SENT', sent_at: new Date().toISOString() }).eq('id', id)

@@ -6,7 +6,7 @@ import { PasswordStrength } from '@/features/auth/components/password-strength'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { resetPasswordSchema, type ResetPasswordValues } from '@/features/auth/schemas'
 import { Button } from '@/shared/components/ui/button'
-import { Input } from '@/shared/components/ui/input'
+import { PasswordInput } from '@/shared/components/ui/password-input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
@@ -49,7 +49,7 @@ export function ResetPasswordPage() {
               <FormItem>
                 <FormLabel>New password</FormLabel>
                 <FormControl>
-                  <Input type="password" autoComplete="new-password" placeholder="••••••••••" {...field} />
+                  <PasswordInput autoComplete="new-password" placeholder="••••••••••" {...field} />
                 </FormControl>
                 <PasswordStrength value={passwordValue} />
                 <FormMessage />
@@ -63,7 +63,7 @@ export function ResetPasswordPage() {
               <FormItem>
                 <FormLabel>Confirm password</FormLabel>
                 <FormControl>
-                  <Input type="password" autoComplete="new-password" placeholder="••••••••••" {...field} />
+                  <PasswordInput autoComplete="new-password" placeholder="••••••••••" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

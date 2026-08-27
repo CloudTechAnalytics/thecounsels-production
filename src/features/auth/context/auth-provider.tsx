@@ -160,6 +160,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         permissions = new Set<PermissionKey>()
       }
 
+      // Same "freshly-issued JWT" eventual-consistency gotcha as the
+      // memberships-empty retry above, just hitting a different query: a
+      // real role is never actually permission-less (every seeded role
+      // gets at least dashboard.view), so an active membership somehow
+      // resolving to zero permissions is a reliable enough signal this hit
+      // the same race — not a real "this role can do nothing" state. Left
+      // unguarded before, this produced a real reported bug: sign back in,
+      // memberships load fine (so THAT retry never triggers), but every
+      // permission check is silently false — every action button hidden
+      // or inert — until something else (e.g. editing your own profile,
+      // which calls refresh()) happens to re-run load() on a now-settled
+      // token and get the real permissions.
+      if (!isRetry && !isPlatformAdmin && activeMembership && permissions.size === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 800))
+        return load(userId, true)
+      }
+
       if (activeOrgId) localStorage.setItem(ACTIVE_ORG_KEY, activeOrgId)
 
       setState({

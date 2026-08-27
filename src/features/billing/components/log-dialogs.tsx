@@ -145,7 +145,7 @@ export function TimeEntryDialog({
         </DialogHeader>
 
         {locked && (
-          <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+          <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
             {isPartner
               ? 'This entry has been invoiced — use Reopen from the table to unlock it before editing.'
               : 'This entry has been invoiced and is locked. Ask a partner to reopen it before editing.'}
@@ -383,7 +383,7 @@ export function ExpenseDialog({
         </DialogHeader>
 
         {invoiced && (
-          <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+          <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
             This expense has been invoiced and can no longer be edited.
             {expense?.invoice?.invoice_number && <> Included in Invoice {expense.invoice.invoice_number}.</>}
           </p>

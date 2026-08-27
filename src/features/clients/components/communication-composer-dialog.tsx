@@ -101,7 +101,7 @@ export function CommunicationComposerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit & resend' : 'New client communication'}</DialogTitle>
           <DialogDescription>Sends a real email to {clientName} and logs it below.</DialogDescription>

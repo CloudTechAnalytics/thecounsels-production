@@ -12,9 +12,22 @@ import { useNotificationPreferences } from '@/features/notifications/hooks/use-n
 import { fireBrowserNotification } from '@/features/notifications/lib/browser-push'
 import { toast } from '@/shared/components/ui/sonner'
 
+const SIDEBAR_OPEN_KEY = 'counsel.sidebar_open'
+
 /** Law-firm workspace shell. Scoped entirely to the signed-in user's firm. */
 export function OrganizationLayout() {
   const [mobileOpen, setMobileOpen] = React.useState(false)
+  // Desktop sidebar visibility — previously no way to hide it at all.
+  // Persisted per-browser so collapsing it sticks across reloads/sessions
+  // instead of resetting to open every time.
+  const [sidebarOpen, setSidebarOpen] = React.useState(() => localStorage.getItem(SIDEBAR_OPEN_KEY) !== 'false')
+  const toggleSidebar = () => {
+    setSidebarOpen((prev) => {
+      const next = !prev
+      localStorage.setItem(SIDEBAR_OPEN_KEY, String(next))
+      return next
+    })
+  }
   const { memberships, activeOrgId, supportOrgId, profile } = useAuth()
   const navigate = useNavigate()
   const { data: prefs } = useNotificationPreferences(profile?.id ?? null)
@@ -39,9 +52,11 @@ export function OrganizationLayout() {
 
   return (
     <div className="flex h-full min-h-screen bg-background">
-      <div className="hidden shrink-0 lg:block">
-        <Sidebar />
-      </div>
+      {sidebarOpen && (
+        <div className="hidden shrink-0 lg:block">
+          <Sidebar />
+        </div>
+      )}
 
       <AnimatePresence>
         {mobileOpen && (
@@ -72,7 +87,7 @@ export function OrganizationLayout() {
             is for the firm's own members deciding whether to let someone
             in, not something to show a visitor mid-session. */}
         {!supportOrgId && <SupportAccessRequestBanner />}
-        <Topbar onOpenSidebar={() => setMobileOpen(true)} />
+        <Topbar onOpenSidebar={() => setMobileOpen(true)} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1800px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             {hasWorkspace ? <Outlet /> : <NoOrganizationState />}

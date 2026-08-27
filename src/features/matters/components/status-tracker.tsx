@@ -1,4 +1,3 @@
-import * as React from 'react'
 import { Check, Trophy, X } from 'lucide-react'
 import { MATTER_LIFECYCLE, MATTER_STATUS_META } from '@/features/matters/types'
 import type { MatterStatus } from '@/shared/types/database.types'
@@ -16,20 +15,27 @@ export function StatusTracker({ status }: { status: MatterStatus }) {
     steps[steps.length - 1] = { key: status, label: MATTER_STATUS_META[status].label }
   }
 
+  // Portrait/vertical, not the original horizontal row — with 6 stages
+  // now (0147's under_review/resolved additions) a horizontal tracker
+  // crowds the narrow sidebar cards both call sites live in (Overview's
+  // Progress card, the Timeline's Status tracker card); stacking top-to-
+  // bottom gives every label its own full-width line instead of fighting
+  // for space along one cramped row.
   return (
-    <div className="flex items-center">
+    <div className="flex flex-col">
       {steps.map((step, i) => {
         const done = i < currentIndex
         const active = i === currentIndex || (terminal && i === steps.length - 1)
         const isWon = terminal && i === steps.length - 1 && status === 'won'
         const isLost = terminal && i === steps.length - 1 && status === 'lost'
         const Icon = isWon ? Trophy : isLost ? X : Check
+        const isLast = i === steps.length - 1
         return (
-          <React.Fragment key={step.key}>
-            <div className="flex flex-col items-center gap-1.5">
+          <div key={step.key} className="flex gap-3">
+            <div className="flex flex-col items-center">
               <span
                 className={cn(
-                  'flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-semibold',
+                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-semibold',
                   isLost
                     ? 'border-destructive bg-destructive text-destructive-foreground'
                     : done || active
@@ -39,14 +45,12 @@ export function StatusTracker({ status }: { status: MatterStatus }) {
               >
                 {done || active ? <Icon className="h-4 w-4" /> : i + 1}
               </span>
-              <span className={cn('text-xs', active ? 'font-semibold text-foreground' : 'text-muted-foreground')}>
-                {step.label}
-              </span>
+              {!isLast && <div className={cn('my-1 w-0.5 flex-1', i < currentIndex ? 'bg-primary' : 'bg-border')} />}
             </div>
-            {i < steps.length - 1 && (
-              <div className={cn('mx-1 h-0.5 flex-1', i < currentIndex ? 'bg-primary' : 'bg-border')} />
-            )}
-          </React.Fragment>
+            <span className={cn('pt-1.5 text-sm', !isLast && 'pb-6', active ? 'font-semibold text-foreground' : 'text-muted-foreground')}>
+              {step.label}
+            </span>
+          </div>
         )
       })}
     </div>

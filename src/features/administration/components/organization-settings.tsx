@@ -160,7 +160,7 @@ export function OrganizationSettings() {
           )}
         </div>
         {canManage && slugChanged && (
-          <p className="mt-2 flex items-start gap-1.5 text-xs text-warning-foreground">
+          <p className="mt-2 flex items-start gap-1.5 text-xs text-warning">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
             Changing this changes your workspace's web address. Your matters, clients, documents,
             tasks, billing, users and everything else stay exactly as they are — this only affects

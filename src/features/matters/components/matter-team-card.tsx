@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { initialsOf } from '@/shared/lib/format'
 import { toast } from '@/shared/components/ui/sonner'
 
@@ -28,6 +29,17 @@ export function MatterTeamCard({ matterId }: { matterId: string }) {
   const assign = useAssignMatterMember(activeOrgId, matterId, profile?.id ?? null)
   const unassign = useUnassignMatterMember(matterId)
   const [picked, setPicked] = React.useState('')
+  const [toRemove, setToRemove] = React.useState<{ userId: string; name: string } | null>(null)
+
+  const confirmRemove = async () => {
+    if (!toRemove) return
+    try {
+      await unassign.mutateAsync(toRemove.userId)
+      setToRemove(null)
+    } catch (err) {
+      toast.error('Could not remove', { description: err instanceof Error ? err.message : undefined })
+    }
+  }
 
   const assignedIds = new Set((assignments ?? []).map((a) => a.user_id))
   const available = (members ?? []).filter((m) => !assignedIds.has(m.user_id))
@@ -63,7 +75,7 @@ export function MatterTeamCard({ matterId }: { matterId: string }) {
                   <button
                     aria-label={`Remove ${a.user?.full_name ?? 'member'}`}
                     className="text-muted-foreground hover:text-destructive"
-                    onClick={() => unassign.mutate(a.user_id)}
+                    onClick={() => setToRemove({ userId: a.user_id, name: a.user?.full_name ?? 'this member' })}
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -91,6 +103,17 @@ export function MatterTeamCard({ matterId }: { matterId: string }) {
           </div>
         )}
       </CardContent>
+
+      <ConfirmDialog
+        open={Boolean(toRemove)}
+        onOpenChange={(o) => !o && setToRemove(null)}
+        title="Remove from matter"
+        destructive
+        confirmLabel="Remove"
+        loading={unassign.isPending}
+        description={<>This removes <strong>{toRemove?.name}</strong>'s access to this matter.</>}
+        onConfirm={confirmRemove}
+      />
     </Card>
   )
 }

@@ -95,7 +95,7 @@ export function LoginPage() {
       }
     >
       {!env.isSupabaseConfigured && (
-        <div className="mb-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-xs text-warning-foreground">
+        <div className="mb-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-xs text-warning">
           <p className="font-semibold text-warning">Supabase is not configured yet.</p>
           <p className="mt-1 text-muted-foreground">
             Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to{' '}

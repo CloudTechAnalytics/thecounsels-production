@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Check, LogOut, Menu, RefreshCw, Settings, UserCircle, Users2, ArrowLeft, MapPin } from 'lucide-react'
+import { Check, LogOut, Menu, PanelLeftClose, PanelLeftOpen, RefreshCw, Settings, UserCircle, Users2, ArrowLeft, MapPin } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { useBackToWorkspaceTarget } from '@/shared/hooks/use-back-to-workspace-target'
@@ -22,7 +22,18 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
 
-export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
+export function Topbar({
+  onOpenSidebar,
+  sidebarOpen,
+  onToggleSidebar,
+}: {
+  onOpenSidebar: () => void
+  /** Desktop only — the mobile drawer (onOpenSidebar) is a separate,
+   * already-existing affordance. There was previously no way at all to
+   * hide the desktop sidebar and reclaim that width. */
+  sidebarOpen: boolean
+  onToggleSidebar: () => void
+}) {
   const { profile, memberships, activeMembership, activeOrgId, setActiveOrg, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -37,6 +48,16 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border/70 bg-background/85 px-4 backdrop-blur sm:px-6">
       <Button variant="ghost" size="icon" className="lg:hidden" onClick={onOpenSidebar} aria-label="Open menu">
         <Menu className="h-5 w-5" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="hidden lg:flex"
+        onClick={onToggleSidebar}
+        aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+        title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+      >
+        {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
       </Button>
 
       <GlobalSearch />

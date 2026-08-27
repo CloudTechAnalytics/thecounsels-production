@@ -83,7 +83,7 @@ export function PlanSummary() {
         </div>
 
         {sub.status === 'trialing' && sub.trial_ends_at && (
-          <p className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-foreground">
+          <p className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
             Trial ends {format(new Date(sub.trial_ends_at), 'PP')}. No payment required to start — subscribe any time.
           </p>
         )}

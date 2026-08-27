@@ -4,6 +4,7 @@ import type { Hearing, HearingStatus, HearingType, Matter, Profile } from '@/sha
 export interface HearingRow extends Hearing {
   matter: Pick<Matter, 'id' | 'title' | 'matter_number' | 'status'> | null
   assigned_lawyer: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
+  supporting_lawyers: { user: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null }[]
 }
 
 /** hearing_supporting_lawyers (0140) — plural, many-to-many, mirrors

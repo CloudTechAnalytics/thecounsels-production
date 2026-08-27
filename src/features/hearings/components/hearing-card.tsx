@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { MoreHorizontal, Pencil, Trash2, MapPin, Scale, CalendarClock } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, MapPin, Scale, CalendarClock, User, Users } from 'lucide-react'
 import { HEARING_STATUS_META, HEARING_STATUSES, type HearingRow } from '@/features/hearings/types'
 import { isMatterClosed } from '@/features/matters/types'
 import { useSetHearingStatus } from '@/features/hearings/hooks/use-hearings'
@@ -79,6 +79,20 @@ export function HearingCard({
           {h.judge && <span>Hon. {h.judge}</span>}
           {h.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {h.location}</span>}
         </div>
+        {(h.assigned_lawyer || h.supporting_lawyers.length > 0) && (
+          <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            {h.assigned_lawyer && (
+              <span className="flex items-center gap-1">
+                <User className="h-3 w-3" /> {h.assigned_lawyer.full_name}
+              </span>
+            )}
+            {h.supporting_lawyers.length > 0 && (
+              <span className="flex items-center gap-1">
+                <Users className="h-3 w-3" /> Supporting: {h.supporting_lawyers.map((s) => s.user?.full_name).filter(Boolean).join(', ')}
+              </span>
+            )}
+          </div>
+        )}
         {h.outcome && <p className="mt-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">Outcome:</span> {h.outcome}</p>}
       </div>
       {(showEdit || showDelete) && (

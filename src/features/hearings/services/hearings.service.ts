@@ -4,7 +4,7 @@ import type { HearingFormValues } from '@/features/hearings/schemas'
 import type { HearingRow, HearingSupportingLawyerRow } from '@/features/hearings/types'
 
 const SELECT =
-  '*, matter:matters(id, title, matter_number, status), assigned_lawyer:profiles!hearings_assigned_lawyer_id_fkey(id, full_name, avatar_url)'
+  '*, matter:matters(id, title, matter_number, status), assigned_lawyer:profiles!hearings_assigned_lawyer_id_fkey(id, full_name, avatar_url), supporting_lawyers:hearing_supporting_lawyers(user:profiles!hearing_supporting_lawyers_user_id_fkey(id, full_name, avatar_url))'
 
 export interface HearingFilters {
   search?: string

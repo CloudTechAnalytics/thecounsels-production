@@ -1,6 +1,10 @@
 import { supabase } from '@/shared/lib/supabase'
 import type { Client, ClientContact, ClientStatus, ClientType, DocumentRow, Invoice, Payment } from '@/shared/types/database.types'
 import { clientDisplayName, type ClientFormValues, type ContactFormValues } from '@/features/clients/schemas'
+import type { TaskRow } from '@/features/tasks/types'
+import type { HearingRow } from '@/features/hearings/types'
+import type { ExpenseRow } from '@/features/billing/types'
+import type { MatterEventRow } from '@/features/matters/types'
 
 /** Lightweight rows for the Client Detail page's tabs — deliberately not
  * the heavier billingService/documentsService SELECT shapes (those carry
@@ -21,6 +25,10 @@ export interface ClientFilters {
  * one query, no N+1. */
 export interface ClientRow extends Client {
   contacts: { count: number }[]
+}
+
+export interface ClientActivityRow extends MatterEventRow {
+  matter: { id: string; title: string; matter_number: string | null } | null
 }
 
 export interface DuplicateMatch {
@@ -90,6 +98,60 @@ export const clientsService = {
       .order('created_at', { ascending: false })
     if (error) throw error
     return (data ?? []) as unknown as ClientDocumentRow[]
+  },
+
+  /** Tasks/hearings/expenses/timeline events all live on matter_id, not
+   * client_id — same matters!inner join-through as listDocuments above, so
+   * the Client Detail page can actually answer "what's happening with this
+   * client" without making someone open every one of their matters one by
+   * one. */
+  async listTasks(clientId: string): Promise<TaskRow[]> {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*, matter:matters!inner(id, title, matter_number, status), assignee:profiles!tasks_assignee_id_fkey(id, full_name, avatar_url)')
+      .eq('matter.client_id', clientId)
+      .order('due_date', { ascending: true, nullsFirst: false })
+    if (error) throw error
+    return (data ?? []) as unknown as TaskRow[]
+  },
+
+  async listHearings(clientId: string): Promise<HearingRow[]> {
+    const { data, error } = await supabase
+      .from('hearings')
+      .select('*, matter:matters!inner(id, title, matter_number, status)')
+      .eq('matter.client_id', clientId)
+      .order('hearing_at', { ascending: false })
+    if (error) throw error
+    return (data ?? []) as unknown as HearingRow[]
+  },
+
+  async listExpenses(clientId: string): Promise<ExpenseRow[]> {
+    const { data, error } = await supabase
+      .from('expenses')
+      .select(
+        '*, matter:matters!inner(id, title, matter_number), user:profiles!expenses_user_id_fkey(id, full_name), created_by_profile:profiles!expenses_created_by_fkey(id, full_name), updated_by_profile:profiles!expenses_updated_by_fkey(id, full_name), receipts:expense_receipts(*), invoice:invoices(id, invoice_number)',
+      )
+      .eq('matter.client_id', clientId)
+      .order('expense_date', { ascending: false })
+    if (error) throw error
+    return (data ?? []) as unknown as ExpenseRow[]
+  },
+
+  /** Read-only aggregated timeline — the same automatic entries
+   * MatterTimeline shows per-matter (status changes, documents, hearings,
+   * tasks, billing), pulled across every one of this client's matters into
+   * one feed. No "log an update" composer here (unlike the per-matter
+   * timeline) — that writes a matter-scoped event, and picking which
+   * matter it belongs to wouldn't make sense from this page. */
+  async listActivity(clientId: string): Promise<ClientActivityRow[]> {
+    const { data, error } = await supabase
+      .from('matter_events')
+      .select('*, actor:profiles(id, full_name, avatar_url), matter:matters!inner(id, title, matter_number)')
+      .eq('matter.client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(100)
+    if (error) throw error
+    return (data ?? []) as unknown as ClientActivityRow[]
   },
 
   async list(organizationId: string, filters: ClientFilters = {}): Promise<ClientRow[]> {

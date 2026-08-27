@@ -49,6 +49,38 @@ export function useClientDocuments(clientId: string | undefined) {
   })
 }
 
+export function useClientTasks(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['client', clientId, 'tasks'],
+    enabled: Boolean(clientId),
+    queryFn: () => clientsService.listTasks(clientId!),
+  })
+}
+
+export function useClientHearings(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['client', clientId, 'hearings'],
+    enabled: Boolean(clientId),
+    queryFn: () => clientsService.listHearings(clientId!),
+  })
+}
+
+export function useClientExpenses(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['client', clientId, 'expenses'],
+    enabled: Boolean(clientId),
+    queryFn: () => clientsService.listExpenses(clientId!),
+  })
+}
+
+export function useClientActivity(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['client', clientId, 'activity'],
+    enabled: Boolean(clientId),
+    queryFn: () => clientsService.listActivity(clientId!),
+  })
+}
+
 /** Matters attached to a client — used to warn before a delete that cascades. */
 export function useClientMatterCount(clientId: string | undefined) {
   return useQuery({

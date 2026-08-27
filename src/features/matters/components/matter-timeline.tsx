@@ -33,7 +33,7 @@ import { Textarea } from '@/shared/components/ui/textarea'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { toast } from '@/shared/components/ui/sonner'
 
-const EVENT_ICON: Record<string, LucideIcon> = {
+export const EVENT_ICON: Record<string, LucideIcon> = {
   created: Flag,
   status_changed: ArrowRightLeft,
   note_added: StickyNote,

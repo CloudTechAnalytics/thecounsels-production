@@ -1,7 +1,10 @@
 import * as React from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { format } from 'date-fns'
-import { ArrowLeft, Pencil, Trash2, Building2, User, LayoutGrid, Briefcase, Receipt, FileText, Contact, AlertTriangle } from 'lucide-react'
+import { format, formatDistanceToNow } from 'date-fns'
+import {
+  ArrowLeft, Pencil, Trash2, Building2, User, LayoutGrid, Briefcase, Receipt, FileText, Contact,
+  AlertTriangle, CheckSquare, Gavel, Activity as ActivityIcon, PencilLine,
+} from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
@@ -10,14 +13,21 @@ import {
   useClientInvoices,
   useClientPayments,
   useClientDocuments,
+  useClientTasks,
+  useClientHearings,
+  useClientExpenses,
+  useClientActivity,
   useDeleteClient,
   useClientMatterCount,
 } from '@/features/clients/hooks/use-clients'
 import { useMatters } from '@/features/matters/hooks/use-matters'
 import { ClientFormDialog } from '@/features/clients/components/client-form-dialog'
 import { ManageContactsDialog } from '@/features/clients/components/manage-contacts-dialog'
+import { EVENT_ICON } from '@/features/matters/components/matter-timeline'
 import { MATTER_STATUS_META } from '@/features/matters/types'
 import { INVOICE_STATUS_META } from '@/features/billing/types'
+import { TASK_STATUS_META, TASK_PRIORITY_META } from '@/features/tasks/types'
+import { HEARING_STATUS_META } from '@/features/hearings/types'
 import { Card } from '@/shared/components/ui/card'
 import { Badge, type BadgeProps } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
@@ -33,8 +43,11 @@ const STATUS_VARIANT: Record<string, BadgeProps['variant']> = { active: 'success
 const TABS = [
   { key: 'overview', label: 'Overview', icon: LayoutGrid },
   { key: 'matters', label: 'Matters', icon: Briefcase },
+  { key: 'tasks', label: 'Tasks', icon: CheckSquare },
+  { key: 'hearings', label: 'Hearings', icon: Gavel },
   { key: 'billing', label: 'Billing', icon: Receipt },
   { key: 'documents', label: 'Documents', icon: FileText },
+  { key: 'activity', label: 'Activity', icon: ActivityIcon },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 
@@ -67,6 +80,10 @@ export function ClientDetailPage() {
   const { data: invoices } = useClientInvoices(id)
   const { data: payments } = useClientPayments(id)
   const { data: documents } = useClientDocuments(id)
+  const { data: tasks } = useClientTasks(id)
+  const { data: hearings } = useClientHearings(id)
+  const { data: expenses } = useClientExpenses(id)
+  const { data: activity } = useClientActivity(id)
 
   const [tab, setTab] = React.useState<TabKey>('overview')
   const [editOpen, setEditOpen] = React.useState(false)
@@ -213,6 +230,57 @@ export function ClientDetailPage() {
           </Card>
         )}
 
+        {tab === 'tasks' && (
+          <Card className="overflow-hidden">
+            {!tasks?.length ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">No tasks for this client's matters yet.</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {tasks.map((t) => (
+                  <div key={t.id} className="flex items-center justify-between gap-3 p-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{t.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t.matter && <Link to={`/matters/${t.matter.id}`} className="text-primary hover:underline">{t.matter.matter_number}</Link>}
+                        {t.due_date && ` · Due ${format(new Date(t.due_date), 'PP')}`}
+                        {t.assignee?.full_name && ` · ${t.assignee.full_name}`}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <Badge variant={TASK_PRIORITY_META[t.priority].variant}>{TASK_PRIORITY_META[t.priority].label}</Badge>
+                      <Badge variant={TASK_STATUS_META[t.status].variant}>{TASK_STATUS_META[t.status].label}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {tab === 'hearings' && (
+          <Card className="overflow-hidden">
+            {!hearings?.length ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">No hearings for this client's matters yet.</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {hearings.map((h) => (
+                  <div key={h.id} className="flex items-center justify-between gap-3 p-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{h.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(h.hearing_at), 'PPp')}
+                        {h.court && ` · ${h.court}`}
+                        {h.matter && <> · <Link to={`/matters/${h.matter.id}`} className="text-primary hover:underline">{h.matter.matter_number}</Link></>}
+                      </p>
+                    </div>
+                    <Badge variant={HEARING_STATUS_META[h.status].variant} className="shrink-0">{HEARING_STATUS_META[h.status].label}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
+
         {tab === 'billing' && (
           <div className="grid gap-6 lg:grid-cols-2">
             <Card className="overflow-hidden">
@@ -254,6 +322,28 @@ export function ClientDetailPage() {
                 </div>
               )}
             </Card>
+            <Card className="overflow-hidden lg:col-span-2">
+              <p className="border-b border-border p-4 font-display text-sm font-semibold">Expenses</p>
+              {!expenses?.length ? (
+                <p className="p-6 text-center text-sm text-muted-foreground">No expenses logged yet.</p>
+              ) : (
+                <div className="divide-y divide-border">
+                  {expenses.map((e) => (
+                    <div key={e.id} className="flex items-center justify-between p-3 text-sm">
+                      <div>
+                        <p className="font-medium">{e.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(e.expense_date), 'PP')}
+                          {e.matter && <> · <Link to={`/matters/${e.matter.id}`} className="text-primary hover:underline">{e.matter.matter_number}</Link></>}
+                          {!e.billable && ' · Non-billable'}
+                        </p>
+                      </div>
+                      <p className="font-medium">{formatNaira(Number(e.amount))}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
           </div>
         )}
 
@@ -278,6 +368,35 @@ export function ClientDetailPage() {
                   </div>
                 ))}
               </div>
+            )}
+          </Card>
+        )}
+
+        {tab === 'activity' && (
+          <Card className="p-6">
+            {!activity?.length ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">No activity tracked yet.</p>
+            ) : (
+              <ol className="relative ml-3 space-y-5 border-l border-border pl-6">
+                {activity.map((e) => {
+                  const Icon = EVENT_ICON[e.kind] ?? PencilLine
+                  return (
+                    <li key={e.id} className="relative">
+                      <span className="absolute -left-[33px] flex h-6 w-6 items-center justify-center rounded-full bg-primary/12 text-primary ring-4 ring-background">
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                      <p className="text-sm">{e.summary}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {e.matter && <><Link to={`/matters/${e.matter.id}`} className="text-primary hover:underline">{e.matter.matter_number}</Link> · </>}
+                        {e.actor?.full_name ? `${e.actor.full_name} · ` : ''}
+                        <span title={format(new Date(e.created_at), 'PPpp')}>
+                          {formatDistanceToNow(new Date(e.created_at), { addSuffix: true })}
+                        </span>
+                      </p>
+                    </li>
+                  )
+                })}
+              </ol>
             )}
           </Card>
         )}

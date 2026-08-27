@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Building2, Users, ShieldCheck, CreditCard, LifeBuoy, HardDrive, MapPin } from 'lucide-react'
+import { Building2, Users, ShieldCheck, CreditCard, LifeBuoy, HardDrive, MapPin, FileJson } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { MembersPanel } from '@/features/administration/components/members-panel'
@@ -8,6 +8,7 @@ import { RolesViewer } from '@/features/administration/components/roles-viewer'
 import { PlanSummary } from '@/features/administration/components/plan-summary'
 import { StorageManagement } from '@/features/administration/components/storage-management'
 import { BranchesTab } from '@/features/administration/components/branches-tab'
+import { DataExportPanel } from '@/features/administration/components/data-export-panel'
 import { FirmSupportPanel } from '@/features/support/components/firm-support-panel'
 import { PageHeader } from '@/shared/components/page-header'
 import { Badge } from '@/shared/components/ui/badge'
@@ -20,6 +21,7 @@ const TABS = [
   { key: 'roles', label: 'Roles & Permissions', icon: ShieldCheck },
   { key: 'plan', label: 'Plan & Billing', icon: CreditCard },
   { key: 'storage', label: 'Storage', icon: HardDrive },
+  { key: 'export', label: 'Data Export', icon: FileJson },
   { key: 'support', label: 'Support', icon: LifeBuoy },
 ] as const
 type Tab = (typeof TABS)[number]['key']
@@ -72,6 +74,7 @@ export function AdministrationPage() {
       {tab === 'roles' && <RolesViewer />}
       {tab === 'plan' && <PlanSummary />}
       {tab === 'storage' && <StorageManagement organizationId={activeOrgId} />}
+      {tab === 'export' && <DataExportPanel organizationId={activeOrgId} />}
       {tab === 'support' && <FirmSupportPanel organizationId={activeOrgId} />}
     </div>
   )

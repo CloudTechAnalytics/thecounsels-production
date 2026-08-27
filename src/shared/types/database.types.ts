@@ -42,6 +42,7 @@ export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type NotificationPriority = 'info' | 'reminder' | 'warning' | 'urgent'
 export type NotificationCategory = 'matters' | 'clients' | 'hearings' | 'billing' | 'tasks' | 'documents' | 'notes' | 'messaging' | 'hr' | 'appointments' | 'support'
 export type SupportSessionStatus = 'pending' | 'active' | 'denied' | 'ended'
+export type DataExportStatus = 'pending' | 'processing' | 'ready' | 'failed'
 export type RoleKey =
   | 'platform_owner'
   | 'platform_admin'
@@ -868,6 +869,32 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['support_sessions']['Insert']>
+        Relationships: []
+      }
+      data_export_requests: {
+        Row: {
+          id: string
+          organization_id: string
+          requested_by: string | null
+          status: DataExportStatus
+          file_path: string | null
+          error: string | null
+          requested_at: string
+          completed_at: string | null
+          expires_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          requested_by?: string | null
+          status?: DataExportStatus
+          file_path?: string | null
+          error?: string | null
+          requested_at?: string
+          completed_at?: string | null
+          expires_at?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['data_export_requests']['Insert']>
         Relationships: []
       }
       support_tickets: {

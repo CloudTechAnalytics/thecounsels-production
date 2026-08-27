@@ -45,6 +45,9 @@ export function resolveNotificationHref(n: Pick<NotificationRow, 'entity_type' |
   // handles this is global (organization-layout.tsx), so any page works;
   // land on the dashboard rather than a dead-end settings tab.
   if (n.entity_type === 'support_session') return '/'
+  // Data export ready (0134) — lands on Firm Settings; the Data Export
+  // tab itself polls for the request, no need to deep-link a query param.
+  if (n.entity_type === 'data_export_request') return '/administration'
   switch (n.category) {
     case 'clients': return '/clients'
     case 'hearings': return '/hearings'

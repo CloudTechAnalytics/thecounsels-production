@@ -60,7 +60,7 @@ export function useDashboardKpis(organizationId: string | null, branchId?: strin
 
       const statuses = (matters.data ?? []).map((m) => m.status)
       return {
-        activeMatters: statuses.filter((s) => s === 'open' || s === 'pending' || s === 'in_court').length,
+        activeMatters: statuses.filter((s) => s === 'open' || s === 'pending' || s === 'in_court' || s === 'under_review').length,
         openMatters: statuses.filter((s) => s === 'open').length,
         mattersInCourt: statuses.filter((s) => s === 'in_court').length,
         hearingsThisWeek: hearings.count ?? 0,

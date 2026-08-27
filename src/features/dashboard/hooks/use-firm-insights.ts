@@ -137,7 +137,7 @@ export function useFirmInsights(organizationId: string | null, includeFinancial 
       // 6. Workload imbalance across lead lawyers.
       const activeByLead = new Map<string, number>()
       for (const m of report.matters) {
-        if (!['open', 'pending', 'in_court'].includes(m.status) || !m.lead_lawyer_id) continue
+        if (!['open', 'pending', 'in_court', 'under_review'].includes(m.status) || !m.lead_lawyer_id) continue
         activeByLead.set(m.lead_lawyer_id, (activeByLead.get(m.lead_lawyer_id) ?? 0) + 1)
       }
       if (activeByLead.size > 1) {
@@ -188,7 +188,7 @@ export function useFirmInsights(organizationId: string | null, includeFinancial 
       }
 
       // 9. A matter that's gone quiet — no logged activity (or none since opening) in 15+ days.
-      const activeMatterIds = report.matters.filter((m) => ['open', 'pending', 'in_court'].includes(m.status)).map((m) => m.id)
+      const activeMatterIds = report.matters.filter((m) => ['open', 'pending', 'in_court', 'under_review'].includes(m.status)).map((m) => m.id)
       if (activeMatterIds.length > 0) {
         const { data: events, error: eventsErr } = await supabase
           .from('matter_events')

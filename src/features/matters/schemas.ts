@@ -4,7 +4,7 @@ export const matterSchema = z.object({
   title: z.string().min(2, 'Enter a matter title'),
   clientId: z.string().optional(),
   practiceArea: z.string().optional(),
-  status: z.enum(['open', 'pending', 'in_court', 'closed', 'won', 'lost', 'appeal']),
+  status: z.enum(['open', 'pending', 'in_court', 'closed', 'won', 'lost', 'appeal', 'under_review', 'resolved']),
   priority: z.enum(['low', 'medium', 'high']),
   leadLawyerId: z.string().optional(),
   responsiblePartnerId: z.string().optional(),

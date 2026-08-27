@@ -9,6 +9,8 @@ export const DEFAULT_TASK_CHANNEL_PREFS: TaskChannelPrefs = {
   completed: { email: true, whatsapp: true },
   reassigned: { email: true, whatsapp: true },
   hearing_reminder: { email: true, whatsapp: true },
+  appointment_assigned: { email: true, whatsapp: true },
+  appointment_reminder: { email: true, whatsapp: true },
 }
 
 const SELECT = '*, actor:profiles!notifications_actor_id_fkey(id, full_name, avatar_url)'

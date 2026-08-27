@@ -15,8 +15,16 @@ export interface MatterEventRow extends MatterEvent {
   actor: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
 }
 
-/** Linear lifecycle used by the status tracker (won/lost are terminal states). */
-export const MATTER_LIFECYCLE: MatterStatus[] = ['open', 'in_court', 'appeal', 'closed']
+/** Linear lifecycle used by the status tracker (won/lost are terminal
+ * states). under_review and resolved (migration 0147) are additive to what
+ * shipped originally — an intake/conflict-check stage before work formally
+ * begins, and a "the outcome is reached" stage distinct from the file
+ * being administratively closed. Deliberately NOT a full litigation-shaped
+ * 7-stage pipeline (Court Proceedings/Awaiting Judgment don't generalize
+ * to Corporate & Commercial, Real Estate, Tax, IP, Immigration, Banking &
+ * Finance matters, and litigation already gets that granularity from
+ * Hearings) — see the migration's own note. */
+export const MATTER_LIFECYCLE: MatterStatus[] = ['open', 'under_review', 'in_court', 'appeal', 'resolved', 'closed']
 
 export interface MatterNoteRow extends MatterNote {
   author: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
@@ -60,12 +68,14 @@ export const PRACTICE_AREAS = [
 
 export const MATTER_STATUS_META: Record<MatterStatus, { label: string; variant: BadgeProps['variant'] }> = {
   open: { label: 'New', variant: 'success' },
+  under_review: { label: 'Under Review', variant: 'warning' },
   // Legacy alias — "Pending" and "In Court" were the same idea wearing two
   // labels; existing matters keep the stored value, but display and behave
   // identically to In Court everywhere from here on.
   pending: { label: 'In Court', variant: 'default' },
   in_court: { label: 'In Court', variant: 'default' },
   appeal: { label: 'Appeal', variant: 'warning' },
+  resolved: { label: 'Resolved', variant: 'success' },
   closed: { label: 'Closed', variant: 'muted' },
   // Won/Lost are retired from new selection (folded into Closed) but kept
   // here so any existing matter still tagged with one displays correctly.
@@ -77,7 +87,7 @@ export const MATTER_STATUS_META: Record<MatterStatus, { label: string; variant: 
  * displayable statuses for existing data (see MATTER_STATUS_META above)
  * but are no longer offered as a fresh choice — Pending merged into In
  * Court, and Won/Lost fold into Closed. */
-export const MATTER_STATUSES: MatterStatus[] = ['open', 'in_court', 'appeal', 'closed']
+export const MATTER_STATUSES: MatterStatus[] = ['open', 'under_review', 'in_court', 'appeal', 'resolved', 'closed']
 
 /** Filtering by "In Court" or "Closed" also matches the legacy values that
  * merged into them, so a matter stored as 'pending'/'won'/'lost' before

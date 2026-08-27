@@ -22,7 +22,7 @@ import { BarChart, DistributionBars } from '@/shared/components/bar-chart'
 import { formatNaira, formatMoneyCompact, titleCase, initialsOf } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
 
-const ACTIVE = ['open', 'pending', 'in_court']
+const ACTIVE = ['open', 'pending', 'in_court', 'under_review']
 const timeAmt = (min: number, rate: number) => (min / 60) * rate
 const monthLabel = new Intl.DateTimeFormat('en', { month: 'short' })
 

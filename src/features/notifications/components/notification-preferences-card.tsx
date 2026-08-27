@@ -13,7 +13,16 @@ import { Label } from '@/shared/components/ui/label'
 import { toast } from '@/shared/components/ui/sonner'
 import type { TaskChannelEvent, TaskChannelPrefs } from '@/shared/types/database.types'
 
-const TASK_EVENT_ORDER: TaskChannelEvent[] = ['assigned', 'due_soon', 'overdue', 'completed', 'reassigned', 'hearing_reminder']
+const TASK_EVENT_ORDER: TaskChannelEvent[] = [
+  'assigned',
+  'due_soon',
+  'overdue',
+  'completed',
+  'reassigned',
+  'hearing_reminder',
+  'appointment_assigned',
+  'appointment_reminder',
+]
 const TASK_EVENT_LABELS: Record<TaskChannelEvent, string> = {
   assigned: 'Task assigned to you',
   due_soon: 'Upcoming deadline reminders',
@@ -21,6 +30,8 @@ const TASK_EVENT_LABELS: Record<TaskChannelEvent, string> = {
   completed: 'A task you created is completed',
   reassigned: 'Task reassigned to you',
   hearing_reminder: 'Hearing coming up (24h / 1h before)',
+  appointment_assigned: 'Appointment assigned or reassigned to you',
+  appointment_reminder: 'Appointment coming up (24h / 1h before)',
 }
 
 /** Per-task-event Email/WhatsApp matrix — in-app is intentionally absent here;

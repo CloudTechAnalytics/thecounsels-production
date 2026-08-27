@@ -71,7 +71,7 @@ export interface ReportKpis {
   tasksDue: number
 }
 
-const ACTIVE_STATUSES = ['open', 'pending', 'in_court']
+const ACTIVE_STATUSES = ['open', 'pending', 'in_court', 'under_review']
 const CLOSED_STATUSES = ['closed', 'won', 'lost']
 
 /** True when a filter narrows *which matters* we're talking about (not lawyer/date, which apply per-entity). */

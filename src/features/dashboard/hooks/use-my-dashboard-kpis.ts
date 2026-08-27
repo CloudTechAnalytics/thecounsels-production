@@ -7,7 +7,7 @@ export interface MyDashboardKpis {
   myHearingsThisWeek: number
 }
 
-const ACTIVE_STATUSES = ['open', 'pending', 'in_court']
+const ACTIVE_STATUSES = ['open', 'pending', 'in_court', 'under_review']
 
 /** Senior Associate's own matter/client/hearing counts — matters they lead. */
 export function useMyDashboardKpis(organizationId: string | null, userId: string | null) {

@@ -211,6 +211,68 @@ function buildHearingWhatsAppMessage(type: string, h: HearingContext): string {
   }
 }
 
+interface AppointmentContext {
+  title: string
+  appointmentAt: string
+  location: string | null
+  matterTitle: string | null
+  clientName: string | null
+  actorName: string | null
+  link: string
+}
+
+function appointmentDetailsBlock(a: AppointmentContext): string {
+  return `
+    <table cellpadding="0" cellspacing="0" style="width:100%;margin:16px 0;font-size:14px">
+      <tr><td style="padding:4px 12px 4px 0;color:${MUTED};white-space:nowrap">Appointment</td><td style="padding:4px 0;font-weight:600">${esc(a.title)}</td></tr>
+      ${a.clientName ? `<tr><td style="padding:4px 12px 4px 0;color:${MUTED}">Client</td><td style="padding:4px 0">${esc(a.clientName)}</td></tr>` : ''}
+      ${a.matterTitle ? `<tr><td style="padding:4px 12px 4px 0;color:${MUTED}">Matter</td><td style="padding:4px 0">${esc(a.matterTitle)}</td></tr>` : ''}
+      <tr><td style="padding:4px 12px 4px 0;color:${MUTED}">When</td><td style="padding:4px 0;font-weight:600">${esc(fmtDateTime(a.appointmentAt))}</td></tr>
+      ${a.location ? `<tr><td style="padding:4px 12px 4px 0;color:${MUTED}">Location</td><td style="padding:4px 0">${esc(a.location)}</td></tr>` : ''}
+      ${a.actorName ? `<tr><td style="padding:4px 12px 4px 0;color:${MUTED}">Scheduled by</td><td style="padding:4px 0">${esc(a.actorName)}</td></tr>` : ''}
+    </table>
+    <a href="${a.link}" style="display:inline-block;margin-top:8px;padding:10px 22px;background:${GOLD};color:#ffffff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">View appointment</a>
+  `
+}
+
+function buildAppointmentEmail(type: string, a: AppointmentContext): { subject: string; html: string } {
+  switch (type) {
+    case 'appointment_assigned':
+      return {
+        subject: `New appointment assigned: ${a.title}`,
+        html: emailShell("You've been assigned an appointment", 'A new appointment needs your attention.', appointmentDetailsBlock(a)),
+      }
+    case 'appointment_reassigned':
+      return {
+        subject: `Appointment reassigned to you: ${a.title}`,
+        html: emailShell("You've been assigned an appointment", 'This appointment was reassigned to you.', appointmentDetailsBlock(a)),
+      }
+    case 'appointment_reminder_24h':
+      return {
+        subject: `Appointment tomorrow: ${a.title}`,
+        html: emailShell('Appointment tomorrow', 'An appointment on your calendar is coming up in 24 hours.', appointmentDetailsBlock(a)),
+      }
+    case 'appointment_reminder_1h':
+      return {
+        subject: `Appointment in 1 hour: ${a.title}`,
+        html: emailShell('Appointment in 1 hour', "This appointment is coming up very soon — don't miss it.", appointmentDetailsBlock(a)),
+      }
+    default:
+      return { subject: a.title, html: emailShell(a.title, '', appointmentDetailsBlock(a)) }
+  }
+}
+
+function buildAppointmentWhatsAppMessage(type: string, a: AppointmentContext): string {
+  const base = `${a.title}${a.matterTitle ? ` (${a.matterTitle})` : ''} — ${fmtDateTime(a.appointmentAt)}${a.location ? `, ${a.location}` : ''}.`
+  switch (type) {
+    case 'appointment_assigned': return `🗓️ New appointment assigned: ${base} ${a.link}`
+    case 'appointment_reassigned': return `🗓️ Appointment reassigned to you: ${base} ${a.link}`
+    case 'appointment_reminder_24h': return `🗓️ Appointment tomorrow: ${base} ${a.link}`
+    case 'appointment_reminder_1h': return `🗓️ Appointment in 1 hour: ${base} ${a.link}`
+    default: return `${base} ${a.link}`
+  }
+}
+
 // ----------------------------------------------------------------------------
 // Email — Resend REST API. Honest "not configured" FAILED state when the
 // secret is unset, same posture as paystack-init-transaction for payments.
@@ -358,22 +420,27 @@ Deno.serve(async (req: Request) => {
     return json({ ok: false, error: reason })
   }
 
-  const isHearing = Boolean(log.hearing_id)
+  const kind: 'hearing' | 'appointment' | 'task' = log.hearing_id ? 'hearing' : log.appointment_id ? 'appointment' : 'task'
 
-  const [{ data: recipient }, { data: prefs }, { data: task }, { data: hearing }] = await Promise.all([
+  const [{ data: recipient }, { data: prefs }, { data: task }, { data: hearing }, { data: appointment }] = await Promise.all([
     admin.from('profiles').select('id, full_name, email, phone').eq('id', log.user_id).maybeSingle(),
     admin.from('notification_preferences').select('whatsapp_number').eq('user_id', log.user_id).maybeSingle(),
-    !isHearing && log.task_id
+    kind === 'task' && log.task_id
       ? admin.from('tasks').select('id, title, priority, due_date, matter_id').eq('id', log.task_id).maybeSingle()
       : Promise.resolve({ data: null }),
-    isHearing
+    kind === 'hearing'
       ? admin.from('hearings').select('id, title, hearing_at, court, judge, location, matter_id').eq('id', log.hearing_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    kind === 'appointment'
+      ? admin.from('appointments').select('id, title, appointment_at, location, matter_id, client_id').eq('id', log.appointment_id).maybeSingle()
       : Promise.resolve({ data: null }),
   ])
   if (!recipient) return fail('Recipient profile not found.')
-  if (isHearing ? !hearing : !task) return fail(`${isHearing ? 'Hearing' : 'Task'} not found — it may have been deleted.`)
+  if (kind === 'hearing' ? !hearing : kind === 'appointment' ? !appointment : !task) {
+    return fail(`${kind === 'hearing' ? 'Hearing' : kind === 'appointment' ? 'Appointment' : 'Task'} not found — it may have been deleted.`)
+  }
 
-  const matterId = isHearing ? hearing!.matter_id : task!.matter_id
+  const matterId = kind === 'hearing' ? hearing!.matter_id : kind === 'appointment' ? appointment!.matter_id : task!.matter_id
   let matterTitle: string | null = null
   let clientName: string | null = null
   if (matterId) {
@@ -384,10 +451,16 @@ Deno.serve(async (req: Request) => {
       clientName = client?.display_name ?? null
     }
   }
+  // Appointments can carry a client directly, independent of any matter
+  // (0110: "often a consultation before any matter exists yet").
+  if (kind === 'appointment' && !clientName && appointment!.client_id) {
+    const { data: client } = await admin.from('clients').select('display_name').eq('id', appointment!.client_id).maybeSingle()
+    clientName = client?.display_name ?? null
+  }
 
   let subject: string, html: string, waMessage: string
 
-  if (isHearing) {
+  if (kind === 'hearing') {
     const hctx: HearingContext = {
       title: hearing!.title,
       hearingAt: hearing!.hearing_at,
@@ -399,6 +472,23 @@ Deno.serve(async (req: Request) => {
     }
     ;({ subject, html } = buildHearingEmail(log.notification_type, hctx))
     waMessage = buildHearingWhatsAppMessage(log.notification_type, hctx)
+  } else if (kind === 'appointment') {
+    let actorName: string | null = null
+    if (log.actor_id) {
+      const { data: actor } = await admin.from('profiles').select('full_name').eq('id', log.actor_id).maybeSingle()
+      actorName = actor?.full_name ?? null
+    }
+    const actx: AppointmentContext = {
+      title: appointment!.title,
+      appointmentAt: appointment!.appointment_at,
+      location: appointment!.location,
+      matterTitle,
+      clientName,
+      actorName,
+      link: appointment!.matter_id ? `${SITE_URL}/matters/${appointment!.matter_id}` : `${SITE_URL}/appointments`,
+    }
+    ;({ subject, html } = buildAppointmentEmail(log.notification_type, actx))
+    waMessage = buildAppointmentWhatsAppMessage(log.notification_type, actx)
   } else {
     let assignedByName: string | null = null
     if (log.actor_id) {

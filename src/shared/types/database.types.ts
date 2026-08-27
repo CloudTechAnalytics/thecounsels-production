@@ -24,7 +24,7 @@ export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'paused' |
 export type BillingCycle = 'monthly' | 'quarterly' | 'yearly'
 export type ClientType = 'individual' | 'corporate'
 export type ClientStatus = 'active' | 'inactive' | 'prospect'
-export type MatterStatus = 'open' | 'pending' | 'in_court' | 'closed' | 'won' | 'lost' | 'appeal'
+export type MatterStatus = 'open' | 'pending' | 'in_court' | 'closed' | 'won' | 'lost' | 'appeal' | 'under_review' | 'resolved'
 export type HearingType = 'mention' | 'hearing' | 'trial' | 'ruling' | 'motion' | 'conference' | 'other'
 export type HearingStatus = 'scheduled' | 'adjourned' | 'held' | 'cancelled'
 export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show'
@@ -34,7 +34,15 @@ export type NotificationLogChannel = 'IN_APP' | 'EMAIL' | 'WHATSAPP'
 export type NotificationLogStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED'
 export type ClientCommunicationStatus = 'PENDING' | 'SENT' | 'FAILED'
 /** Per-event-type channel opt-in, keyed to match notification_preferences.task_channel_prefs (migration 0057). */
-export type TaskChannelEvent = 'assigned' | 'due_soon' | 'overdue' | 'completed' | 'reassigned' | 'hearing_reminder'
+export type TaskChannelEvent =
+  | 'assigned'
+  | 'due_soon'
+  | 'overdue'
+  | 'completed'
+  | 'reassigned'
+  | 'hearing_reminder'
+  | 'appointment_assigned'
+  | 'appointment_reminder'
 export type TaskChannelPrefs = Record<TaskChannelEvent, { email: boolean; whatsapp: boolean }>
 export type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'void'
 export type TimeEntryStatus = 'draft' | 'submitted' | 'approved' | 'invoiced' | 'paid'
@@ -1429,6 +1437,8 @@ export interface Database {
           notes: string | null
           created_by: string | null
           branch_id: string | null
+          reminder_24h_sent_at: string | null
+          reminder_1h_sent_at: string | null
         } & Timestamps
         Insert: {
           id?: string
@@ -1444,6 +1454,8 @@ export interface Database {
           notes?: string | null
           created_by?: string | null
           branch_id?: string | null
+          reminder_24h_sent_at?: string | null
+          reminder_1h_sent_at?: string | null
         }
         Update: Partial<Database['public']['Tables']['appointments']['Insert']>
         Relationships: [

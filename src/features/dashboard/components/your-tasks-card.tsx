@@ -67,7 +67,7 @@ function bucketTasks(tasks: TaskRow[]): Buckets {
 function TaskRowItem({ task }: { task: TaskRow }) {
   const meta = TASK_PRIORITY_META[task.priority]
   const emphasize = task.priority === 'urgent' || task.priority === 'high'
-  const to = task.matter ? `/matters/${task.matter.id}` : '/tasks'
+  const to = task.matter ? `/matters/${task.matter.id}?tab=tasks` : '/tasks'
   return (
     <Link
       to={to}

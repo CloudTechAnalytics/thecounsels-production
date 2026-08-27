@@ -25,7 +25,7 @@ import { errorMessage } from '@/shared/lib/errors'
 export function TaskDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { activeOrgId } = useAuth()
+  const { activeOrgId, profile } = useAuth()
   const { has } = usePermissions()
   const { data: task, isLoading } = useTask(id)
   const del = useDeleteTask(activeOrgId)
@@ -46,6 +46,9 @@ export function TaskDetailPage() {
   }
 
   const readOnly = Boolean(task.matter && isMatterClosed(task.matter.status))
+  // Same split as the task list (0139): editing/completing someone else's
+  // task needs tasks.assign; the assignee can always edit/complete their own.
+  const canEdit = (has('tasks.assign') || task.assignee_id === profile?.id) && !readOnly
 
   const doDelete = async () => {
     try {
@@ -67,7 +70,7 @@ export function TaskDetailPage() {
         title={task.title}
         actions={
           <div className="flex gap-2">
-            {has('tasks.update') && (
+            {canEdit && (
               <Button variant="outline" onClick={() => setEditOpen(true)}><Pencil className="h-4 w-4" /> Edit</Button>
             )}
             {has('tasks.delete') && (
@@ -87,7 +90,13 @@ export function TaskDetailPage() {
               value={task.status}
               options={TASK_STATUSES}
               meta={TASK_STATUS_META}
-              onChange={(status) => setStatus.mutate({ id: task.id, status })}
+              disabled={!canEdit}
+              onChange={(status) =>
+                setStatus.mutate(
+                  { id: task.id, status },
+                  { onError: (err) => toast.error('Could not update task', { description: errorMessage(err) }) },
+                )
+              }
             />
           </div>
           {task.description && <p className="mt-4 whitespace-pre-wrap text-sm text-muted-foreground">{task.description}</p>}

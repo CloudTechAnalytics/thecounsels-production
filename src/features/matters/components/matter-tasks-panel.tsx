@@ -23,7 +23,10 @@ export function MatterTasksPanel({ matterId, readOnly = false }: { matterId: str
   const [toDelete, setToDelete] = React.useState<TaskRow | null>(null)
 
   const canCreate = has('tasks.create') && !readOnly
-  const canEdit = has('tasks.update') && !readOnly
+  // Same split as tasks-page.tsx: editing someone else's task needs
+  // tasks.assign, the assignee can always edit their own.
+  const canManageTasks = has('tasks.assign')
+  const canEdit = (t: TaskRow) => !readOnly && (canManageTasks || t.assignee_id === profile?.id)
   const canDelete = has('tasks.delete') && !readOnly
 
   const openNew = () => { setEditing(null); setFormOpen(true) }
@@ -48,7 +51,7 @@ export function MatterTasksPanel({ matterId, readOnly = false }: { matterId: str
               key={t.id}
               task={t}
               showMatter={false}
-              canEdit={canEdit}
+              canEdit={canEdit(t)}
               canDelete={canDelete}
               onEdit={() => openEdit(t)}
               onDelete={() => setToDelete(t)}

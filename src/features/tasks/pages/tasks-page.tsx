@@ -35,7 +35,12 @@ export function TasksPage() {
   const [toDelete, setToDelete] = React.useState<TaskRow | null>(null)
 
   const canCreate = has('tasks.create')
-  const canEdit = has('tasks.update')
+  // Editing (and completing) someone else's task requires tasks.assign
+  // (fee-earners/leadership), not the broader tasks.update — the assignee
+  // can always edit/complete their own regardless. Per-task, not a single
+  // org-wide flag, since it depends on who each task is actually assigned to.
+  const canManageTasks = has('tasks.assign')
+  const canEdit = (t: TaskRow) => canManageTasks || t.assignee_id === profile?.id
   const canDelete = has('tasks.delete')
 
   const open = (data ?? []).filter((t) => t.status !== 'done' && t.status !== 'cancelled')
@@ -111,7 +116,7 @@ export function TasksPage() {
       ) : data && data.length > 0 ? (
         <div className="space-y-2">
           {data.map((t) => (
-            <TaskItem key={t.id} task={t} canEdit={canEdit} canDelete={canDelete} onEdit={() => openEdit(t)} onDelete={() => setToDelete(t)} />
+            <TaskItem key={t.id} task={t} canEdit={canEdit(t)} canDelete={canDelete} onEdit={() => openEdit(t)} onDelete={() => setToDelete(t)} />
           ))}
         </div>
       ) : (

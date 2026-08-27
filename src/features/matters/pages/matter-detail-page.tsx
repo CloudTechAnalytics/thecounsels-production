@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ArrowLeft, Pencil, Trash2, LockOpen, FileText, StickyNote, LayoutGrid, Activity, Gavel, CheckSquare, Sparkles } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
@@ -52,6 +52,7 @@ function Detail({ label, value }: { label: string; value: React.ReactNode }) {
 export function MatterDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { activeOrgId } = useAuth()
   const { has } = usePermissions()
   const { has: hasFeature } = usePlanFeature(activeOrgId)
@@ -61,6 +62,15 @@ export function MatterDetailPage() {
   const reopen = useReopenMatter(activeOrgId)
   const setStatus = useSetMatterStatus(activeOrgId)
   const [tab, setTab] = React.useState<TabKey>('overview')
+
+  // Deep-linking into a specific tab (e.g. the dashboard's "Your tasks"
+  // card linking straight to a matter's Tasks tab via ?tab=tasks) instead
+  // of always landing on Overview and making the click a two-step trip.
+  React.useEffect(() => {
+    const requested = searchParams.get('tab')
+    if (requested && TABS.some((t) => t.key === requested)) setTab(requested as TabKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, searchParams])
   const [editOpen, setEditOpen] = React.useState(false)
   const [confirmDelete, setConfirmDelete] = React.useState(false)
   const [reopenOpen, setReopenOpen] = React.useState(false)

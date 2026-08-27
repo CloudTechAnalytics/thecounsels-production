@@ -16,6 +16,8 @@ import {
 } from '@/shared/components/ui/dropdown-menu'
 import { cn } from '@/shared/lib/utils'
 import { initialsOf } from '@/shared/lib/format'
+import { toast } from '@/shared/components/ui/sonner'
+import { errorMessage } from '@/shared/lib/errors'
 
 function DueLabel({ due, done }: { due: string; done: boolean }) {
   const d = new Date(due + 'T00:00:00')
@@ -51,6 +53,18 @@ export function TaskItem({
   const done = task.status === 'done'
   const emphasize = !done && (task.priority === 'urgent' || task.priority === 'high')
 
+  // Only the assignee can complete their own task (0139) — a manager
+  // holding tasks.assign can still edit everything else, but marking it
+  // done for someone else is exactly what this restriction exists to stop.
+  // canEdit already carries that same "assignee or manager" shape, so it's
+  // reused here rather than re-deriving it a second way.
+  const onStatusChange = (status: (typeof TASK_STATUSES)[number]) => {
+    setStatus.mutate(
+      { id: task.id, status },
+      { onError: (err) => toast.error('Could not update task', { description: errorMessage(err) }) },
+    )
+  }
+
   return (
     <Card
       className={cn(
@@ -59,16 +73,18 @@ export function TaskItem({
       )}
       onClick={() => navigate(`/tasks/${task.id}`)}
     >
-      <button
-        className="mt-0.5 text-muted-foreground hover:text-primary"
-        onClick={(e) => {
-          e.stopPropagation()
-          setStatus.mutate({ id: task.id, status: done ? 'todo' : 'done' })
-        }}
-        aria-label={done ? 'Mark incomplete' : 'Mark complete'}
-      >
-        {done ? <CheckCircle2 className="h-5 w-5 text-success" /> : <Circle className="h-5 w-5" />}
-      </button>
+      {canEdit && (
+        <button
+          className="mt-0.5 text-muted-foreground hover:text-primary"
+          onClick={(e) => {
+            e.stopPropagation()
+            onStatusChange(done ? 'todo' : 'done')
+          }}
+          aria-label={done ? 'Mark incomplete' : 'Mark complete'}
+        >
+          {done ? <CheckCircle2 className="h-5 w-5 text-success" /> : <Circle className="h-5 w-5" />}
+        </button>
+      )}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className={cn('text-sm font-medium', done && 'text-muted-foreground line-through')}>{task.title}</p>
@@ -77,7 +93,8 @@ export function TaskItem({
             value={task.status}
             options={TASK_STATUSES}
             meta={TASK_STATUS_META}
-            onChange={(status) => setStatus.mutate({ id: task.id, status })}
+            disabled={!canEdit}
+            onChange={onStatusChange}
           />
         </div>
         {task.description && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{task.description}</p>}

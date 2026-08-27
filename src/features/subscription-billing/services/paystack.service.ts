@@ -13,16 +13,22 @@ export interface InitTransactionResult {
  * server-side, after verifying the event with Paystack.
  */
 export const paystackService = {
+  /** context distinguishes two very different situations the same
+   * callback page has to handle: 'onboarding' (no real session yet — the
+   * existing "sign in fresh" behavior is correct there) vs 'existing' (an
+   * already-authenticated user upgrading or resubscribing mid-session, who
+   * should just land back in their workspace, not get signed out). */
   async initTransaction(
     organizationId: string,
     planId: string,
     billingCycle: BillingCycle = 'monthly',
+    context: 'onboarding' | 'existing' = 'onboarding',
   ): Promise<InitTransactionResult> {
     return invokeEdgeFunction<InitTransactionResult>('paystack-init-transaction', {
       organizationId,
       planId,
       billingCycle,
-      callbackUrl: `${window.location.origin}/subscription/callback`,
+      callbackUrl: `${window.location.origin}/subscription/callback?context=${context}`,
     })
   },
 }

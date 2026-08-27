@@ -35,7 +35,7 @@ export function ExpiredSubscriptionPage() {
   const subscribe = async (planId: string) => {
     if (!orgId) return
     try {
-      await checkout.mutateAsync({ organizationId: orgId, planId, billingCycle: cycle })
+      await checkout.mutateAsync({ organizationId: orgId, planId, billingCycle: cycle, context: 'existing' })
     } catch (err) {
       toast.error('Could not start checkout', { description: err instanceof Error ? err.message : undefined })
     }

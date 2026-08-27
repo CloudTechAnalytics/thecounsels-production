@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
@@ -16,20 +16,34 @@ const POLL_MS = 3_000
  * verified) has already flipped the subscription to 'active', then hands
  * off. If the webhook hasn't landed after ~2 minutes, says so plainly
  * rather than pretending success.
+ *
+ * context=existing (an already-authenticated user upgrading/resubscribing
+ * mid-session, see paystack.service.ts's own comment) skips the forced
+ * sign-out below and returns them straight to their workspace instead —
+ * carrying an existing session forward through checkout is fine; it's
+ * only a brand-new onboarding signup that has no real session yet to
+ * carry. Getting this wrong was the actual cause of a real reported bug:
+ * an existing user upgrading got forced through sign-out -> sign-in, and
+ * briefly saw an empty workspace (zero clients/matters/members) during
+ * that transition — the data was never gone, but the UX genuinely looked
+ * like data loss right after a payment. context=onboarding (the default,
+ * for the two call sites that predate this) keeps the original behavior.
  */
 export function BillingCallbackPage() {
   const { activeOrgId, refresh, signOut } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isExistingUser = searchParams.get('context') === 'existing'
   const [elapsed, setElapsed] = React.useState(0)
 
-  // Same "sign in fresh, don't just carry the session forward" treatment
-  // the onboarding wizard's own welcome screen uses — payment confirmed or
-  // not, the next thing this page does is send them to sign in with their
-  // own credentials rather than dropping them straight into the dashboard.
+  // Onboarding only — same "sign in fresh, don't just carry the session
+  // forward" treatment the onboarding wizard's own welcome screen uses.
   const goToSignIn = async () => {
     await signOut()
     navigate('/auth/login', { replace: true })
   }
+
+  const returnToWorkspace = () => navigate('/', { replace: true })
 
   const { data: subscription } = useQuery({
     queryKey: ['billing-callback-subscription', activeOrgId],
@@ -58,15 +72,27 @@ export function BillingCallbackPage() {
           {active ? <CheckCircle2 className="h-8 w-8" /> : <Loader2 className="h-8 w-8 animate-spin" />}
         </span>
         {active ? (
-          <>
-            <h2 className="mt-6 font-display text-xl font-semibold">You're all set</h2>
-            <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-              Your subscription is active. Sign in with your email and password to enter your workspace.
-            </p>
-            <Button size="lg" className="mt-8 w-full" onClick={goToSignIn}>
-              Go to sign in
-            </Button>
-          </>
+          isExistingUser ? (
+            <>
+              <h2 className="mt-6 font-display text-xl font-semibold">You're all set</h2>
+              <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+                Your subscription is active. Taking you back to your workspace.
+              </p>
+              <Button size="lg" className="mt-8 w-full" onClick={returnToWorkspace}>
+                Continue to workspace
+              </Button>
+            </>
+          ) : (
+            <>
+              <h2 className="mt-6 font-display text-xl font-semibold">You're all set</h2>
+              <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+                Your subscription is active. Sign in with your email and password to enter your workspace.
+              </p>
+              <Button size="lg" className="mt-8 w-full" onClick={goToSignIn}>
+                Go to sign in
+              </Button>
+            </>
+          )
         ) : timedOut ? (
           <>
             <h2 className="mt-6 font-display text-xl font-semibold">Still processing</h2>

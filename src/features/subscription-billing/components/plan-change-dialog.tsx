@@ -61,7 +61,7 @@ export function PlanChangeDialog({
     if (!selected) return
     try {
       if (payNow) {
-        await checkout.mutateAsync({ organizationId, planId: selected.id, billingCycle: cycle }) // redirects to Paystack; never returns normally
+        await checkout.mutateAsync({ organizationId, planId: selected.id, billingCycle: cycle, context: 'existing' }) // redirects to Paystack; never returns normally
       } else if (isDowngrade) {
         await scheduleDowngrade.mutateAsync({ planId: selected.id, billingCycle: cycle !== currentCycle ? cycle : undefined })
         toast.success(`Your plan will change to ${selected.name} on your next billing date.`)

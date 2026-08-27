@@ -13,15 +13,18 @@ export function useStartCheckout() {
       organizationId,
       planId,
       billingCycle = 'monthly',
+      context = 'onboarding',
     }: {
       organizationId: string
       planId: string
       billingCycle?: BillingCycle
+      /** See paystackService.initTransaction's own comment. */
+      context?: 'onboarding' | 'existing'
     }) => {
       if (!env.isPaystackConfigured) {
         throw new Error('Payment integration is not configured yet — contact support.')
       }
-      const { authorizationUrl } = await paystackService.initTransaction(organizationId, planId, billingCycle)
+      const { authorizationUrl } = await paystackService.initTransaction(organizationId, planId, billingCycle, context)
       window.location.href = authorizationUrl
     },
   })

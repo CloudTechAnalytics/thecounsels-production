@@ -15,6 +15,7 @@ import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Badge, type BadgeProps } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { toast } from '@/shared/components/ui/sonner'
 import { friendlyErrorMessage } from '@/shared/lib/errors'
 
@@ -36,12 +37,16 @@ function CommunicationCard({
   onEdit: (comm: ClientCommunicationRow) => void
 }) {
   const meta = STATUS_META[comm.status]
-  // Only a row that never actually sent is retriable/editable/deletable —
-  // RLS (migration 0149) refuses those once status = 'SENT' anyway, this
-  // just keeps the buttons from appearing on a real delivered record.
+  // Retry/Edit only make sense for a row that never actually delivered —
+  // there's nothing to resend once it's SENT, and rewriting its content
+  // afterward would misrepresent what was really emailed. RLS (0149)
+  // enforces this too. Delete has no such restriction (0150, confirmed
+  // with the user) — any row can be removed from the log, SENT or not;
+  // this just confirms first when it's an actual delivered record.
   const notSent = comm.status !== 'SENT'
   const resend = useResendCommunication(comm.client_id, comm.matter_id ?? undefined)
   const del = useDeleteCommunication(comm.client_id, comm.matter_id ?? undefined)
+  const [confirmingDelete, setConfirmingDelete] = React.useState(false)
 
   const retry = async () => {
     try {
@@ -59,9 +64,17 @@ function CommunicationCard({
   const remove = async () => {
     try {
       await del.mutateAsync(comm.id)
-      toast.success('Draft removed')
+      toast.success(notSent ? 'Draft removed' : 'Communication deleted')
     } catch (err) {
       toast.error('Could not remove', { description: friendlyErrorMessage(err) })
+    }
+  }
+
+  const onDeleteClick = () => {
+    if (notSent) {
+      remove()
+    } else {
+      setConfirmingDelete(true)
     }
   }
 
@@ -88,31 +101,35 @@ function CommunicationCard({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Badge variant={meta.variant}>{meta.label}</Badge>
-          {canManage && notSent && (
+          {canManage && (
             <div className="flex items-center gap-1">
-              <button
-                className="text-muted-foreground hover:text-foreground disabled:opacity-50"
-                onClick={retry}
-                disabled={resend.isPending}
-                aria-label="Retry send"
-                title="Retry send"
-              >
-                <RefreshCw className={resend.isPending ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
-              </button>
-              <button
-                className="text-muted-foreground hover:text-foreground"
-                onClick={() => onEdit(comm)}
-                aria-label="Edit and resend"
-                title="Edit and resend"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
+              {notSent && (
+                <>
+                  <button
+                    className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+                    onClick={retry}
+                    disabled={resend.isPending}
+                    aria-label="Retry send"
+                    title="Retry send"
+                  >
+                    <RefreshCw className={resend.isPending ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
+                  </button>
+                  <button
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={() => onEdit(comm)}
+                    aria-label="Edit and resend"
+                    title="Edit and resend"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                </>
+              )}
               <button
                 className="text-muted-foreground hover:text-destructive disabled:opacity-50"
-                onClick={remove}
+                onClick={onDeleteClick}
                 disabled={del.isPending}
-                aria-label="Delete draft"
-                title="Delete draft"
+                aria-label="Delete"
+                title="Delete"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
@@ -130,6 +147,17 @@ function CommunicationCard({
       {comm.status === 'FAILED' && comm.failure_reason && (
         <p className="mt-2 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">{comm.failure_reason}</p>
       )}
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        onOpenChange={setConfirmingDelete}
+        title="Delete this communication?"
+        description="This email was actually sent to the client — deleting it only removes the record from The Counsel, it does not unsend the email."
+        destructive
+        confirmLabel="Delete"
+        loading={del.isPending}
+        onConfirm={remove}
+      />
     </Card>
   )
 }

@@ -97,8 +97,20 @@ export function useMatterCommunications(matterId: string | undefined) {
   })
 }
 
-export function useSendCommunication(organizationId: string | null, clientId: string | undefined, matterId?: string) {
+function useInvalidateCommunications(clientId: string | undefined, matterId?: string) {
   const qc = useQueryClient()
+  return () => {
+    qc.invalidateQueries({ queryKey: ['client', clientId, 'communications'] })
+    qc.invalidateQueries({ queryKey: ['client', clientId, 'activity'] })
+    if (matterId) {
+      qc.invalidateQueries({ queryKey: ['matter', matterId, 'communications'] })
+      qc.invalidateQueries({ queryKey: ['matter-events', matterId] })
+    }
+  }
+}
+
+export function useSendCommunication(organizationId: string | null, clientId: string | undefined, matterId?: string) {
+  const invalidate = useInvalidateCommunications(clientId, matterId)
   return useMutation({
     mutationFn: (params: {
       matterId?: string | null
@@ -108,14 +120,39 @@ export function useSendCommunication(organizationId: string | null, clientId: st
       subject: string
       body: string
     }) => clientsService.sendCommunication({ organizationId: organizationId!, clientId: clientId!, ...params }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['client', clientId, 'communications'] })
-      qc.invalidateQueries({ queryKey: ['client', clientId, 'activity'] })
-      if (matterId) {
-        qc.invalidateQueries({ queryKey: ['matter', matterId, 'communications'] })
-        qc.invalidateQueries({ queryKey: ['matter-events', matterId] })
-      }
-    },
+    // onSettled, not onSuccess — if the send itself throws (the actual bug
+    // hit in testing: a CORS failure reaching the Edge Function), the row
+    // it already inserted is still there as PENDING and needs to show up
+    // immediately so it's retriable/deletable, not just on the next
+    // unrelated refetch.
+    onSettled: invalidate,
+  })
+}
+
+/** Re-attempts a PENDING/FAILED row, optionally with edited content —
+ * used both by a plain "Retry" and by the composer's edit-and-resend. */
+export function useResendCommunication(clientId: string | undefined, matterId?: string) {
+  const invalidate = useInvalidateCommunications(clientId, matterId)
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...edits
+    }: {
+      id: string
+      recipientName?: string | null
+      recipientEmail?: string
+      subject?: string
+      body?: string
+    }) => clientsService.resendCommunication(id, edits),
+    onSettled: invalidate,
+  })
+}
+
+export function useDeleteCommunication(clientId: string | undefined, matterId?: string) {
+  const invalidate = useInvalidateCommunications(clientId, matterId)
+  return useMutation({
+    mutationFn: (id: string) => clientsService.deleteCommunication(id),
+    onSuccess: invalidate,
   })
 }
 

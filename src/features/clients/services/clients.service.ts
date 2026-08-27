@@ -1,5 +1,5 @@
 import { supabase } from '@/shared/lib/supabase'
-import type { Client, ClientCommunication, ClientContact, ClientStatus, ClientType, DocumentRow, Invoice, Payment, Profile } from '@/shared/types/database.types'
+import type { Client, ClientCommunication, ClientContact, ClientStatus, ClientType, Database, DocumentRow, Invoice, Payment, Profile } from '@/shared/types/database.types'
 import { clientDisplayName, type ClientFormValues, type ContactFormValues } from '@/features/clients/schemas'
 import type { TaskRow } from '@/features/tasks/types'
 import type { HearingRow } from '@/features/hearings/types'
@@ -186,12 +186,30 @@ export const clientsService = {
     return (data ?? []) as unknown as ClientCommunicationRow[]
   },
 
+  /** Hands an already-inserted row to send-client-communication to
+   * actually deliver via Resend, then re-reads it for its final SENT/
+   * FAILED status. Shared by sendCommunication and resendCommunication —
+   * if the invoke itself throws (network/CORS — the actual bug hit in
+   * testing: this Edge Function was missing CORS headers and every send
+   * failed before ever reaching it), the row is left exactly as it was
+   * (PENDING) rather than silently lost; the caller still knows its id
+   * and the panel's next refetch will show it, retriable/deletable per
+   * migration 0149 rather than a dead end. */
+  async _deliver(id: string): Promise<ClientCommunicationRow> {
+    await invokeEdgeFunction('send-client-communication', { communicationId: id })
+    const { data: sent, error } = await supabase
+      .from('client_communications')
+      .select('*, sent_by_profile:profiles!client_communications_sent_by_fkey(id, full_name, avatar_url), matter:matters(id, title, matter_number)')
+      .eq('id', id)
+      .single()
+    if (error) throw error
+    return sent as unknown as ClientCommunicationRow
+  },
+
   /** Inserts as PENDING (RLS: clients.communicate + client/matter access),
-   * then immediately hands off to send-client-communication to actually
-   * deliver via Resend and flip status to SENT/FAILED — same two-step
-   * "log now, deliver right after" shape as the hearing/task notification
-   * log. Returns the row with its final status, so the composer can show
-   * a real failure inline instead of a false "sent". */
+   * then immediately hands off to _deliver. Returns the row with its
+   * final status, so the composer can show a real failure inline instead
+   * of a false "sent". */
   async sendCommunication(params: {
     organizationId: string
     clientId: string
@@ -217,16 +235,40 @@ export const clientsService = {
       .select('id')
       .single()
     if (error) throw error
+    return this._deliver(data.id)
+  },
 
-    await invokeEdgeFunction('send-client-communication', { communicationId: data.id })
+  /** Re-attempts delivery for a row that never actually sent (PENDING —
+   * stuck because the invoke itself failed, e.g. the CORS bug above — or
+   * FAILED — Resend rejected it, e.g. bad address). Optionally edits the
+   * content first, so a typo doesn't require deleting and starting over.
+   * RLS (migration 0149) refuses this update once status = 'SENT', so a
+   * real delivered record can never be silently rewritten this way. */
+  async resendCommunication(
+    id: string,
+    edits?: { recipientName?: string | null; recipientEmail?: string; subject?: string; body?: string },
+  ): Promise<ClientCommunicationRow> {
+    const patch: Database['public']['Tables']['client_communications']['Update'] = {
+      status: 'PENDING',
+      failure_reason: null,
+      sent_at: null,
+    }
+    if (edits?.recipientName !== undefined) patch.recipient_name = edits.recipientName?.trim() || null
+    if (edits?.recipientEmail !== undefined) patch.recipient_email = edits.recipientEmail.trim()
+    if (edits?.subject !== undefined) patch.subject = edits.subject.trim()
+    if (edits?.body !== undefined) patch.body = edits.body.trim()
 
-    const { data: sent, error: refetchError } = await supabase
-      .from('client_communications')
-      .select('*, sent_by_profile:profiles!client_communications_sent_by_fkey(id, full_name, avatar_url), matter:matters(id, title, matter_number)')
-      .eq('id', data.id)
-      .single()
-    if (refetchError) throw refetchError
-    return sent as unknown as ClientCommunicationRow
+    const { error } = await supabase.from('client_communications').update(patch).eq('id', id)
+    if (error) throw error
+    return this._deliver(id)
+  },
+
+  /** Removes a communication that never actually sent — RLS blocks this
+   * once status = 'SENT' (migration 0149), so a real delivered record
+   * can't be deleted this way either. */
+  async deleteCommunication(id: string): Promise<void> {
+    const { error } = await supabase.from('client_communications').delete().eq('id', id)
+    if (error) throw error
   },
 
   async list(organizationId: string, filters: ClientFilters = {}): Promise<ClientRow[]> {

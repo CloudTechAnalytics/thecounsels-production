@@ -16,8 +16,23 @@
 // ============================================================================
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.46.1'
 
+// This function is called directly from the browser (supabase.functions.
+// invoke, in clients.service.ts) — unlike send-task-notification (only
+// ever called server-side via pg_net), it needs real CORS handling or the
+// browser blocks it before any response is even parsed. Missing this was
+// a real bug: every send failed with a bare "Failed to fetch"/"Could not
+// fetch" and the row it inserted was stuck PENDING forever, since the
+// function was never actually reached to flip its status. Matches every
+// other browser-invoked function in this project (paystack-init-
+// transaction, generate-data-export, admin-create-user).
+const cors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 }
 
 const GOLD = '#B38A3E'
@@ -75,6 +90,7 @@ async function sendEmail(params: { to: string; subject: string; html: string }):
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!

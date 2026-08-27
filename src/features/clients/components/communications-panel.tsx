@@ -1,15 +1,22 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { format, formatDistanceToNow } from 'date-fns'
-import { Mail, MailWarning, Send } from 'lucide-react'
+import { Mail, MailWarning, Send, RefreshCw, Pencil, Trash2 } from 'lucide-react'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useClientCommunications, useMatterCommunications } from '@/features/clients/hooks/use-clients'
+import {
+  useClientCommunications,
+  useMatterCommunications,
+  useResendCommunication,
+  useDeleteCommunication,
+} from '@/features/clients/hooks/use-clients'
 import type { ClientCommunicationRow } from '@/features/clients/services/clients.service'
 import { CommunicationComposerDialog } from '@/features/clients/components/communication-composer-dialog'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Badge, type BadgeProps } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
+import { toast } from '@/shared/components/ui/sonner'
+import { friendlyErrorMessage } from '@/shared/lib/errors'
 
 const STATUS_META: Record<ClientCommunicationRow['status'], { label: string; variant: BadgeProps['variant'] }> = {
   SENT: { label: 'Sent', variant: 'success' },
@@ -17,8 +24,47 @@ const STATUS_META: Record<ClientCommunicationRow['status'], { label: string; var
   FAILED: { label: 'Failed', variant: 'destructive' },
 }
 
-function CommunicationCard({ comm, showMatter }: { comm: ClientCommunicationRow; showMatter: boolean }) {
+function CommunicationCard({
+  comm,
+  showMatter,
+  canManage,
+  onEdit,
+}: {
+  comm: ClientCommunicationRow
+  showMatter: boolean
+  canManage: boolean
+  onEdit: (comm: ClientCommunicationRow) => void
+}) {
   const meta = STATUS_META[comm.status]
+  // Only a row that never actually sent is retriable/editable/deletable —
+  // RLS (migration 0149) refuses those once status = 'SENT' anyway, this
+  // just keeps the buttons from appearing on a real delivered record.
+  const notSent = comm.status !== 'SENT'
+  const resend = useResendCommunication(comm.client_id, comm.matter_id ?? undefined)
+  const del = useDeleteCommunication(comm.client_id, comm.matter_id ?? undefined)
+
+  const retry = async () => {
+    try {
+      const result = await resend.mutateAsync({ id: comm.id })
+      if (result.status === 'FAILED') {
+        toast.error('Still could not be sent', { description: result.failure_reason ?? undefined })
+        return
+      }
+      toast.success('Email sent')
+    } catch (err) {
+      toast.error('Could not send email', { description: friendlyErrorMessage(err) })
+    }
+  }
+
+  const remove = async () => {
+    try {
+      await del.mutateAsync(comm.id)
+      toast.success('Draft removed')
+    } catch (err) {
+      toast.error('Could not remove', { description: friendlyErrorMessage(err) })
+    }
+  }
+
   return (
     <Card className="p-4">
       <div className="flex items-start justify-between gap-3">
@@ -40,7 +86,39 @@ function CommunicationCard({ comm, showMatter }: { comm: ClientCommunicationRow;
             </p>
           </div>
         </div>
-        <Badge variant={meta.variant} className="shrink-0">{meta.label}</Badge>
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge variant={meta.variant}>{meta.label}</Badge>
+          {canManage && notSent && (
+            <div className="flex items-center gap-1">
+              <button
+                className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+                onClick={retry}
+                disabled={resend.isPending}
+                aria-label="Retry send"
+                title="Retry send"
+              >
+                <RefreshCw className={resend.isPending ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
+              </button>
+              <button
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => onEdit(comm)}
+                aria-label="Edit and resend"
+                title="Edit and resend"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button
+                className="text-muted-foreground hover:text-destructive disabled:opacity-50"
+                onClick={remove}
+                disabled={del.isPending}
+                aria-label="Delete draft"
+                title="Delete draft"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">{comm.body}</p>
       <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
@@ -83,6 +161,16 @@ export function CommunicationsPanel({
   const matterScoped = useMatterCommunications(matterId)
   const { data, isLoading } = matterId ? matterScoped : clientScoped
   const [composing, setComposing] = React.useState(false)
+  const [editingComm, setEditingComm] = React.useState<ClientCommunicationRow | null>(null)
+
+  const openNew = () => {
+    setEditingComm(null)
+    setComposing(true)
+  }
+  const openEdit = (comm: ClientCommunicationRow) => {
+    setEditingComm(comm)
+    setComposing(true)
+  }
 
   return (
     <div className="space-y-4">
@@ -91,7 +179,7 @@ export function CommunicationsPanel({
           {matterId ? "Emails sent to the client about this matter." : 'Every email sent to this client, across all matters.'}
         </p>
         {canSend && (
-          <Button size="sm" onClick={() => setComposing(true)}>
+          <Button size="sm" onClick={openNew}>
             <Send className="h-3.5 w-3.5" /> New message
           </Button>
         )}
@@ -106,7 +194,7 @@ export function CommunicationsPanel({
       ) : data && data.length > 0 ? (
         <div className="space-y-3">
           {data.map((comm) => (
-            <CommunicationCard key={comm.id} comm={comm} showMatter={!matterId} />
+            <CommunicationCard key={comm.id} comm={comm} showMatter={!matterId} canManage={canSend} onEdit={openEdit} />
           ))}
         </div>
       ) : (
@@ -120,8 +208,9 @@ export function CommunicationsPanel({
           matterId={matterId}
           defaultRecipientEmail={defaultRecipientEmail}
           defaultRecipientName={defaultRecipientName}
+          editing={editingComm}
           open={composing}
-          onOpenChange={setComposing}
+          onOpenChange={(o) => { setComposing(o); if (!o) setEditingComm(null) }}
         />
       )}
     </div>

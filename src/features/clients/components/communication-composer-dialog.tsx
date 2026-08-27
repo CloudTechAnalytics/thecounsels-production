@@ -1,8 +1,9 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/features/auth/context/auth-provider'
-import { useSendCommunication } from '@/features/clients/hooks/use-clients'
+import { useSendCommunication, useResendCommunication } from '@/features/clients/hooks/use-clients'
 import { communicationSchema, type CommunicationFormValues } from '@/features/clients/schemas'
+import type { ClientCommunicationRow } from '@/features/clients/services/clients.service'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
@@ -25,6 +26,10 @@ import { friendlyErrorMessage } from '@/shared/lib/errors'
  * building), so unlike most create dialogs in this app there's no silent
  * auto-send: the recipient/subject/body are always shown back before
  * submit, and a failure is surfaced plainly rather than swallowed.
+ *
+ * Doubles as the "edit & resend" dialog for a row that never actually
+ * sent (PENDING/FAILED — pass it as `editing`) — a SENT row is never
+ * passed in here; RLS would refuse the update anyway (migration 0149).
  */
 export function CommunicationComposerDialog({
   clientId,
@@ -32,6 +37,7 @@ export function CommunicationComposerDialog({
   matterId,
   defaultRecipientEmail,
   defaultRecipientName,
+  editing,
   open,
   onOpenChange,
 }: {
@@ -43,33 +49,44 @@ export function CommunicationComposerDialog({
   matterId?: string
   defaultRecipientEmail?: string | null
   defaultRecipientName?: string | null
+  editing?: ClientCommunicationRow | null
   open: boolean
   onOpenChange: (o: boolean) => void
 }) {
   const { activeOrgId, profile } = useAuth()
   const send = useSendCommunication(activeOrgId, clientId, matterId)
+  const resend = useResendCommunication(clientId, matterId)
+  const pending = editing ? resend.isPending : send.isPending
 
   const form = useForm<CommunicationFormValues>({
     resolver: zodResolver(communicationSchema),
     values: {
       matterId: matterId ?? '',
-      recipientName: defaultRecipientName ?? '',
-      recipientEmail: defaultRecipientEmail ?? '',
-      subject: '',
-      body: '',
+      recipientName: editing?.recipient_name ?? defaultRecipientName ?? '',
+      recipientEmail: editing?.recipient_email ?? defaultRecipientEmail ?? '',
+      subject: editing?.subject ?? '',
+      body: editing?.body ?? '',
     },
   })
 
   const onSubmit = async (values: CommunicationFormValues) => {
     try {
-      const result = await send.mutateAsync({
-        matterId: matterId ?? null,
-        sentBy: profile?.id ?? null,
-        recipientName: values.recipientName || null,
-        recipientEmail: values.recipientEmail,
-        subject: values.subject,
-        body: values.body,
-      })
+      const result = editing
+        ? await resend.mutateAsync({
+            id: editing.id,
+            recipientName: values.recipientName || null,
+            recipientEmail: values.recipientEmail,
+            subject: values.subject,
+            body: values.body,
+          })
+        : await send.mutateAsync({
+            matterId: matterId ?? null,
+            sentBy: profile?.id ?? null,
+            recipientName: values.recipientName || null,
+            recipientEmail: values.recipientEmail,
+            subject: values.subject,
+            body: values.body,
+          })
       if (result.status === 'FAILED') {
         toast.error('Email could not be sent', { description: result.failure_reason ?? undefined })
         return
@@ -86,7 +103,7 @@ export function CommunicationComposerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>New client communication</DialogTitle>
+          <DialogTitle>{editing ? 'Edit & resend' : 'New client communication'}</DialogTitle>
           <DialogDescription>Sends a real email to {clientName} and logs it below.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -149,8 +166,8 @@ export function CommunicationComposerDialog({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" loading={send.isPending}>
-                Send email
+              <Button type="submit" loading={pending}>
+                {editing ? 'Resend email' : 'Send email'}
               </Button>
             </DialogFooter>
           </form>

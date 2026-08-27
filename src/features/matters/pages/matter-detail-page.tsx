@@ -224,12 +224,12 @@ export function MatterDetailPage() {
               matterId={matter.id}
               defaultRecipientEmail={matterClientContacts?.find((c) => c.is_primary)?.email || matterClient?.email}
               defaultRecipientName={matterClientContacts?.find((c) => c.is_primary)?.name || matter.client.display_name}
-              // Deliberately NOT gated by isClosed like the other tabs — a
-              // closed matter is read-only for matter-scoped records
-              // (matter_row_access), but client_communications isn't one of
-              // those (see migration 0145): a closing letter or final
-              // confirmation is a normal, legitimate thing to send right
-              // after a matter closes.
+              // Gated by isClosed like every other tab — a closed matter is
+              // fully read-only until reopened (0050's convention, and the
+              // user's explicit call overriding 0145's original "a closing
+              // letter is fine post-closure" choice: closed means closed,
+              // full stop). Enforced server-side too (migration 0151).
+              readOnly={isClosed}
             />
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">This matter has no client attached.</p>

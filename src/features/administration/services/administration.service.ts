@@ -230,6 +230,12 @@ export const administrationService = {
     if (error) throw error
   },
 
+  /** Unscoped — every active member of the org, regardless of branch.
+   * Deliberately kept this way: useFirmMembers (messaging's "New message"
+   * recipient picker) also calls this, and messaging is meant to stay
+   * firm-wide (see /messages' own dialog copy). Firm Settings' own roster
+   * uses listVisibleMembers below instead — see its comment and 0137 for
+   * why the split exists rather than narrowing this one directly. */
   async listMembers(organizationId: string): Promise<MemberWithRelations[]> {
     const { data, error } = await supabase
       .from('memberships')
@@ -237,6 +243,27 @@ export const administrationService = {
         '*, profile:profiles!memberships_user_id_fkey(id, full_name, email, avatar_url, title), role:roles(id, name, key, rank), member_branches(branch_id, branch:branches(id, name))',
       )
       .eq('organization_id', organizationId)
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    return (data ?? []) as unknown as MemberWithRelations[]
+  },
+
+  /** Firm Settings > Members only (0137) — branch-scoped: a Lagos-only
+   * Partner sees Lagos colleagues and org-wide leadership, not Abuja's
+   * roster. list_visible_membership_ids does the actual narrowing
+   * server-side; this just adds that as an extra filter on top of the
+   * same query listMembers runs, rather than a second RLS policy. */
+  async listVisibleMembers(organizationId: string): Promise<MemberWithRelations[]> {
+    const { data: visibleIds, error: idsErr } = await supabase.rpc('list_visible_membership_ids', { p_org: organizationId })
+    if (idsErr) throw idsErr
+    if (!visibleIds || visibleIds.length === 0) return []
+    const { data, error } = await supabase
+      .from('memberships')
+      .select(
+        '*, profile:profiles!memberships_user_id_fkey(id, full_name, email, avatar_url, title), role:roles(id, name, key, rank), member_branches(branch_id, branch:branches(id, name))',
+      )
+      .eq('organization_id', organizationId)
+      .in('id', visibleIds)
       .order('created_at', { ascending: true })
     if (error) throw error
     return (data ?? []) as unknown as MemberWithRelations[]

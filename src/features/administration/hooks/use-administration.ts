@@ -38,7 +38,9 @@ export function useInvitations(organizationId: string | null) {
 export function useMembers(organizationId: string | null) {
   return useQuery({
     queryKey: keys.members(organizationId ?? 'none'),
-    queryFn: () => administrationService.listMembers(organizationId!),
+    // Branch-scoped (0137) — Firm Settings' own roster, not the same
+    // unscoped list messaging's recipient picker uses (useFirmMembers).
+    queryFn: () => administrationService.listVisibleMembers(organizationId!),
     enabled: Boolean(organizationId),
   })
 }

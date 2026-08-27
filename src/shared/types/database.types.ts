@@ -2175,6 +2175,7 @@ export interface Database {
       }
       deny_support_session: { Args: { p_id: string }; Returns: undefined }
       end_support_session: { Args: { p_id: string }; Returns: undefined }
+      list_visible_membership_ids: { Args: { p_org: string }; Returns: string[] }
       set_platform_access: { Args: { p_user: string; p_role: string; p_is_admin: boolean }; Returns: undefined }
       notify_user: {
         Args: {

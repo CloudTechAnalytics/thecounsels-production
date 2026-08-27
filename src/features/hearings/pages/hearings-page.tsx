@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { format, isPast } from 'date-fns'
-import { Plus, Gavel, Search } from 'lucide-react'
+import { Plus, Gavel, Search, Archive } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useHearings, useDeleteHearing } from '@/features/hearings/hooks/use-hearings'
@@ -10,6 +10,7 @@ import { BranchSelector } from '@/features/dashboard/components/branch-selector'
 import { HearingCard } from '@/features/hearings/components/hearing-card'
 import { HEARING_STATUS_META, type HearingRow } from '@/features/hearings/types'
 import type { HearingFilters } from '@/features/hearings/services/hearings.service'
+import { isMatterClosed } from '@/features/matters/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
@@ -25,8 +26,9 @@ export function HearingsPage() {
   const { has } = usePermissions()
   const [search, setSearch] = React.useState('')
   const [status, setStatus] = React.useState<HearingFilters['status']>('all')
+  const [includeClosed, setIncludeClosed] = React.useState(false)
   const branchScope = useBranchScope()
-  const { data, isLoading } = useHearings(activeOrgId, { search, status, branchId: branchScope.selectedBranchId })
+  const { data: rawData, isLoading } = useHearings(activeOrgId, { search, status, branchId: branchScope.selectedBranchId })
   const del = useDeleteHearing(activeOrgId)
 
   const [formOpen, setFormOpen] = React.useState(false)
@@ -36,6 +38,12 @@ export function HearingsPage() {
   const canCreate = has('hearings.create')
   const canEdit = has('hearings.update')
   const canDelete = has('hearings.delete')
+
+  // A closed matter's own hearing history stays fully visible on the
+  // matter's own Hearings tab — this is the cross-matter browsing view,
+  // where old hearings from dead matters are just clutter by default.
+  const data = includeClosed ? rawData : (rawData ?? []).filter((h) => !h.matter || !isMatterClosed(h.matter.status))
+  const closedCount = (rawData ?? []).filter((h) => h.matter && isMatterClosed(h.matter.status)).length
 
   const upcoming = (data ?? []).filter((h) => !isPast(new Date(h.hearing_at)) && h.status === 'scheduled')
   const past = (data ?? []).filter((h) => isPast(new Date(h.hearing_at)) || h.status !== 'scheduled')
@@ -96,6 +104,15 @@ export function HearingsPage() {
         {branchScope.canSelect && (
           <BranchSelector options={branchScope.options} value={branchScope.selectedBranchId} onChange={branchScope.setSelectedBranchId} />
         )}
+        <Button
+          variant={includeClosed ? 'secondary' : 'outline'}
+          size="sm"
+          onClick={() => setIncludeClosed((v) => !v)}
+          title={includeClosed ? 'Hide hearings from closed matters' : 'Show hearings from closed matters too'}
+        >
+          <Archive className="h-3.5 w-3.5" />
+          {includeClosed ? 'Including closed matters' : closedCount > 0 ? `Closed matters hidden (${closedCount})` : 'Closed matters hidden'}
+        </Button>
       </div>
 
       {isLoading ? (

@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { isPast, isToday } from 'date-fns'
-import { Plus, CheckSquare, Search } from 'lucide-react'
+import { Plus, CheckSquare, Search, Archive } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useTasks, useDeleteTask } from '@/features/tasks/hooks/use-tasks'
@@ -10,6 +10,7 @@ import { BranchSelector } from '@/features/dashboard/components/branch-selector'
 import { TaskItem } from '@/features/tasks/components/task-item'
 import { TASK_PRIORITY_META, TASK_STATUS_META, type TaskRow } from '@/features/tasks/types'
 import type { TaskFilters } from '@/features/tasks/services/tasks.service'
+import { isMatterClosed } from '@/features/matters/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
@@ -26,8 +27,9 @@ export function TasksPage() {
   const [search, setSearch] = React.useState('')
   const [status, setStatus] = React.useState<TaskFilters['status']>('all')
   const [scope, setScope] = React.useState<'all' | 'me'>('all')
+  const [includeClosed, setIncludeClosed] = React.useState(false)
   const branchScope = useBranchScope()
-  const { data, isLoading } = useTasks(activeOrgId, { search, status, assigneeId: scope, branchId: branchScope.selectedBranchId }, profile?.id ?? null)
+  const { data: rawData, isLoading } = useTasks(activeOrgId, { search, status, assigneeId: scope, branchId: branchScope.selectedBranchId }, profile?.id ?? null)
   const del = useDeleteTask(activeOrgId)
 
   const [formOpen, setFormOpen] = React.useState(false)
@@ -42,6 +44,13 @@ export function TasksPage() {
   const canManageTasks = has('tasks.assign')
   const canEdit = (t: TaskRow) => canManageTasks || t.assignee_id === profile?.id
   const canDelete = has('tasks.delete')
+
+  // Full history stays on the matter's own Tasks tab — this cross-matter
+  // list defaults to hiding a closed matter's old tasks so they don't
+  // clutter what's actually live (they can't be completed anymore anyway,
+  // same as your-tasks-card.tsx's dashboard widget already does).
+  const data = includeClosed ? rawData : (rawData ?? []).filter((t) => !t.matter || !isMatterClosed(t.matter.status))
+  const closedCount = (rawData ?? []).filter((t) => t.matter && isMatterClosed(t.matter.status)).length
 
   const open = (data ?? []).filter((t) => t.status !== 'done' && t.status !== 'cancelled')
   const done = (data ?? []).filter((t) => t.status === 'done')
@@ -109,6 +118,15 @@ export function TasksPage() {
         {branchScope.canSelect && (
           <BranchSelector options={branchScope.options} value={branchScope.selectedBranchId} onChange={branchScope.setSelectedBranchId} />
         )}
+        <Button
+          variant={includeClosed ? 'secondary' : 'outline'}
+          size="sm"
+          onClick={() => setIncludeClosed((v) => !v)}
+          title={includeClosed ? 'Hide tasks from closed matters' : 'Show tasks from closed matters too'}
+        >
+          <Archive className="h-3.5 w-3.5" />
+          {includeClosed ? 'Including closed matters' : closedCount > 0 ? `Closed matters hidden (${closedCount})` : 'Closed matters hidden'}
+        </Button>
       </div>
 
       {isLoading ? (

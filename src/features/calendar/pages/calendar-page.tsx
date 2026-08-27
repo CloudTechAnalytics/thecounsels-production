@@ -73,7 +73,11 @@ export function CalendarPage() {
     for (const h of data ?? []) {
       // Resolved hearings (held/cancelled) shouldn't linger on the calendar
       // — same "resolved work disappears" expectation tasks get below.
+      // A closed matter's hearing is the same category: dead weight on
+      // "what's happening", not something to hunt through here (its full
+      // history stays on the matter's own Hearings tab).
       if (h.status === 'held' || h.status === 'cancelled') continue
+      if (h.matter && isMatterClosed(h.matter.status)) continue
       const key = format(new Date(h.hearing_at), 'yyyy-MM-dd')
       push(key, { kind: 'hearing', id: h.id, time: format(new Date(h.hearing_at), 'HH:mm'), title: h.title, sortKey: h.hearing_at, data: h })
     }
@@ -81,11 +85,13 @@ export function CalendarPage() {
       // due_date is a plain date (no time component) — every task due that
       // day sorts after the day's timed hearings, alphabetically among themselves.
       if (!t.due_date || t.status === 'cancelled' || t.status === 'done') continue
+      if (t.matter && isMatterClosed(t.matter.status)) continue
       push(t.due_date, { kind: 'task', id: t.id, time: '', title: t.title, sortKey: t.due_date + 'T23:59:59', data: t })
     }
     for (const a of apptData ?? []) {
       // Same "resolved work disappears" rule as hearings.
       if (a.status === 'completed' || a.status === 'cancelled' || a.status === 'no_show') continue
+      if (a.matter && isMatterClosed(a.matter.status)) continue
       const key = format(new Date(a.appointment_at), 'yyyy-MM-dd')
       push(key, { kind: 'appointment', id: a.id, time: format(new Date(a.appointment_at), 'HH:mm'), title: a.title, sortKey: a.appointment_at, data: a })
     }
@@ -131,16 +137,19 @@ export function CalendarPage() {
     const items: DayItem[] = []
     for (const h of data ?? []) {
       if (h.status === 'held' || h.status === 'cancelled') continue
+      if (h.matter && isMatterClosed(h.matter.status)) continue
       if (!isSameMonth(new Date(h.hearing_at), cursor)) continue
       items.push({ kind: 'hearing', id: h.id, time: format(new Date(h.hearing_at), 'HH:mm'), title: h.title, sortKey: h.hearing_at, data: h })
     }
     for (const t of taskData ?? []) {
       if (!t.due_date || t.status === 'cancelled' || t.status === 'done') continue
+      if (t.matter && isMatterClosed(t.matter.status)) continue
       if (!isSameMonth(new Date(t.due_date + 'T00:00:00'), cursor)) continue
       items.push({ kind: 'task', id: t.id, time: '', title: t.title, sortKey: t.due_date + 'T23:59:59', data: t })
     }
     for (const a of apptData ?? []) {
       if (a.status === 'completed' || a.status === 'cancelled' || a.status === 'no_show') continue
+      if (a.matter && isMatterClosed(a.matter.status)) continue
       if (!isSameMonth(new Date(a.appointment_at), cursor)) continue
       items.push({ kind: 'appointment', id: a.id, time: format(new Date(a.appointment_at), 'HH:mm'), title: a.title, sortKey: a.appointment_at, data: a })
     }

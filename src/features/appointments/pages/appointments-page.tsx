@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { format, isPast } from 'date-fns'
-import { Plus, CalendarClock, Search } from 'lucide-react'
+import { Plus, CalendarClock, Search, Archive } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useAppointments, useDeleteAppointment } from '@/features/appointments/hooks/use-appointments'
@@ -10,6 +10,7 @@ import { BranchSelector } from '@/features/dashboard/components/branch-selector'
 import { AppointmentCard } from '@/features/appointments/components/appointment-card'
 import { APPOINTMENT_STATUS_META, type AppointmentRow } from '@/features/appointments/types'
 import type { AppointmentFilters } from '@/features/appointments/services/appointments.service'
+import { isMatterClosed } from '@/features/matters/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { ExportButton } from '@/shared/components/export-button'
 import { Card } from '@/shared/components/ui/card'
@@ -26,8 +27,9 @@ export function AppointmentsPage() {
   const { has } = usePermissions()
   const [search, setSearch] = React.useState('')
   const [status, setStatus] = React.useState<AppointmentFilters['status']>('all')
+  const [includeClosed, setIncludeClosed] = React.useState(false)
   const branchScope = useBranchScope()
-  const { data, isLoading } = useAppointments(activeOrgId, { search, status, branchId: branchScope.selectedBranchId })
+  const { data: rawData, isLoading } = useAppointments(activeOrgId, { search, status, branchId: branchScope.selectedBranchId })
   const del = useDeleteAppointment(activeOrgId)
 
   const [formOpen, setFormOpen] = React.useState(false)
@@ -37,6 +39,11 @@ export function AppointmentsPage() {
   const canCreate = has('appointments.create')
   const canEdit = has('appointments.update')
   const canDelete = has('appointments.delete')
+
+  // Full history stays visible from the matter itself — this cross-matter
+  // list defaults to hiding a closed matter's old appointments.
+  const data = includeClosed ? rawData : (rawData ?? []).filter((a) => !a.matter || !isMatterClosed(a.matter.status))
+  const closedCount = (rawData ?? []).filter((a) => a.matter && isMatterClosed(a.matter.status)).length
 
   const upcoming = (data ?? []).filter((a) => !isPast(new Date(a.appointment_at)) && a.status === 'scheduled')
   const past = (data ?? []).filter((a) => isPast(new Date(a.appointment_at)) || a.status !== 'scheduled')
@@ -95,6 +102,15 @@ export function AppointmentsPage() {
         {branchScope.canSelect && (
           <BranchSelector options={branchScope.options} value={branchScope.selectedBranchId} onChange={branchScope.setSelectedBranchId} />
         )}
+        <Button
+          variant={includeClosed ? 'secondary' : 'outline'}
+          size="sm"
+          onClick={() => setIncludeClosed((v) => !v)}
+          title={includeClosed ? 'Hide appointments from closed matters' : 'Show appointments from closed matters too'}
+        >
+          <Archive className="h-3.5 w-3.5" />
+          {includeClosed ? 'Including closed matters' : closedCount > 0 ? `Closed matters hidden (${closedCount})` : 'Closed matters hidden'}
+        </Button>
       </div>
 
       {isLoading ? (

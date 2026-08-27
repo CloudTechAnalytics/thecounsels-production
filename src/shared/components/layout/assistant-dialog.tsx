@@ -85,27 +85,35 @@ export function AssistantDialog() {
           </div>
           <MessageThread messages={messages} currentUserId={userId} isLoading={isLoading} pendingReply={send.isPending} />
           <MessageComposer onSend={onSend} disabled={send.isPending} />
+
+          {/* Nested inside the outer DialogContent, not a sibling after
+           * </Dialog> — two independent Radix Dialog roots open at once
+           * (this one plus a standalone ConfirmDialog) causes the outer one
+           * to dismiss itself when the inner one opens, which is exactly
+           * what "clicking Clear just closes the whole assistant" was.
+           * payment-detail-dialog.tsx (and everywhere else in this app that
+           * confirms an action from inside an already-open dialog) nests
+           * ConfirmDialog the same way — this just matches that. */}
+          <ConfirmDialog
+            open={confirmClear}
+            onOpenChange={setConfirmClear}
+            title="Clear chat"
+            destructive
+            confirmLabel="Clear chat"
+            loading={clear.isPending}
+            description="This permanently deletes your assistant chat history. This cannot be undone."
+            onConfirm={async () => {
+              try {
+                await clear.mutateAsync()
+                setConfirmClear(false)
+              } catch (err) {
+                logClientError(err, { source: 'ask-assistant-clear', context: { organizationId: activeOrgId } })
+                toast.error('Could not clear chat', { description: errorMessage(err) })
+              }
+            }}
+          />
         </DialogContent>
       </Dialog>
-
-      <ConfirmDialog
-        open={confirmClear}
-        onOpenChange={setConfirmClear}
-        title="Clear chat"
-        destructive
-        confirmLabel="Clear chat"
-        loading={clear.isPending}
-        description="This permanently deletes your assistant chat history. This cannot be undone."
-        onConfirm={async () => {
-          try {
-            await clear.mutateAsync()
-            setConfirmClear(false)
-          } catch (err) {
-            logClientError(err, { source: 'ask-assistant-clear', context: { organizationId: activeOrgId } })
-            toast.error('Could not clear chat', { description: errorMessage(err) })
-          }
-        }}
-      />
     </>
   )
 }

@@ -159,31 +159,38 @@ export function DocumentViewer({
               </div>
             )}
           </div>
+
+          {/* Nested inside this DialogContent, not siblings after </Dialog>
+           * — two independent Radix Dialog roots open at once causes the
+           * outer one to dismiss itself when the inner one opens (same bug
+           * fixed in assistant-dialog.tsx's Clear chat — see its own
+           * comment). Both of these open while this viewer is already open,
+           * so both need to live inside it, matching how
+           * payment-detail-dialog.tsx nests its own ConfirmDialog. */}
+          <DocumentRenameDialog doc={doc} open={renaming} onOpenChange={setRenaming} />
+
+          <ConfirmDialog
+            open={confirmDelete}
+            onOpenChange={setConfirmDelete}
+            title="Delete document"
+            destructive
+            confirmLabel="Delete"
+            loading={del.isPending}
+            description={<>This permanently removes <strong>{doc?.display_name}</strong> from storage.</>}
+            onConfirm={async () => {
+              if (!doc) return
+              try {
+                await del.mutateAsync(doc)
+                toast.success('Document deleted')
+                setConfirmDelete(false)
+                onOpenChange(false)
+              } catch (err) {
+                toast.error('Could not delete', { description: err instanceof Error ? err.message : undefined })
+              }
+            }}
+          />
         </DialogContent>
       </Dialog>
-
-      <DocumentRenameDialog doc={doc} open={renaming} onOpenChange={setRenaming} />
-
-      <ConfirmDialog
-        open={confirmDelete}
-        onOpenChange={setConfirmDelete}
-        title="Delete document"
-        destructive
-        confirmLabel="Delete"
-        loading={del.isPending}
-        description={<>This permanently removes <strong>{doc?.display_name}</strong> from storage.</>}
-        onConfirm={async () => {
-          if (!doc) return
-          try {
-            await del.mutateAsync(doc)
-            toast.success('Document deleted')
-            setConfirmDelete(false)
-            onOpenChange(false)
-          } catch (err) {
-            toast.error('Could not delete', { description: err instanceof Error ? err.message : undefined })
-          }
-        }}
-      />
     </>
   )
 }

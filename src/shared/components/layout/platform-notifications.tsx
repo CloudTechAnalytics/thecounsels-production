@@ -1,19 +1,33 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
-import { Bell } from 'lucide-react'
+import { Bell, Trash2 } from 'lucide-react'
 import { usePlatformActivity } from '@/features/platform/hooks/use-platform'
 import { Button } from '@/shared/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/components/ui/dropdown-menu'
 import { titleCase } from '@/shared/lib/format'
 
 const SEEN_KEY = 'counsel.platform_notifications_seen_at'
+// Distinct from SEEN_KEY: seenAt only silences the unread dot, clearedAt
+// actually empties this bell's list for this admin going forward. Doesn't
+// touch audit_logs itself (a real audit trail every platform admin
+// shares — nothing here is ever deleted), only what this bell shows this
+// user in this browser, same "local, per-user, no server round trip"
+// posture SEEN_KEY already had.
+const CLEARED_KEY = 'counsel.platform_notifications_cleared_at'
 
 /** Platform-wide activity bell — same audit_logs feed as the dashboard and Audit Logs page. */
 export function PlatformNotifications() {
   const navigate = useNavigate()
-  const { data: activity, isLoading, live } = usePlatformActivity()
+  const { data: rawActivity, isLoading, live } = usePlatformActivity()
   const [seenAt, setSeenAt] = React.useState<string | null>(() => localStorage.getItem(SEEN_KEY))
+  const [clearedAt, setClearedAt] = React.useState<string | null>(() => localStorage.getItem(CLEARED_KEY))
+
+  const activity = React.useMemo(() => {
+    if (!rawActivity || !clearedAt) return rawActivity
+    const cleared = new Date(clearedAt).getTime()
+    return rawActivity.filter((a) => new Date(a.created_at).getTime() > cleared)
+  }, [rawActivity, clearedAt])
 
   const unreadCount = React.useMemo(() => {
     if (!activity) return 0
@@ -29,6 +43,13 @@ export function PlatformNotifications() {
     setSeenAt(now)
   }
 
+  const clearAll = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const now = new Date().toISOString()
+    localStorage.setItem(CLEARED_KEY, now)
+    setClearedAt(now)
+  }
+
   return (
     <DropdownMenu onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
@@ -42,10 +63,21 @@ export function PlatformNotifications() {
       <DropdownMenuContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
           <p className="text-sm font-semibold">Platform activity</p>
-          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className={`h-1.5 w-1.5 rounded-full ${live ? 'animate-pulse bg-success' : 'bg-muted-foreground/40'}`} />
-            {live ? 'Live' : 'Connecting…'}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className={`h-1.5 w-1.5 rounded-full ${live ? 'animate-pulse bg-success' : 'bg-muted-foreground/40'}`} />
+              {live ? 'Live' : 'Connecting…'}
+            </span>
+            {activity && activity.length > 0 && (
+              <button
+                onClick={clearAll}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
+                title="Clear this list (doesn't delete the underlying audit log)"
+              >
+                <Trash2 className="h-3 w-3" /> Clear
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="max-h-80 overflow-y-auto">
@@ -68,7 +100,9 @@ export function PlatformNotifications() {
               ))}
             </ul>
           ) : (
-            <div className="px-3 py-8 text-center text-sm text-muted-foreground">No activity yet.</div>
+            <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+              {clearedAt ? 'Cleared — new activity will show up here.' : 'No activity yet.'}
+            </div>
           )}
         </div>
 

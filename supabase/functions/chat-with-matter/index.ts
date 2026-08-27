@@ -30,10 +30,11 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 }
 
-// See summarize-matter/index.ts's own comment for why this is the
-// "-latest" alias rather than a pinned dated model string (two prior
-// outages from Google retiring a dated model for new users).
-const GEMINI_MODEL = 'gemini-flash-latest'
+// See summarize-matter/index.ts's own comment — pinned to a real model
+// name, not the "-latest" alias (confirmed live: that alias hangs
+// indefinitely on this account rather than erroring or actually
+// resolving to the current model).
+const GEMINI_MODEL = 'gemini-3.6-flash'
 const MAX_TOKENS = 1536
 const HISTORY_LIMIT = 20
 // See summarize-matter/index.ts's own comment — the frontend's Supabase

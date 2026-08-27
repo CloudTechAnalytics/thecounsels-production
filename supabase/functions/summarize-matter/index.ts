@@ -31,16 +31,19 @@ function json(body: unknown, status = 200) {
 }
 
 // gemini-2.0-flash, then gemini-2.5-flash, were each retired for new users
-// in turn (both confirmed via a live 404 from Google's API) — pinning an
-// exact dated model string here has now broken this feature twice in one
-// session. Switched to the "-latest" alias instead: Google hot-swaps it to
-// whatever the current non-deprecated Flash model is, with a 2-week email
-// notice before any breaking change — it stays on the Flash tier (the
-// free-tier-friendly one this integration was chosen for) rather than ever
-// silently resolving to a paid Pro model. If generation ever starts
-// failing again, it's no longer "which model string is current" — check
-// GEMINI_API_KEY/quota first.
-const GEMINI_MODEL = 'gemini-flash-latest'
+// in turn (both confirmed via a live 404 from Google's API) — the "-latest"
+// alias this was switched to specifically to dodge that turned out to have
+// its own failure mode, worse than a clean 404: confirmed live (a
+// diagnostic Edge Function isolating DNS/TLS/key/model one at a time) that
+// generativelanguage.googleapis.com just hangs indefinitely on
+// gemini-flash-latest:generateContent — no response, no error, nothing —
+// while the same call against a real model name (gemini-3.6-flash, what
+// Google's own 404 on the old model pointed to) answers in ~2s. Back to a
+// pinned exact model name; when this one eventually gets retired in turn,
+// the fix is the same as always — GEMINI_API_KEY/quota first, then check
+// https://ai.google.dev/gemini-api/docs/models for the current Flash-tier
+// model name (free-tier-friendly, not a paid Pro model).
+const GEMINI_MODEL = 'gemini-3.6-flash'
 // 2.5+/3.x Flash models "think" before answering by default, and those
 // reasoning tokens are drawn from this same maxOutputTokens budget — a low
 // limit can get fully consumed by invisible thinking before a single

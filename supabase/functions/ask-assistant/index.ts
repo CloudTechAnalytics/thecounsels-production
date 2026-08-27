@@ -40,7 +40,11 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 }
 
-const GEMINI_MODEL = 'gemini-flash-latest'
+// See summarize-matter/index.ts's own comment — pinned to a real model
+// name, not the "-latest" alias (confirmed live: that alias hangs
+// indefinitely on this account rather than erroring or actually
+// resolving to the current model).
+const GEMINI_MODEL = 'gemini-3.6-flash'
 const MAX_TOKENS = 2048
 const HISTORY_LIMIT = 20
 // See summarize-matter/index.ts's own comment for the full reasoning — the

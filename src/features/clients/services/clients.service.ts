@@ -1,10 +1,11 @@
 import { supabase } from '@/shared/lib/supabase'
-import type { Client, ClientContact, ClientStatus, ClientType, DocumentRow, Invoice, Payment } from '@/shared/types/database.types'
+import type { Client, ClientCommunication, ClientContact, ClientStatus, ClientType, DocumentRow, Invoice, Payment, Profile } from '@/shared/types/database.types'
 import { clientDisplayName, type ClientFormValues, type ContactFormValues } from '@/features/clients/schemas'
 import type { TaskRow } from '@/features/tasks/types'
 import type { HearingRow } from '@/features/hearings/types'
 import type { ExpenseRow } from '@/features/billing/types'
 import type { MatterEventRow } from '@/features/matters/types'
+import { invokeEdgeFunction } from '@/shared/lib/edge-function'
 
 /** Lightweight rows for the Client Detail page's tabs — deliberately not
  * the heavier billingService/documentsService SELECT shapes (those carry
@@ -28,6 +29,11 @@ export interface ClientRow extends Client {
 }
 
 export interface ClientActivityRow extends MatterEventRow {
+  matter: { id: string; title: string; matter_number: string | null } | null
+}
+
+export interface ClientCommunicationRow extends ClientCommunication {
+  sent_by_profile: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
   matter: { id: string; title: string; matter_number: string | null } | null
 }
 
@@ -152,6 +158,75 @@ export const clientsService = {
       .limit(100)
     if (error) throw error
     return (data ?? []) as unknown as ClientActivityRow[]
+  },
+
+  /** Full outbound correspondence history for a client, across every one
+   * of its matters plus any client-level (no matter) messages. */
+  async listCommunications(clientId: string): Promise<ClientCommunicationRow[]> {
+    const { data, error } = await supabase
+      .from('client_communications')
+      .select(
+        '*, sent_by_profile:profiles!client_communications_sent_by_fkey(id, full_name, avatar_url), matter:matters(id, title, matter_number)',
+      )
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return (data ?? []) as unknown as ClientCommunicationRow[]
+  },
+
+  /** Same table, scoped strictly to one matter — for the Matter Detail
+   * page's Communications tab (mirrors Tasks/Hearings/Documents there). */
+  async listMatterCommunications(matterId: string): Promise<ClientCommunicationRow[]> {
+    const { data, error } = await supabase
+      .from('client_communications')
+      .select('*, sent_by_profile:profiles!client_communications_sent_by_fkey(id, full_name, avatar_url), matter:matters(id, title, matter_number)')
+      .eq('matter_id', matterId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return (data ?? []) as unknown as ClientCommunicationRow[]
+  },
+
+  /** Inserts as PENDING (RLS: clients.communicate + client/matter access),
+   * then immediately hands off to send-client-communication to actually
+   * deliver via Resend and flip status to SENT/FAILED — same two-step
+   * "log now, deliver right after" shape as the hearing/task notification
+   * log. Returns the row with its final status, so the composer can show
+   * a real failure inline instead of a false "sent". */
+  async sendCommunication(params: {
+    organizationId: string
+    clientId: string
+    matterId?: string | null
+    sentBy: string | null
+    recipientName?: string | null
+    recipientEmail: string
+    subject: string
+    body: string
+  }): Promise<ClientCommunicationRow> {
+    const { data, error } = await supabase
+      .from('client_communications')
+      .insert({
+        organization_id: params.organizationId,
+        client_id: params.clientId,
+        matter_id: params.matterId || null,
+        sent_by: params.sentBy,
+        recipient_name: params.recipientName?.trim() || null,
+        recipient_email: params.recipientEmail.trim(),
+        subject: params.subject.trim(),
+        body: params.body.trim(),
+      })
+      .select('id')
+      .single()
+    if (error) throw error
+
+    await invokeEdgeFunction('send-client-communication', { communicationId: data.id })
+
+    const { data: sent, error: refetchError } = await supabase
+      .from('client_communications')
+      .select('*, sent_by_profile:profiles!client_communications_sent_by_fkey(id, full_name, avatar_url), matter:matters(id, title, matter_number)')
+      .eq('id', data.id)
+      .single()
+    if (refetchError) throw refetchError
+    return sent as unknown as ClientCommunicationRow
   },
 
   async list(organizationId: string, filters: ClientFilters = {}): Promise<ClientRow[]> {

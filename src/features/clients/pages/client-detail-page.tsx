@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { format, formatDistanceToNow } from 'date-fns'
 import {
   ArrowLeft, Pencil, Trash2, Building2, User, LayoutGrid, Briefcase, Receipt, FileText, Contact,
-  AlertTriangle, CheckSquare, Gavel, Activity as ActivityIcon, PencilLine,
+  AlertTriangle, CheckSquare, Gavel, Activity as ActivityIcon, PencilLine, Mail,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
@@ -23,6 +23,7 @@ import {
 import { useMatters } from '@/features/matters/hooks/use-matters'
 import { ClientFormDialog } from '@/features/clients/components/client-form-dialog'
 import { ManageContactsDialog } from '@/features/clients/components/manage-contacts-dialog'
+import { CommunicationsPanel } from '@/features/clients/components/communications-panel'
 import { EVENT_ICON } from '@/features/matters/components/matter-timeline'
 import { MATTER_STATUS_META } from '@/features/matters/types'
 import { INVOICE_STATUS_META } from '@/features/billing/types'
@@ -47,6 +48,7 @@ const TABS = [
   { key: 'hearings', label: 'Hearings', icon: Gavel },
   { key: 'billing', label: 'Billing', icon: Receipt },
   { key: 'documents', label: 'Documents', icon: FileText },
+  { key: 'communications', label: 'Communications', icon: Mail },
   { key: 'activity', label: 'Activity', icon: ActivityIcon },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
@@ -370,6 +372,15 @@ export function ClientDetailPage() {
               </div>
             )}
           </Card>
+        )}
+
+        {tab === 'communications' && (
+          <CommunicationsPanel
+            clientId={client.id}
+            clientName={client.display_name}
+            defaultRecipientEmail={contacts?.find((c) => c.is_primary)?.email || client.email}
+            defaultRecipientName={contacts?.find((c) => c.is_primary)?.name || client.display_name}
+          />
         )}
 
         {tab === 'activity' && (

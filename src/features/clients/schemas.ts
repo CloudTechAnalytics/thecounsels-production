@@ -53,3 +53,13 @@ export const contactSchema = z.object({
 })
 
 export type ContactFormValues = z.infer<typeof contactSchema>
+
+export const communicationSchema = z.object({
+  matterId: z.string().optional(),
+  recipientName: z.string().optional(),
+  recipientEmail: z.string().email('Enter a valid email'),
+  subject: z.string().min(1, 'Enter a subject'),
+  body: z.string().min(1, 'Enter a message'),
+})
+
+export type CommunicationFormValues = z.infer<typeof communicationSchema>

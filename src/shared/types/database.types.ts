@@ -32,6 +32,7 @@ export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type NotificationLogChannel = 'IN_APP' | 'EMAIL' | 'WHATSAPP'
 export type NotificationLogStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED'
+export type ClientCommunicationStatus = 'PENDING' | 'SENT' | 'FAILED'
 /** Per-event-type channel opt-in, keyed to match notification_preferences.task_channel_prefs (migration 0057). */
 export type TaskChannelEvent = 'assigned' | 'due_soon' | 'overdue' | 'completed' | 'reassigned' | 'hearing_reminder'
 export type TaskChannelPrefs = Record<TaskChannelEvent, { email: boolean; whatsapp: boolean }>
@@ -2003,6 +2004,62 @@ export interface Database {
           },
         ]
       }
+      client_communications: {
+        Row: {
+          id: string
+          organization_id: string
+          client_id: string
+          matter_id: string | null
+          sent_by: string | null
+          recipient_name: string | null
+          recipient_email: string
+          subject: string
+          body: string
+          status: ClientCommunicationStatus
+          failure_reason: string | null
+          sent_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          client_id: string
+          matter_id?: string | null
+          sent_by?: string | null
+          recipient_name?: string | null
+          recipient_email: string
+          subject: string
+          body: string
+          status?: ClientCommunicationStatus
+          failure_reason?: string | null
+          sent_at?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['client_communications']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'client_communications_client_id_fkey'
+            columns: ['client_id']
+            isOneToOne: false
+            referencedRelation: 'clients'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'client_communications_matter_id_fkey'
+            columns: ['matter_id']
+            isOneToOne: false
+            referencedRelation: 'matters'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'client_communications_sent_by_fkey'
+            columns: ['sent_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       channels: {
         Row: {
           id: string
@@ -2384,6 +2441,7 @@ export type PlatformSettings = Database['public']['Tables']['platform_settings']
 export type Client = Database['public']['Tables']['clients']['Row']
 export type ClientContact = Database['public']['Tables']['client_contacts']['Row']
 export type ClientInsert = Database['public']['Tables']['clients']['Insert']
+export type ClientCommunication = Database['public']['Tables']['client_communications']['Row']
 export type Matter = Database['public']['Tables']['matters']['Row']
 export type MatterNote = Database['public']['Tables']['matter_notes']['Row']
 export type MatterAssignment = Database['public']['Tables']['matter_assignments']['Row']

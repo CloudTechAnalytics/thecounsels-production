@@ -81,6 +81,44 @@ export function useClientActivity(clientId: string | undefined) {
   })
 }
 
+export function useClientCommunications(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['client', clientId, 'communications'],
+    enabled: Boolean(clientId),
+    queryFn: () => clientsService.listCommunications(clientId!),
+  })
+}
+
+export function useMatterCommunications(matterId: string | undefined) {
+  return useQuery({
+    queryKey: ['matter', matterId, 'communications'],
+    enabled: Boolean(matterId),
+    queryFn: () => clientsService.listMatterCommunications(matterId!),
+  })
+}
+
+export function useSendCommunication(organizationId: string | null, clientId: string | undefined, matterId?: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (params: {
+      matterId?: string | null
+      sentBy: string | null
+      recipientName?: string | null
+      recipientEmail: string
+      subject: string
+      body: string
+    }) => clientsService.sendCommunication({ organizationId: organizationId!, clientId: clientId!, ...params }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['client', clientId, 'communications'] })
+      qc.invalidateQueries({ queryKey: ['client', clientId, 'activity'] })
+      if (matterId) {
+        qc.invalidateQueries({ queryKey: ['matter', matterId, 'communications'] })
+        qc.invalidateQueries({ queryKey: ['matter-events', matterId] })
+      }
+    },
+  })
+}
+
 /** Matters attached to a client — used to warn before a delete that cascades. */
 export function useClientMatterCount(clientId: string | undefined) {
   return useQuery({

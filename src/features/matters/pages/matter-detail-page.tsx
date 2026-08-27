@@ -1,11 +1,13 @@
 import * as React from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { ArrowLeft, Pencil, Trash2, LockOpen, FileText, StickyNote, LayoutGrid, Activity, Gavel, CheckSquare, Sparkles } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, LockOpen, FileText, StickyNote, LayoutGrid, Activity, Gavel, CheckSquare, Sparkles, Mail } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { useMatter, useDeleteMatter, useReopenMatter, useSetMatterStatus } from '@/features/matters/hooks/use-matters'
+import { useClient, useClientContacts } from '@/features/clients/hooks/use-clients'
+import { CommunicationsPanel } from '@/features/clients/components/communications-panel'
 import { MatterFormDialog } from '@/features/matters/components/matter-form-dialog'
 import { MatterStatusMenu } from '@/features/matters/components/matter-status-menu'
 import { DocumentsPanel } from '@/features/matters/components/documents-panel'
@@ -36,6 +38,7 @@ const TABS = [
   { key: 'tasks', label: 'Tasks', icon: CheckSquare },
   { key: 'documents', label: 'Documents', icon: FileText },
   { key: 'notes', label: 'Notes', icon: StickyNote },
+  { key: 'communications', label: 'Communications', icon: Mail },
   { key: 'ai-chat', label: 'AI Chat', icon: Sparkles },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
@@ -61,6 +64,10 @@ export function MatterDetailPage() {
   const del = useDeleteMatter(activeOrgId)
   const reopen = useReopenMatter(activeOrgId)
   const setStatus = useSetMatterStatus(activeOrgId)
+  // For the Communications tab's default recipient — matter.client only
+  // carries id/display_name/type, not email or the primary contact.
+  const { data: matterClient } = useClient(matter?.client?.id)
+  const { data: matterClientContacts } = useClientContacts(matter?.client?.id)
   const [tab, setTab] = React.useState<TabKey>('overview')
 
   // Deep-linking into a specific tab (e.g. the dashboard's "Your tasks"
@@ -209,6 +216,25 @@ export function MatterDetailPage() {
         {tab === 'tasks' && <MatterTasksPanel matterId={matter.id} readOnly={isClosed} />}
         {tab === 'documents' && <DocumentsPanel matterId={matter.id} readOnly={isClosed} />}
         {tab === 'notes' && <NotesPanel matterId={matter.id} readOnly={isClosed} />}
+        {tab === 'communications' && (
+          matter.client ? (
+            <CommunicationsPanel
+              clientId={matter.client.id}
+              clientName={matter.client.display_name}
+              matterId={matter.id}
+              defaultRecipientEmail={matterClientContacts?.find((c) => c.is_primary)?.email || matterClient?.email}
+              defaultRecipientName={matterClientContacts?.find((c) => c.is_primary)?.name || matter.client.display_name}
+              // Deliberately NOT gated by isClosed like the other tabs — a
+              // closed matter is read-only for matter-scoped records
+              // (matter_row_access), but client_communications isn't one of
+              // those (see migration 0145): a closing letter or final
+              // confirmation is a normal, legitimate thing to send right
+              // after a matter closes.
+            />
+          ) : (
+            <p className="py-8 text-center text-sm text-muted-foreground">This matter has no client attached.</p>
+          )
+        )}
         {tab === 'ai-chat' && hasAiChat && <MatterAiChatPanel matterId={matter.id} readOnly={isClosed} />}
       </div>
 

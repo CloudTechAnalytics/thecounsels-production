@@ -5,6 +5,7 @@ import { Bell, Trash2 } from 'lucide-react'
 import { usePlatformActivity } from '@/features/platform/hooks/use-platform'
 import { Button } from '@/shared/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/components/ui/dropdown-menu'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { titleCase } from '@/shared/lib/format'
 
 const SEEN_KEY = 'counsel.platform_notifications_seen_at'
@@ -22,6 +23,7 @@ export function PlatformNotifications() {
   const { data: rawActivity, isLoading, live } = usePlatformActivity()
   const [seenAt, setSeenAt] = React.useState<string | null>(() => localStorage.getItem(SEEN_KEY))
   const [clearedAt, setClearedAt] = React.useState<string | null>(() => localStorage.getItem(CLEARED_KEY))
+  const [confirmClear, setConfirmClear] = React.useState(false)
 
   const activity = React.useMemo(() => {
     if (!rawActivity || !clearedAt) return rawActivity
@@ -43,14 +45,15 @@ export function PlatformNotifications() {
     setSeenAt(now)
   }
 
-  const clearAll = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const clearAll = () => {
     const now = new Date().toISOString()
     localStorage.setItem(CLEARED_KEY, now)
     setClearedAt(now)
+    setConfirmClear(false)
   }
 
   return (
+    <>
     <DropdownMenu onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
@@ -70,7 +73,10 @@ export function PlatformNotifications() {
             </span>
             {activity && activity.length > 0 && (
               <button
-                onClick={clearAll}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setConfirmClear(true)
+                }}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
                 title="Clear this list (doesn't delete the underlying audit log)"
               >
@@ -114,5 +120,16 @@ export function PlatformNotifications() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+
+    <ConfirmDialog
+      open={confirmClear}
+      onOpenChange={setConfirmClear}
+      title="Clear platform activity"
+      destructive
+      confirmLabel="Clear"
+      description="This clears the list for you — it doesn't delete the underlying audit log, and new activity will still show up here going forward."
+      onConfirm={clearAll}
+    />
+    </>
   )
 }

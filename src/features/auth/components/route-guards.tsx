@@ -6,6 +6,7 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useSubscription, usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { LoadingScreen } from '@/shared/components/loading-screen'
 import { Button } from '@/shared/components/ui/button'
+import { LandingPage } from '@/features/landing/pages/landing-page'
 import type { PermissionKey } from '@/shared/lib/permissions'
 import type { PlanFeatureKey } from '@/features/administration/lib/plan-features'
 
@@ -16,9 +17,12 @@ export function RequireAuth() {
 
   if (status === 'loading') return <LoadingScreen />
   if (status === 'unauthenticated') {
-    // Fresh visitors to the root see the marketing page; deep links go
-    // straight to login so they return to what they were sent.
-    if (location.pathname === '/') return <Navigate to="/welcome" replace />
+    // Fresh visitors to the root see the marketing page — rendered directly
+    // in place, not a Navigate to /welcome, so the address bar stays on
+    // thecounsels.org instead of visibly changing to .../welcome the
+    // instant the page loads. /welcome itself still works as a real route
+    // for anyone who already has that link.
+    if (location.pathname === '/') return <LandingPage />
     return <Navigate to="/auth/login" replace state={{ from: location.pathname + location.search }} />
   }
   return <Outlet />

@@ -37,7 +37,7 @@ export function GetStartedShell({
   return (
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border/70 px-6 py-5">
-        <Link to="/welcome" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+        <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
           <CounselMark className="h-9 w-9" />
           <p className="font-display text-lg font-semibold">{APP.product}</p>
         </Link>

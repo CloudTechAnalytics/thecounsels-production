@@ -34,7 +34,7 @@ export function AuthShell({
               'radial-gradient(60rem 60rem at 80% -10%, hsl(var(--sidebar-accent) / 0.5), transparent 60%)',
           }}
         />
-        <Link to="/welcome" className="relative flex items-center gap-3 transition-opacity hover:opacity-80">
+        <Link to="/" className="relative flex items-center gap-3 transition-opacity hover:opacity-80">
           <CounselMark className="h-11 w-11" />
           <div className="leading-tight">
             <p className="font-display text-lg font-semibold">{APP.product}</p>
@@ -80,7 +80,7 @@ export function AuthShell({
           transition={{ duration: 0.4, ease: 'easeOut' }}
           className="w-full max-w-md"
         >
-          <Link to="/welcome" className="mb-8 flex items-center gap-3 transition-opacity hover:opacity-80 lg:hidden">
+          <Link to="/" className="mb-8 flex items-center gap-3 transition-opacity hover:opacity-80 lg:hidden">
             <CounselMark className="h-10 w-10" />
             <div className="leading-tight">
               <p className="font-display text-base font-semibold">{APP.product}</p>

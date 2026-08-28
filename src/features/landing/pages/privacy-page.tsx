@@ -35,7 +35,7 @@ export function PrivacyPage() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
-          <Link to="/welcome" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <CounselMark variant="small" className="h-8 w-8" />
             <span className="font-display text-base font-semibold">{APP.product}</span>
           </Link>

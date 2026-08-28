@@ -79,7 +79,7 @@ export function LoginPage() {
       subtitle="Sign in to your firm's workspace to continue."
       back={
         <Link
-          to="/welcome"
+          to="/"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
         >
           <ArrowLeft className="h-4 w-4" /> Back to home

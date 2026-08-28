@@ -3,21 +3,29 @@ import { Outlet } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, RefreshCw, ShieldCheck } from 'lucide-react'
 import { PlatformSidebar } from '@/shared/components/layout/platform-sidebar'
+import { SidebarCollapseToggle } from '@/shared/components/layout/sidebar-collapse-toggle'
 import { PlatformNotifications } from '@/shared/components/layout/platform-notifications'
 import { SupportAccessWaitingBanner } from '@/features/platform/components/support-access-waiting-banner'
 import { UserMenu } from '@/shared/components/layout/user-menu'
 import { ThemeToggle } from '@/shared/components/theme-toggle'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
+import { useSidebarCollapsed } from '@/shared/hooks/use-sidebar-collapsed'
 
 /** CloudTech Platform console shell. Entirely separate from the firm workspace. */
 export function PlatformLayout() {
   const [mobileOpen, setMobileOpen] = React.useState(false)
+  // See organization-layout.tsx's own comment — same icon-rail collapse.
+  // Platform owners/admins were missed entirely the first time this was
+  // added (this layout doesn't share OrganizationLayout/HrLayout's shell
+  // at all — its own sidebar, its own header), a real reported gap.
+  const [collapsed, toggleCollapsed] = useSidebarCollapsed('counsel.platform_sidebar_collapsed')
 
   return (
     <div className="flex h-full min-h-screen bg-background">
-      <div className="hidden shrink-0 lg:block">
-        <PlatformSidebar />
+      <div className="relative hidden shrink-0 lg:block">
+        <PlatformSidebar collapsed={collapsed} />
+        <SidebarCollapseToggle collapsed={collapsed} onToggle={toggleCollapsed} />
       </div>
 
       <AnimatePresence>

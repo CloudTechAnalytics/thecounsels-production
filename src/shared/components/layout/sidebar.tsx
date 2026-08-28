@@ -21,38 +21,40 @@ function useVisible() {
   }
 }
 
-export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+export function Sidebar({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
   const isVisible = useVisible()
   const { activeMembership } = useAuth()
   const org = activeMembership?.organization
 
   return (
-    <aside className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex h-16 items-center gap-3 px-5">
+    <aside className={cn('flex h-full flex-col bg-sidebar text-sidebar-foreground transition-[width]', collapsed ? 'w-[68px]' : 'w-64')}>
+      <div className={cn('flex h-16 items-center gap-3', collapsed ? 'justify-center px-2' : 'px-5')}>
         {org?.logo_url ? (
-          <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-primary/15 text-sm font-semibold text-sidebar-accent ring-1 ring-sidebar-border">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/15 text-sm font-semibold text-sidebar-accent ring-1 ring-sidebar-border">
             <img src={org.logo_url} alt="" className="h-full w-full object-cover" />
           </span>
         ) : org ? (
-          <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-primary/15 text-sm font-semibold text-sidebar-accent ring-1 ring-sidebar-border">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/15 text-sm font-semibold text-sidebar-accent ring-1 ring-sidebar-border">
             {initialsOf(org.name, 'OR')}
           </span>
         ) : (
-          <CounselMark className="h-9 w-9" />
+          <CounselMark className="h-9 w-9 shrink-0" />
         )}
-        <div className="min-w-0 leading-tight">
-          <p className="truncate font-display text-[15px] font-semibold">{org?.name ?? 'The Counsel'}</p>
-          <p className="text-[11px] text-sidebar-muted">Powered by The Counsel</p>
-        </div>
+        {!collapsed && (
+          <div className="min-w-0 leading-tight">
+            <p className="truncate font-display text-[15px] font-semibold">{org?.name ?? 'The Counsel'}</p>
+            <p className="text-[11px] text-sidebar-muted">Powered by The Counsel</p>
+          </div>
+        )}
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+      <nav className={cn('flex-1 space-y-6 overflow-y-auto py-4', collapsed ? 'px-2' : 'px-3')}>
         {NAVIGATION.map((section, i) => {
           const items = section.items.filter(isVisible)
           if (items.length === 0) return null
           return (
             <div key={i}>
-              {section.heading && (
+              {section.heading && !collapsed && (
                 <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">
                   {section.heading}
                 </p>
@@ -64,9 +66,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                       to={item.to}
                       end={item.end}
                       onClick={onNavigate}
+                      title={collapsed ? item.label : undefined}
                       className={({ isActive }) =>
                         cn(
-                          'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                          'group flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors',
+                          collapsed ? 'justify-center px-2' : 'px-3',
                           isActive
                             ? 'bg-sidebar-hover text-sidebar-foreground'
                             : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground',
@@ -81,8 +85,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                               isActive ? 'text-sidebar-accent' : 'text-sidebar-muted group-hover:text-sidebar-foreground',
                             )}
                           />
-                          <span className="flex-1 truncate">{item.label}</span>
-                          {item.badge && <item.badge />}
+                          {!collapsed && (
+                            <>
+                              <span className="flex-1 truncate">{item.label}</span>
+                              {item.badge && <item.badge />}
+                            </>
+                          )}
                         </>
                       )}
                     </NavLink>
@@ -94,9 +102,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
 
-      <div className="border-t border-sidebar-border px-5 py-4 text-[11px] text-sidebar-muted">
-        CloudTech Legal Suite · v1.0
-      </div>
+      {!collapsed && (
+        <div className="border-t border-sidebar-border px-5 py-4 text-[11px] text-sidebar-muted">
+          CloudTech Legal Suite · v1.0
+        </div>
+      )}
     </aside>
   )
 }

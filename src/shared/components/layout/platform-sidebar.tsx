@@ -3,23 +3,25 @@ import { Cloud } from 'lucide-react'
 import { PLATFORM_NAVIGATION } from '@/app/platform-navigation'
 import { cn } from '@/shared/lib/utils'
 
-export function PlatformSidebar({ onNavigate }: { onNavigate?: () => void }) {
+export function PlatformSidebar({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
   return (
-    <aside className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex h-16 items-center gap-3 px-5">
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15 text-sidebar-accent ring-1 ring-sidebar-border">
+    <aside className={cn('flex h-full flex-col bg-sidebar text-sidebar-foreground transition-[width]', collapsed ? 'w-[68px]' : 'w-64')}>
+      <div className={cn('flex h-16 items-center gap-3', collapsed ? 'justify-center px-2' : 'px-5')}>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-sidebar-accent ring-1 ring-sidebar-border">
           <Cloud className="h-5 w-5" />
         </span>
-        <div className="leading-tight">
-          <p className="font-display text-[15px] font-semibold">CloudTech Legal Suite</p>
-          <p className="text-[11px] text-sidebar-muted">The Counsel · Platform</p>
-        </div>
+        {!collapsed && (
+          <div className="leading-tight">
+            <p className="font-display text-[15px] font-semibold">CloudTech Legal Suite</p>
+            <p className="text-[11px] text-sidebar-muted">The Counsel · Platform</p>
+          </div>
+        )}
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+      <nav className={cn('flex-1 space-y-6 overflow-y-auto py-4', collapsed ? 'px-2' : 'px-3')}>
         {PLATFORM_NAVIGATION.map((section, i) => (
           <div key={i}>
-            {section.heading && (
+            {section.heading && !collapsed && (
               <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">
                 {section.heading}
               </p>
@@ -31,9 +33,11 @@ export function PlatformSidebar({ onNavigate }: { onNavigate?: () => void }) {
                     to={item.to}
                     end={item.end}
                     onClick={onNavigate}
+                    title={collapsed ? item.label : undefined}
                     className={({ isActive }) =>
                       cn(
-                        'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        'group flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors',
+                        collapsed ? 'justify-center px-2' : 'px-3',
                         isActive
                           ? 'bg-sidebar-hover text-sidebar-foreground'
                           : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground',
@@ -48,7 +52,7 @@ export function PlatformSidebar({ onNavigate }: { onNavigate?: () => void }) {
                             isActive ? 'text-sidebar-accent' : 'text-sidebar-muted group-hover:text-sidebar-foreground',
                           )}
                         />
-                        {item.label}
+                        {!collapsed && item.label}
                       </>
                     )}
                   </NavLink>
@@ -59,9 +63,11 @@ export function PlatformSidebar({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border px-5 py-4 text-[11px] text-sidebar-muted">
-        Platform Console · v1.0
-      </div>
+      {!collapsed && (
+        <div className="border-t border-sidebar-border px-5 py-4 text-[11px] text-sidebar-muted">
+          Platform Console · v1.0
+        </div>
+      )}
     </aside>
   )
 }

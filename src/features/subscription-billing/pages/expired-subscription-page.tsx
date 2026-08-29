@@ -1,5 +1,6 @@
 import * as React from 'react'
-import { CheckCircle2, LockKeyhole } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { CheckCircle2, LockKeyhole, LogOut } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useSubscription } from '@/features/administration/hooks/use-administration'
@@ -51,8 +52,9 @@ const ADMIN_HOLD_COPY: Record<string, { stepLabel: string; heading: string; body
  * org-scoped forced-stop screen in this app.
  */
 export function ExpiredSubscriptionPage() {
-  const { activeMembership } = useAuth()
+  const { activeMembership, signOut } = useAuth()
   const { has } = usePermissions()
+  const navigate = useNavigate()
   const canManage = has('organization.manage')
   const orgId = activeMembership?.organization_id ?? null
   const { data: sub } = useSubscription(orgId)
@@ -61,6 +63,23 @@ export function ExpiredSubscriptionPage() {
   const checkout = useStartCheckout()
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
   const [cycle, setCycle] = React.useState<BillingCycle>('monthly')
+
+  // The one way out of this screen. A plain <Link to="/"> (GetStartedShell's
+  // default logo behavior) does nothing useful here: an authenticated user
+  // hitting "/" doesn't see the landing page, they just get bounced straight
+  // back to this exact screen by RequireActiveSubscription — the logo looked
+  // clickable but silently went nowhere, and there was no sign-out control
+  // on this page at all, so a locked-out user had no way to leave it. Real
+  // reported bug: both the logo and (missing) sign out did nothing.
+  const leave = async () => {
+    await signOut()
+    navigate('/', { replace: true })
+  }
+  const signOutButton = (
+    <Button variant="ghost" size="sm" onClick={leave} className="gap-1.5 text-muted-foreground">
+      <LogOut className="h-4 w-4" /> Sign out
+    </Button>
+  )
 
   const subscribe = async (planId: string) => {
     if (!orgId) return
@@ -75,7 +94,7 @@ export function ExpiredSubscriptionPage() {
   // is self-serve, so everyone in the firm sees the same plain message.
   if (holdCopy) {
     return (
-      <GetStartedShell title={APP.product} stepLabel={holdCopy.stepLabel}>
+      <GetStartedShell title={APP.product} stepLabel={holdCopy.stepLabel} onLogoClick={leave} headerEnd={signOutButton}>
         <div className="flex flex-col items-center py-8 text-center">
           <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
             <LockKeyhole className="h-8 w-8" />
@@ -92,7 +111,7 @@ export function ExpiredSubscriptionPage() {
 
   if (!canManage) {
     return (
-      <GetStartedShell title={APP.product} stepLabel="Trial ended">
+      <GetStartedShell title={APP.product} stepLabel="Trial ended" onLogoClick={leave} headerEnd={signOutButton}>
         <div className="flex flex-col items-center py-8 text-center">
           <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
             <LockKeyhole className="h-8 w-8" />
@@ -107,7 +126,13 @@ export function ExpiredSubscriptionPage() {
   }
 
   return (
-    <GetStartedShell title={APP.product} stepLabel="Your free trial has ended" stepDescription={`Choose a plan to continue using ${APP.product}`}>
+    <GetStartedShell
+      title={APP.product}
+      stepLabel="Your free trial has ended"
+      stepDescription={`Choose a plan to continue using ${APP.product}`}
+      onLogoClick={leave}
+      headerEnd={signOutButton}
+    >
       {isLoading || !plans ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}

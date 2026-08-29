@@ -22,6 +22,8 @@ export function GetStartedShell({
   onBack,
   children,
   maxWidthClassName = 'max-w-lg',
+  onLogoClick,
+  headerEnd,
 }: {
   title?: string
   stepLabel: string
@@ -33,15 +35,39 @@ export function GetStartedShell({
   children: ReactNode
   /** Override the container width — e.g. a wide plan-selection grid needs more room than a name/email form. */
   maxWidthClassName?: string
+  /** Override what the logo does — default is "go home" (Link to="/"). A page reachable only while
+   * signed in but locked out of the workspace (e.g. a paused/suspended subscription) needs this: an
+   * authenticated visitor to "/" doesn't see the landing page at all, they just get bounced straight
+   * back to the same lock screen by RequireActiveSubscription — so the logo silently did nothing. Pass
+   * a real handler (typically sign out, then navigate home) to make it actually go somewhere. */
+  onLogoClick?: () => void
+  /** Extra content in the header, before the theme toggle — e.g. a Sign out control on a page a
+   * signed-in-but-locked-out user has no other way to leave. */
+  headerEnd?: ReactNode
 }) {
+  const brand = (
+    <>
+      <CounselMark className="h-9 w-9" />
+      <p className="font-display text-lg font-semibold">{APP.product}</p>
+    </>
+  )
+
   return (
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border/70 px-6 py-5">
-        <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
-          <CounselMark className="h-9 w-9" />
-          <p className="font-display text-lg font-semibold">{APP.product}</p>
-        </Link>
-        <ThemeToggle />
+        {onLogoClick ? (
+          <button type="button" onClick={onLogoClick} className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+            {brand}
+          </button>
+        ) : (
+          <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+            {brand}
+          </Link>
+        )}
+        <div className="flex items-center gap-2">
+          {headerEnd}
+          <ThemeToggle />
+        </div>
       </header>
 
       <div className={cn('mx-auto px-6 py-12', maxWidthClassName)}>

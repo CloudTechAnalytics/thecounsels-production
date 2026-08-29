@@ -39,7 +39,8 @@ export function GetStartedShell({
    * signed in but locked out of the workspace (e.g. a paused/suspended subscription) needs this: an
    * authenticated visitor to "/" doesn't see the landing page at all, they just get bounced straight
    * back to the same lock screen by RequireActiveSubscription — so the logo silently did nothing. Pass
-   * a real handler (typically sign out, then navigate home) to make it actually go somewhere. */
+   * a real handler (typically sign out, then navigate somewhere reachable while signed out) to make
+   * it actually go somewhere. */
   onLogoClick?: () => void
   /** Extra content in the header, before the theme toggle — e.g. a Sign out control on a page a
    * signed-in-but-locked-out user has no other way to leave. */

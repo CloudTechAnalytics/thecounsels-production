@@ -70,10 +70,12 @@ export function ExpiredSubscriptionPage() {
   // back to this exact screen by RequireActiveSubscription — the logo looked
   // clickable but silently went nowhere, and there was no sign-out control
   // on this page at all, so a locked-out user had no way to leave it. Real
-  // reported bug: both the logo and (missing) sign out did nothing.
+  // reported bug: both the logo and (missing) sign out did nothing. Goes to
+  // /auth/login specifically, not "/" — signing out of a locked workspace
+  // means wanting back in (possibly as someone else), not the marketing page.
   const leave = async () => {
     await signOut()
-    navigate('/', { replace: true })
+    navigate('/auth/login', { replace: true })
   }
   const signOutButton = (
     <Button variant="ghost" size="sm" onClick={leave} className="gap-1.5 text-muted-foreground">

@@ -14,6 +14,17 @@ const SUPPORT_KEY = 'counsel.support_org'
 // DNS, CORS, a paused Supabase project) must resolve into a visible error
 // state within a bounded time, not an infinite "Loading your workspace…".
 const BOOTSTRAP_TIMEOUT_MS = 15_000
+// The "freshly-issued JWT" eventual-consistency race (see load()'s own
+// comments below) was originally handled with exactly one 800ms retry.
+// That was proven too narrow by a real reported case: sign up, pay via
+// Paystack (a full external redirect away and back), then sign in fresh
+// on the callback screen — landed on "No workspace yet" instead of the
+// just-created firm, even though the membership row was confirmed correct
+// in the database the entire time. A single retry is fine for the common
+// fast-network case but not enough after a slower round trip like that
+// one. Retrying up to 4 times with increasing backoff (still bounded,
+// ~5s worst case) covers both without meaningfully slowing the common case.
+const JWT_RACE_RETRY_DELAYS_MS = [800, 1200, 1800, 2400]
 
 const initialState: AuthState = {
   userId: null,
@@ -84,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<AuthState>(initialState)
   const emailConfirmHandledRef = React.useRef(false)
 
-  const load = React.useCallback(async (userId: string | null, isRetry = false) => {
+  const load = React.useCallback(async (userId: string | null, attempt = 0) => {
     if (!userId) {
       setState({ ...initialState, status: 'unauthenticated' })
       return
@@ -114,15 +125,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // isTransientAuthError retry below never even runs. From here that's
       // indistinguishable from a genuinely membership-less brand-new user
       // (about to be routed to /onboarding) — retrying once costs that
-      // legitimate case one harmless extra 800ms before landing on the same
-      // "no memberships" result, and fixes the real bug: a just-registered
+      // legitimate case a few harmless extra seconds (bounded, see
+      // JWT_RACE_RETRY_DELAYS_MS) before landing on the same "no
+      // memberships" result, and fixes the real bug: a just-registered
       // org's own creator intermittently landing with an empty
       // memberships/permissions state (every permission check silently
-      // false — "Managing Partner can't do X" — until their next full
-      // sign-in happened to land on a settled token).
-      if (!isRetry && !isPlatformAdmin && memberships.length === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 800))
-        return load(userId, true)
+      // false — "Managing Partner can't do X" — or, worst case, the whole
+      // workspace looking like it doesn't exist yet ("No workspace yet"
+      // right after paying) — until their next full sign-in happened to
+      // land on a settled token).
+      if (attempt < JWT_RACE_RETRY_DELAYS_MS.length && !isPlatformAdmin && memberships.length === 0) {
+        await new Promise((resolve) => setTimeout(resolve, JWT_RACE_RETRY_DELAYS_MS[attempt]))
+        return load(userId, attempt + 1)
       }
 
       // Support Mode: a platform admin operating inside a firm's workspace.
@@ -172,9 +186,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // or inert — until something else (e.g. editing your own profile,
       // which calls refresh()) happens to re-run load() on a now-settled
       // token and get the real permissions.
-      if (!isRetry && !isPlatformAdmin && activeMembership && permissions.size === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 800))
-        return load(userId, true)
+      if (attempt < JWT_RACE_RETRY_DELAYS_MS.length && !isPlatformAdmin && activeMembership && permissions.size === 0) {
+        await new Promise((resolve) => setTimeout(resolve, JWT_RACE_RETRY_DELAYS_MS[attempt]))
+        return load(userId, attempt + 1)
       }
 
       if (activeOrgId) localStorage.setItem(ACTIVE_ORG_KEY, activeOrgId)
@@ -199,10 +213,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // silently recovers instead of bouncing a just-signed-in user back to
       // login with a confusing "JWT ..." error they'd otherwise have to
       // retry manually (exactly what a second sign-in attempt was doing).
-      if (!isRetry && isTransientAuthError(error)) {
-        console.warn('Transient auth error loading session, retrying once:', error)
-        await new Promise((resolve) => setTimeout(resolve, 800))
-        return load(userId, true)
+      if (attempt < JWT_RACE_RETRY_DELAYS_MS.length && isTransientAuthError(error)) {
+        console.warn(`Transient auth error loading session, retrying (attempt ${attempt + 1}):`, error)
+        await new Promise((resolve) => setTimeout(resolve, JWT_RACE_RETRY_DELAYS_MS[attempt]))
+        return load(userId, attempt + 1)
       }
       // A failed fetch here must never leave status stuck at 'loading' forever —
       // surface it and fall back to signed-out so the app is usable again.

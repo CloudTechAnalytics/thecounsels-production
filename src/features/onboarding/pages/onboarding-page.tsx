@@ -103,6 +103,15 @@ export function OnboardingPage() {
   const [pendingAction, setPendingAction] = React.useState<'trial' | 'subscribe' | null>(null)
   const [welcomeMessage, setWelcomeMessage] = React.useState<string | undefined>(undefined)
 
+  // 0154 — the registrant isn't necessarily the Managing Partner anymore
+  // (very often IT/HR/office staff registering on the firm's behalf). When
+  // that's the case, say so plainly on the confirmation screen instead of
+  // leaving it to the checklist alone to mention later.
+  const mpReminder =
+    firmValues && firmValues.registrantRole !== 'managing_partner'
+      ? ' Since you signed up on the firm\'s behalf, remember to invite the Managing Partner once you\'re in — Firm Settings → Team.'
+      : ''
+
   const startTrial = async (planId: string) => {
     if (!firmValues) return
     setPendingAction('trial')
@@ -111,6 +120,11 @@ export function OnboardingPage() {
       // Deliberately doesn't stay signed in — the trial account/firm exist
       // now, but the flow sends them to a fresh sign-in instead of
       // continuing straight into the workspace.
+      if (mpReminder) {
+        setWelcomeMessage(
+          `You're registered — your account and firm workspace are ready. Sign in with your email and password to get started.${mpReminder}`,
+        )
+      }
       setStep('welcome')
     } catch (err) {
       toast.error('Could not set up your firm', {
@@ -156,7 +170,7 @@ export function OnboardingPage() {
       toast.error('Could not start checkout', { description: reason })
       setWelcomeMessage(
         `We couldn't start checkout (${reason}), so your workspace was created on a free 30-day trial instead. ` +
-          'Sign in to continue — you can subscribe any time from Firm Settings.',
+          `Sign in to continue — you can subscribe any time from Firm Settings.${mpReminder}`,
       )
       setStep('welcome')
       setPendingAction(null)

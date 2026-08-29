@@ -38,26 +38,42 @@ export const onboardingService = {
    */
   async getChecklistStatus(organizationId: string): Promise<{
     teamInvited: boolean
+    hasManagingPartner: boolean
     hasClient: boolean
     hasMatter: boolean
     hasTask: boolean
   }> {
-    const [members, clients, matters, tasks] = await Promise.all([
+    const [members, managingPartners, clients, matters, tasks] = await Promise.all([
       supabase.from('memberships').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('status', 'active'),
+      // Registration no longer assumes the registrant is the Managing
+      // Partner (0154) — an org can genuinely have none yet, which the
+      // checklist calls out specifically rather than folding into the
+      // generic "invite your team" step.
+      supabase
+        .from('memberships')
+        .select('id, role:roles!inner(key)', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('status', 'active')
+        .eq('role.key', 'managing_partner'),
       supabase.from('clients').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
       supabase.from('matters').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
       supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
     ])
-    for (const r of [members, clients, matters, tasks]) if (r.error) throw r.error
+    for (const r of [members, managingPartners, clients, matters, tasks]) if (r.error) throw r.error
     return {
       teamInvited: (members.count ?? 0) > 1,
+      hasManagingPartner: (managingPartners.count ?? 0) > 0,
       hasClient: (clients.count ?? 0) > 0,
       hasMatter: (matters.count ?? 0) > 0,
       hasTask: (tasks.count ?? 0) > 0,
     }
   },
 
-  /** Atomic self-service org + trial + owner-membership creation. See register_organization() (migration 0054). */
+  /** Atomic self-service org + trial + owner-membership creation. See
+   * register_organization() (migration 0154) — the registrant keeps
+   * account ownership regardless, but their own membership role now
+   * follows what they actually said they are, instead of unconditionally
+   * becoming Managing Partner. */
   async registerOrganization(values: FirmSetupValues, planId: string) {
     const { data, error } = await supabase.rpc('register_organization', {
       p_name: values.firmName.trim(),
@@ -70,6 +86,7 @@ export const onboardingService = {
       p_industry: values.industry?.trim() || null,
       p_user_count: values.userCount ?? null,
       p_practice_areas: values.practiceAreas.length > 0 ? values.practiceAreas : null,
+      p_registrant_role: values.registrantRole,
     })
     if (error) throw error
     return data

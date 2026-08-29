@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Globe } from 'lucide-react'
-import { firmSetupSchema, slugify, USER_COUNT_BANDS, type FirmSetupValues } from '@/features/onboarding/schemas'
+import { firmSetupSchema, slugify, USER_COUNT_BANDS, REGISTRANT_ROLES, type FirmSetupValues } from '@/features/onboarding/schemas'
 import { COUNTRIES } from '@/features/onboarding/countries'
 import { PRACTICE_AREAS } from '@/features/matters/types'
 import { Button } from '@/shared/components/ui/button'
@@ -72,6 +72,50 @@ export function FirmSetupStep({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onNext)} className="space-y-5" noValidate>
+        <FormField
+          control={form.control}
+          name="registrantRole"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Which best describes you?<span className="text-destructive"> *</span></FormLabel>
+              <p className="text-xs text-muted-foreground">
+                Most sign-ups are IT, HR, or office staff setting the account up on the firm's behalf, not the
+                Managing Partner personally — that's completely normal, just tell us which one you are.
+              </p>
+              <div className="space-y-2">
+                {REGISTRANT_ROLES.map((r) => {
+                  const active = field.value === r.value
+                  return (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => field.onChange(r.value)}
+                      className={cn(
+                        'flex w-full items-start gap-3 rounded-lg border px-3.5 py-2.5 text-left transition-colors',
+                        active ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2',
+                          active ? 'border-primary' : 'border-border',
+                        )}
+                      >
+                        {active && <span className="h-2 w-2 rounded-full bg-primary" />}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium">{r.label}</span>
+                        <span className="block text-xs text-muted-foreground">{r.hint}</span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="firmName"

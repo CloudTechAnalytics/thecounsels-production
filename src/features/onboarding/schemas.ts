@@ -14,8 +14,28 @@ export function slugify(value: string): string {
     .slice(0, 32)
 }
 
-/** Step 2 — "Tell us about your firm." Only name/short name/country/timezone are required. */
+/** Who's actually filling out this form — most self-service registrants
+ * turn out to be IT/HR/office staff setting the account up on the firm's
+ * behalf, not the Managing Partner personally. Determines the role their
+ * own membership gets (see register_organization, migration 0154) instead
+ * of unconditionally making every registrant Managing Partner — they keep
+ * account ownership either way, just not case-content access they were
+ * never meant to have. Required, no default — a deliberate choice, not a
+ * silent assumption. */
+export const REGISTRANT_ROLES = [
+  { value: 'managing_partner', label: 'Managing Partner', hint: "I'm the firm's decision-maker, signing up directly." },
+  { value: 'it_administrator', label: 'IT', hint: "I'm setting this up on the firm's behalf — I'll get IT access, and can invite the Managing Partner right after." },
+  { value: 'hr', label: 'HR', hint: "I'm setting this up on the firm's behalf — I'll get HR access, and can invite the Managing Partner right after." },
+  { value: 'finance', label: 'Finance', hint: "I'm setting this up on the firm's behalf — I'll get Finance access, and can invite the Managing Partner right after." },
+  { value: 'secretary', label: 'Administrative / Office staff', hint: "I'm setting this up on the firm's behalf — I'll get general access, and can invite the Managing Partner right after." },
+] as const
+export type RegistrantRole = (typeof REGISTRANT_ROLES)[number]['value']
+
+/** Step 2 — "Tell us about your firm." Only name/short name/country/timezone/registrantRole are required. */
 export const firmSetupSchema = z.object({
+  registrantRole: z.enum(['managing_partner', 'it_administrator', 'hr', 'finance', 'secretary'], {
+    required_error: 'Let us know who you are',
+  }),
   firmName: z.string().min(2, 'Enter your firm name'),
   shortName: z
     .string()

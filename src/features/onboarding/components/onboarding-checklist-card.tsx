@@ -25,7 +25,14 @@ export function OnboardingChecklistCard({ organizationId }: { organizationId: st
 
   const items = [
     { label: 'Create your firm', done: true, to: null, visible: true },
-    { label: 'Invite your team', done: data.teamInvited, to: '/administration', visible: has('members.manage') },
+    // Registration no longer assumes the registrant is the Managing
+    // Partner (0154) — an org can genuinely have none yet (IT/HR/office
+    // staff registered on the firm's behalf), which is a more specific,
+    // more important gap than the generic "invite your team" wording
+    // covers, so call it out directly while it's still true.
+    data.hasManagingPartner
+      ? { label: 'Invite your team', done: data.teamInvited, to: '/administration', visible: has('members.manage') }
+      : { label: 'Invite your Managing Partner', done: false, to: '/administration', visible: has('members.manage') },
     { label: 'Add your first client', done: data.hasClient, to: '/clients', visible: has('clients.create') },
     { label: 'Create your first matter', done: data.hasMatter, to: '/matters', visible: has('matters.create') },
     { label: 'Create your first task', done: data.hasTask, to: '/tasks', visible: has('tasks.create') },

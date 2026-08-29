@@ -163,7 +163,13 @@ function NotificationsList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-1">
+      {/* Was flex-nowrap + overflow-x-auto — at anything short of a very
+       * wide screen this row of a search box plus two selects plus three
+       * buttons simply didn't fit, and instead of wrapping to a second
+       * line the whole toolbar silently became horizontally scrollable —
+       * a real reported bug ("will have to scroll right to see"). Letting
+       * it wrap is the fix; nothing here needs to stay on one line. */}
+      <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[160px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} placeholder="Search notifications…" className="pl-9" />

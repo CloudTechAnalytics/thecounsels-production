@@ -116,7 +116,9 @@ export function ErrorLogsPage() {
         }
       />
 
-      <div className="mb-4 flex flex-nowrap items-center gap-2 overflow-x-auto pb-1">
+      {/* Was flex-nowrap + overflow-x-auto — see notifications-page.tsx's
+       * own comment on the identical toolbar-overflow bug this matched. */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-[200px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} placeholder="Search error messages…" className="pl-9" />

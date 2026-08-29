@@ -123,10 +123,21 @@ export function useCreateOrganizationWithAdmin() {
 }
 export function useSetOrganizationStatus() {
   const invalidate = useInvalidateAll()
+  const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: Parameters<typeof platformService.setOrganizationStatus>[1] }) =>
       platformService.setOrganizationStatus(id, status),
-    onSuccess: invalidate,
+    // This can now also flip the org's subscription status (see
+    // platformService.setOrganizationStatus's own comment) — invalidating
+    // only the 'platform' namespace left the FIRM side (topbar status pill,
+    // RequireActiveSubscription's own query, the locked-out screen) showing
+    // the stale status until a manual reload. useSubscription's key is
+    // ['administration', 'subscription', orgId] — invalidate the whole
+    // prefix so every org's cached copy refetches, not just the one edited.
+    onSuccess: () => {
+      invalidate()
+      void qc.invalidateQueries({ queryKey: ['administration', 'subscription'] })
+    },
   })
 }
 export function useSoftDeleteOrganization() {
@@ -175,6 +186,7 @@ export function useSavePlan() {
 }
 export function useUpdateSubscription() {
   const invalidate = useInvalidateAll()
+  const qc = useQueryClient()
   return useMutation({
     mutationFn: (args: {
       id: string
@@ -182,6 +194,12 @@ export function useUpdateSubscription() {
       action: string
       patch: Parameters<typeof platformService.updateSubscription>[1]
     }) => platformService.updateSubscription(args.id, args.patch, args.orgId, args.action),
-    onSuccess: invalidate,
+    // Same reasoning as useSetOrganizationStatus above — this is the other
+    // direction of the same sync, and had the same gap: the firm side's
+    // cached subscription never got told to refetch.
+    onSuccess: () => {
+      invalidate()
+      void qc.invalidateQueries({ queryKey: ['administration', 'subscription'] })
+    },
   })
 }

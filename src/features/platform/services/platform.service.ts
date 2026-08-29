@@ -195,6 +195,37 @@ export const platformService = {
   async setOrganizationStatus(id: string, status: OrgStatus): Promise<void> {
     const { error } = await supabase.from('organizations').update({ status }).eq('id', id)
     if (error) throw error
+
+    // Keep this in sync with the subscription too, same direction as
+    // updateSubscription already does the other way (subscription status
+    // change -> organizations.status). Without this, this action only ever
+    // updated one half: a real reported bug was toggling an org back to
+    // "Active" here while its subscription stayed "Paused" underneath —
+    // the Organizations table said Active, but RequireActiveSubscription
+    // reads subscriptions.status, not organizations.status, so the firm
+    // stayed locked out regardless of what this table showed.
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('id, status')
+      .eq('organization_id', id)
+      .maybeSingle()
+
+    if (sub) {
+      // Reactivating the org lifts a pure admin hold (paused/suspended) —
+      // deliberately NOT touched for expired/past_due/cancelled, which are
+      // real billing lapses that still need an actual plan/checkout, not
+      // just a status flip (see expired-subscription-page.tsx).
+      if (status === 'active' && (sub.status === 'paused' || sub.status === 'suspended')) {
+        await supabase.from('subscriptions').update({ status: 'active' }).eq('id', sub.id)
+      }
+      // Suspending the org is meant to be a real hard stop — carry it
+      // through to the subscription too, unless it's already a terminal
+      // billing state (expired/cancelled) that shouldn't be overwritten.
+      if (status === 'suspended' && sub.status !== 'expired' && sub.status !== 'cancelled') {
+        await supabase.from('subscriptions').update({ status: 'suspended' }).eq('id', sub.id)
+      }
+    }
+
     await supabase.rpc('log_audit', {
       p_org: id,
       p_action: `organization.${status === 'suspended' ? 'suspended' : 'reactivated'}`,

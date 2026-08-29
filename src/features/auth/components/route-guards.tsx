@@ -69,7 +69,14 @@ export function RequireActiveSubscription() {
 
   if (isPlatformAdmin) return <Outlet />
   if (isLoading) return <LoadingScreen />
-  if (sub && (sub.status === 'expired' || sub.status === 'suspended')) {
+  // 'paused' was missing here — a real reported gap: the Platform Console
+  // can set a subscription to any status (see platform.service.ts's
+  // updateSubscription), but a paused org's own members could still use
+  // the whole workspace freely, same as an active one. trialing/active/
+  // past_due/cancelled are deliberately still let through (grace-period-
+  // style access, not a hard lock) — only these three are meant to be a
+  // full stop.
+  if (sub && (sub.status === 'expired' || sub.status === 'suspended' || sub.status === 'paused')) {
     return <Navigate to="/subscription/expired" replace />
   }
   return <Outlet />

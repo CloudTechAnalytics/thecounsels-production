@@ -600,9 +600,17 @@ export const platformService = {
   ): Promise<void> {
     const { error } = await supabase.from('subscriptions').update(patch).eq('id', id)
     if (error) throw error
-    // Keep organization status in sync with subscription lifecycle.
+    // Keep organization status in sync with subscription lifecycle. Was
+    // previously only handling 'active'/'cancelled' — setting a
+    // subscription to paused/suspended/expired left organizations.status
+    // stale (still 'active'), a real reported inconsistency between what
+    // the Platform Console's own Organizations table showed and what the
+    // subscription actually was.
     if (patch.status === 'active') await supabase.from('organizations').update({ status: 'active' }).eq('id', orgId)
     if (patch.status === 'cancelled') await supabase.from('organizations').update({ status: 'cancelled' }).eq('id', orgId)
+    if (patch.status === 'suspended' || patch.status === 'paused' || patch.status === 'expired') {
+      await supabase.from('organizations').update({ status: 'suspended' }).eq('id', orgId)
+    }
     await supabase.rpc('log_audit', {
       p_org: orgId,
       p_action: `subscription.${action}`,

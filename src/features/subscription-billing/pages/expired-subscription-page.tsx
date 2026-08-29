@@ -2,6 +2,7 @@ import * as React from 'react'
 import { CheckCircle2, LockKeyhole } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
+import { useSubscription } from '@/features/administration/hooks/use-administration'
 import { useSelectablePlans } from '@/features/onboarding/hooks/use-onboarding'
 import { useStartCheckout } from '@/features/subscription-billing/hooks/use-paystack'
 import { GetStartedShell } from '@/shared/components/get-started-shell'
@@ -15,22 +16,49 @@ import { APP } from '@/shared/config/env'
 import { toast } from '@/shared/components/ui/sonner'
 import type { BillingCycle } from '@/shared/types/database.types'
 
+// RequireActiveSubscription sends expired/suspended/paused here alike, but
+// "Your free trial has ended" reads wrong for a paid org that got suspended
+// or paused — this was previously hardcoded to trial-ended copy regardless
+// of which of the three actually applied. Real gap surfaced while checking
+// why a manually paused org's own members could still use the workspace
+// (see route-guards.tsx's own comment on that fix) — worth getting the
+// copy right at the same time, not just the access control.
+const STATUS_COPY: Record<string, { stepLabel: string; heading: string; blockedBody: string }> = {
+  paused: {
+    stepLabel: 'Workspace paused',
+    heading: "Your firm's workspace is paused",
+    blockedBody: 'Ask your Managing Partner or IT administrator to resume your plan to continue using {product}.',
+  },
+  suspended: {
+    stepLabel: 'Workspace suspended',
+    heading: "Your firm's workspace has been suspended",
+    blockedBody: 'Ask your Managing Partner or IT administrator to resolve this to continue using {product}.',
+  },
+  default: {
+    stepLabel: 'Trial ended',
+    heading: "Your firm's trial has ended",
+    blockedBody: 'Ask your Managing Partner to choose a plan to continue using {product}.',
+  },
+}
+
 /**
- * Forced stop for an expired/suspended organization (RequireActiveSubscription).
- * Everyone in the firm is blocked from the workspace — only organization.manage
- * holders see payment controls here (§14: Senior Associates never administer
- * billing), matching every other org-scoped forced-stop screen in this app.
+ * Forced stop for an expired/suspended/paused organization
+ * (RequireActiveSubscription). Everyone in the firm is blocked from the
+ * workspace — only organization.manage holders see payment controls here
+ * (§14: Senior Associates never administer billing), matching every other
+ * org-scoped forced-stop screen in this app.
  */
 export function ExpiredSubscriptionPage() {
   const { activeMembership } = useAuth()
   const { has } = usePermissions()
   const canManage = has('organization.manage')
+  const orgId = activeMembership?.organization_id ?? null
+  const { data: sub } = useSubscription(orgId)
+  const copy = STATUS_COPY[sub?.status ?? 'default'] ?? STATUS_COPY.default
   const { data: plans, isLoading } = useSelectablePlans()
   const checkout = useStartCheckout()
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
   const [cycle, setCycle] = React.useState<BillingCycle>('monthly')
-
-  const orgId = activeMembership?.organization_id ?? null
 
   const subscribe = async (planId: string) => {
     if (!orgId) return
@@ -43,14 +71,14 @@ export function ExpiredSubscriptionPage() {
 
   if (!canManage) {
     return (
-      <GetStartedShell title={APP.product} stepLabel="Trial ended">
+      <GetStartedShell title={APP.product} stepLabel={copy.stepLabel}>
         <div className="flex flex-col items-center py-8 text-center">
           <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
             <LockKeyhole className="h-8 w-8" />
           </span>
-          <h2 className="mt-6 font-display text-xl font-semibold">Your firm's trial has ended</h2>
+          <h2 className="mt-6 font-display text-xl font-semibold">{copy.heading}</h2>
           <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-            Ask your Managing Partner to choose a plan to continue using {APP.product}.
+            {copy.blockedBody.replace('{product}', APP.product)}
           </p>
         </div>
       </GetStartedShell>
@@ -58,7 +86,7 @@ export function ExpiredSubscriptionPage() {
   }
 
   return (
-    <GetStartedShell title={APP.product} stepLabel="Your free trial has ended" stepDescription="Choose a plan to continue using The Counsel">
+    <GetStartedShell title={APP.product} stepLabel={copy.heading} stepDescription={`Choose a plan to continue using ${APP.product}`}>
       {isLoading || !plans ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}

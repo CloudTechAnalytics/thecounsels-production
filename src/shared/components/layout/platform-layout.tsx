@@ -70,7 +70,10 @@ export function PlatformLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto">
+        {/* min-w-0 is load-bearing — see organization-layout.tsx's own
+         * comment for why (this is the exact page the real bug was
+         * reported on: the Platform Console's Organizations table). */}
+        <main className="min-w-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1800px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             <Outlet />
           </div>

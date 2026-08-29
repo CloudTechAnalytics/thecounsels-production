@@ -80,7 +80,17 @@ export function OrganizationLayout() {
             in, not something to show a visitor mid-session. */}
         {!supportOrgId && <SupportAccessRequestBanner />}
         <Topbar onOpenSidebar={() => setMobileOpen(true)} />
-        <main className="flex-1 overflow-y-auto">
+        {/* min-w-0 is load-bearing here, not decorative: without it, a flex
+         * item's default min-width is "auto" (its content's intrinsic
+         * width), so a wide table further down (which already has its own
+         * overflow-x-auto wrapper, see ui/table.tsx) never actually gets
+         * constrained — main just grows wider than the viewport instead,
+         * taking the whole page with it. A real reported bug: "can't even
+         * scroll" on a wide Platform Console table, because there was
+         * nothing to scroll — the page had silently blown out past the
+         * screen edge instead of the table's own scroll container
+         * engaging. */}
+        <main className="min-w-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1800px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             {hasWorkspace ? <Outlet /> : <NoOrganizationState />}
           </div>

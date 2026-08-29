@@ -55,7 +55,9 @@ export function HrLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onOpenSidebar={() => setMobileOpen(true)} />
-        <main className="flex-1 overflow-y-auto">
+        {/* min-w-0 is load-bearing — see organization-layout.tsx's own
+         * comment for why. */}
+        <main className="min-w-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1800px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             <Outlet />
           </div>

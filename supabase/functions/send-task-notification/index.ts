@@ -4,20 +4,30 @@
 // actually sent (name predates the hearing reminder engine, migration 0098
 // — kept as-is rather than risk a rename across every SQL function that
 // already hard-codes this URL). Branches on notification_log.hearing_id vs
-// task_id to know which it's building. Invoked two ways, both passing the
-// same { notification_log_id }: directly via invokeEdgeFunction() for a
-// synchronous send, and via pg_net.http_post from the database
-// (dispatch_task_notification/run_task_reminders — 0058/0059 — and
-// dispatch_hearing_notification/run_hearing_reminders — 0098) for
-// scheduler-driven reminders. Either way this function is the single
-// source of truth for what actually got sent — every call updates the
-// matching notification_log row's status/sent_at/failure_reason, never
-// leaving it PENDING forever and never faking SENT.
+// task_id to know which it's building. Invoked exclusively via
+// pg_net.http_post from the database (dispatch_task_notification/
+// run_task_reminders — 0058/0059 — and dispatch_hearing_notification/
+// run_hearing_reminders — 0098), always passing { notification_log_id } and
+// an Authorization: Bearer <service_role_key> header (see those functions'
+// own net.http_post calls). This is the single source of truth for what
+// actually got sent — every call updates the matching notification_log
+// row's status/sent_at/failure_reason, never leaving it PENDING forever
+// and never faking SENT.
 //
 // Deploy:  supabase functions deploy send-task-notification --no-verify-jwt
 //   (--no-verify-jwt because pg_net calls this with a service-role bearer
-//   token, not an end-user JWT — the service-role check inside this
-//   function is what actually gates access, same posture as paystack-webhook.)
+//   token, not an end-user JWT.)
+//
+// SECURITY: --no-verify-jwt only disables the *platform's* check — this
+// function MUST do its own. A real reported gap: earlier this file read
+// SUPABASE_SERVICE_ROLE_KEY only to build its own outbound admin client,
+// but never actually compared the caller's incoming Authorization header
+// against it, despite this exact comment already claiming it did. That
+// meant literally anyone on the internet with a notification_log id could
+// POST here directly and trigger a real (costed) email/WhatsApp/SMS send
+// with no authentication at all. Fixed below — the very first thing this
+// handler does now is reject any request not bearing the real service-role
+// key, since that's the only legitimate caller this function ever has.
 // Secrets: supabase secrets set RESEND_API_KEY=re_...
 //          supabase secrets set RESEND_FROM_EMAIL="The Counsel <notifications@yourdomain>"
 //          supabase secrets set SITE_URL=https://your-deployed-app-domain
@@ -396,6 +406,28 @@ Deno.serve(async (req: Request) => {
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
   const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  // pg_net's own calls (dispatch_task_notification/dispatch_hearing_notification)
+  // read their bearer token from vault.decrypted_secrets 'service_role_key' —
+  // a manually-seeded LEGACY JWT-format key, not necessarily the same value
+  // Supabase's edge runtime currently auto-injects as SUPABASE_SERVICE_ROLE_KEY
+  // (this project has since migrated to the newer sb_secret_... key format for
+  // that auto-injected var — confirmed live via a disposable diagnostic probe
+  // that the two differ). PG_NET_SERVICE_KEY is a second, explicitly-set
+  // function secret holding that same legacy value, so this check matches
+  // whichever key pg_net is actually presenting.
+  const PG_NET_KEY = Deno.env.get('PG_NET_SERVICE_KEY')
+
+  // The only real gate this function has, now that --no-verify-jwt disables
+  // the platform's own check — pg_net is the only legitimate caller, and it
+  // always presents one of these two service-role-equivalent keys (see the
+  // migrations named above). Anything else is rejected outright, before any
+  // DB work happens.
+  const authHeader = req.headers.get('Authorization')
+  const authorized = authHeader === `Bearer ${SERVICE_ROLE}` || (PG_NET_KEY && authHeader === `Bearer ${PG_NET_KEY}`)
+  if (!authorized) {
+    return json({ error: 'Not authorized' }, 401)
+  }
+
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { autoRefreshToken: false, persistSession: false } })
 
   let body: { notification_log_id?: string }

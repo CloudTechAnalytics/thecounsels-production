@@ -66,10 +66,18 @@ export function AssistantDialog() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex h-[70vh] max-w-lg flex-col gap-0 overflow-hidden p-0">
           <DialogTitle className="sr-only">Ask the assistant</DialogTitle>
-          <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+          {/* pr-10 leaves clearance for DialogContent's own close "X",
+           * which is absolutely positioned at right-4 top-4 — without it,
+           * the Clear button (the last item in this row) sat directly
+           * under/behind that X, a real reported bug ("the icon to close
+           * and the one to clear are on top of each other"). Same fix
+           * document-viewer.tsx already uses (pr-6) for its own header row,
+           * just wider here since this row ends in an actual button, not
+           * text that can wrap. */}
+          <div className="flex items-center gap-2 border-b border-border py-3 pl-4 pr-10">
             <Sparkles className="h-4 w-4 text-primary" />
             <p className="font-display text-sm font-semibold">Assistant</p>
-            <p className="flex-1 text-xs text-muted-foreground">Ask about hearings, tasks and appointments across the firm.</p>
+            <p className="flex-1 text-xs text-muted-foreground">Ask any legal question, or about hearings, tasks and appointments across the firm.</p>
             {messages.length > 0 && (
               <Button
                 variant="ghost"

@@ -59,13 +59,38 @@ export function PlanEditorDialog({
   const save = useSavePlan()
   const [draft, setDraft] = React.useState<Draft>(toDraft(plan))
 
+  // Quarterly/yearly auto-follow monthly (10% off quarterly, 2 months free
+  // yearly — the actual pattern already baked into every real plan's
+  // stored prices, reverse-engineered from the live numbers on the Plans &
+  // Pricing page) until the admin edits either field directly, the same
+  // "auto-follow until manually touched" convention firm-setup-step.tsx
+  // already uses for shortName-follows-firmName. An existing plan's
+  // already-stored prices count as "already edited" so opening this dialog
+  // to tweak one field never silently overwrites the other two.
+  const quarterlyEdited = React.useRef(Boolean(plan?.price_quarterly))
+  const yearlyEdited = React.useRef(Boolean(plan?.price_yearly))
+
   React.useEffect(() => {
-    if (open) setDraft(toDraft(plan))
+    if (open) {
+      setDraft(toDraft(plan))
+      quarterlyEdited.current = Boolean(plan?.price_quarterly)
+      yearlyEdited.current = Boolean(plan?.price_yearly)
+    }
   }, [open, plan])
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }))
   const toggleFeature = (key: string) =>
     setDraft((d) => ({ ...d, features: { ...d.features, [key]: !d.features[key] } }))
+
+  const onMonthlyChange = (value: string) => {
+    const n = Number(value)
+    setDraft((d) => ({
+      ...d,
+      price_monthly: value,
+      price_quarterly: !quarterlyEdited.current && value && n ? String(Math.round(n * 2.7)) : d.price_quarterly,
+      price_yearly: !yearlyEdited.current && value && n ? String(n * 10) : d.price_yearly,
+    }))
+  }
 
   const submit = async () => {
     if (!draft.name.trim()) {
@@ -120,22 +145,30 @@ export function PlanEditorDialog({
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label>Monthly (₦)</Label>
-              <Input type="number" value={draft.price_monthly} onChange={(e) => set('price_monthly', e.target.value)} />
+              <Input type="number" value={draft.price_monthly} onChange={(e) => onMonthlyChange(e.target.value)} />
             </div>
             <div className="space-y-1.5">
               <Label>Quarterly (₦)</Label>
               <Input
                 type="number"
                 value={draft.price_quarterly}
-                onChange={(e) => set('price_quarterly', e.target.value)}
-                placeholder={draft.price_monthly ? String(Math.round(Number(draft.price_monthly) * 3 * 0.9)) : ''}
+                onChange={(e) => { quarterlyEdited.current = true; set('price_quarterly', e.target.value) }}
+                placeholder={draft.price_monthly ? String(Math.round(Number(draft.price_monthly) * 2.7)) : ''}
               />
             </div>
             <div className="space-y-1.5">
               <Label>Yearly (₦)</Label>
-              <Input type="number" value={draft.price_yearly} onChange={(e) => set('price_yearly', e.target.value)} />
+              <Input
+                type="number"
+                value={draft.price_yearly}
+                onChange={(e) => { yearlyEdited.current = true; set('price_yearly', e.target.value) }}
+                placeholder={draft.price_monthly ? String(Number(draft.price_monthly) * 10) : ''}
+              />
             </div>
           </div>
+          <p className="-mt-2 text-xs text-muted-foreground">
+            Quarterly and yearly auto-fill from monthly (10% off quarterly, 2 months free yearly) until you edit one directly.
+          </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">

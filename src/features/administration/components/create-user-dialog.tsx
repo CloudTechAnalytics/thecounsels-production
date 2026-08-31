@@ -74,7 +74,16 @@ export function CreateUserDialog({ organizationId }: { organizationId: string })
         branchIds: values.accessScope === 'branch' ? (values.branchId ? [values.branchId] : []) : values.accessScope === 'multiple_branches' ? values.branchIds ?? [] : [],
       })
       toast.success('Team member added', { description: `${values.email} can sign in with the temporary password now.` })
+      // Real reported bug: a newly-invited Partner didn't show up in the
+      // matter/hearing forms' lawyer pickers (useFirmMembers, keyed
+      // 'firm-members') even though Firm Settings > Members correctly
+      // showed them right away — this only ever invalidated the
+      // 'administration'/'members' cache, a separate key over the exact
+      // same underlying data. useRemoveMember/useSetMembershipStatus
+      // already invalidate both together; this is the one member-list
+      // mutation that didn't.
       await qc.invalidateQueries({ queryKey: ['administration', 'members', organizationId] })
+      await qc.invalidateQueries({ queryKey: ['firm-members', organizationId] })
       form.reset({ fullName: '', email: '', password: '', roleId: values.roleId, accessScope: 'organization', branchId: '', branchIds: [] })
       setOpen(false)
     } catch (err) {

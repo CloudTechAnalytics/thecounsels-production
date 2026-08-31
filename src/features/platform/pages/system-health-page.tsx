@@ -1,14 +1,15 @@
 import { format } from 'date-fns'
-import { Activity, RefreshCw, Building2, Users, HardDrive, ScrollText } from 'lucide-react'
+import { Activity, RefreshCw, Building2, Users, HardDrive, ScrollText, Database } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { healthService, type ServiceStatus } from '@/features/platform/services/health.service'
-import { usePlatformOrganizations, usePlatformStats } from '@/features/platform/hooks/use-platform'
+import { usePlatformOrganizations, usePlatformStats, usePlatformResourceUsage } from '@/features/platform/hooks/use-platform'
 import { KpiCard } from '@/features/platform/components/kpi-card'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
+import { Progress } from '@/shared/components/ui/progress'
 import { formatStorage } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
 
@@ -26,6 +27,7 @@ export function SystemHealthPage() {
   })
   const { data: stats, isLoading: statsLoading } = usePlatformStats()
   const { data: orgs } = usePlatformOrganizations()
+  const { data: usage, isLoading: usageLoading } = usePlatformResourceUsage()
 
   const checks = report?.checks ?? []
   const worst: ServiceStatus = checks.some((c) => c.status === 'down')
@@ -86,6 +88,42 @@ export function SystemHealthPage() {
               </Card>
             ))}
       </div>
+
+      <h2 className="mb-4 mt-8 font-display text-lg font-semibold">Supabase plan usage</h2>
+      <Card className="p-5">
+        {usageLoading || !usage ? (
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-1.5 font-medium"><Database className="h-4 w-4 text-muted-foreground" /> Database</span>
+                <span className="text-muted-foreground">
+                  {formatStorage(usage.dbBytes)} of {formatStorage(usage.dbCapBytes)} ({usage.dbPct}%)
+                </span>
+              </div>
+              <Progress value={usage.dbPct} className="mt-2" />
+            </div>
+            <div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-1.5 font-medium"><HardDrive className="h-4 w-4 text-muted-foreground" /> Storage</span>
+                <span className="text-muted-foreground">
+                  {formatStorage(usage.storageBytes)} of {formatStorage(usage.storageCapBytes)} ({usage.storagePct}%)
+                </span>
+              </div>
+              <Progress value={usage.storagePct} className="mt-2" />
+            </div>
+          </div>
+        )}
+        <p className="mt-4 text-xs text-muted-foreground">
+          Against the current Supabase plan cap (update it in the database once you upgrade). A daily automated check
+          emails every platform admin the moment either crosses 70% — this view is just the on-demand version of that
+          same check.
+        </p>
+      </Card>
 
       <h2 className="mb-4 mt-8 font-display text-lg font-semibold">Platform usage</h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

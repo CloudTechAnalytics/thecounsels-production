@@ -25,6 +25,18 @@ function useInvalidateAll() {
 export function usePlatformStats() {
   return useQuery({ queryKey: keys.stats, queryFn: () => platformService.getStats() })
 }
+/** Real Supabase plan usage (database + storage bytes vs. the current
+ * plan cap) — the on-demand counterpart to the daily automated alert
+ * (see platform.service.ts's getResourceUsage). Refetches on its own
+ * schedule since this doesn't change fast enough to need the health
+ * page's 60s cadence. */
+export function usePlatformResourceUsage() {
+  return useQuery({
+    queryKey: ['platform', 'resource-usage'],
+    queryFn: () => platformService.getResourceUsage(),
+    refetchInterval: 5 * 60_000,
+  })
+}
 export function usePlatformOrganizations(includeDeleted = false) {
   return useQuery({
     queryKey: keys.organizations(includeDeleted),

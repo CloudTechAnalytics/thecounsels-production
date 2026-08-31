@@ -120,6 +120,39 @@ export const platformService = {
     })
   },
 
+  /** Real database/storage bytes against the current Supabase plan cap
+   * (platform_settings.db_cap_mb/storage_cap_mb — update those the day this
+   * project moves off Free tier). Backs the same 0158/0159 daily alert
+   * check (check-resource-usage edge function), just the on-demand,
+   * admin-viewable half of it. */
+  async getResourceUsage(): Promise<{
+    dbBytes: number
+    storageBytes: number
+    dbCapBytes: number
+    storageCapBytes: number
+    dbPct: number
+    storagePct: number
+  }> {
+    const { data, error } = await supabase.rpc('platform_resource_usage')
+    if (error) throw error
+    const row = (Array.isArray(data) ? data[0] : data) as {
+      db_bytes: number
+      storage_bytes: number
+      db_cap_bytes: number
+      storage_cap_bytes: number
+      db_pct: number
+      storage_pct: number
+    }
+    return {
+      dbBytes: row.db_bytes,
+      storageBytes: row.storage_bytes,
+      dbCapBytes: row.db_cap_bytes,
+      storageCapBytes: row.storage_cap_bytes,
+      dbPct: row.db_pct,
+      storagePct: row.storage_pct,
+    }
+  },
+
   async getStats(): Promise<PlatformStats> {
     const startOfMonth = new Date()
     startOfMonth.setDate(1)

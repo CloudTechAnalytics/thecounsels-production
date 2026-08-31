@@ -8,7 +8,7 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { formatNaira } from '@/shared/lib/format'
 import { BILLING_CYCLES, CYCLE_LABEL, CYCLE_SUFFIX, cyclePrice, cycleDiscountPercent } from '@/shared/lib/billing-cycle'
-import { SUPPORTED_CURRENCIES, CURRENCY_META, defaultCurrencyForCountry, type SupportedCurrency } from '@/shared/lib/currencies'
+import { ENABLED_CURRENCIES, CURRENCY_META, defaultCurrencyForCountry, type SupportedCurrency } from '@/shared/lib/currencies'
 import { cn } from '@/shared/lib/utils'
 import { APP } from '@/shared/config/env'
 import type { BillingCycle } from '@/shared/types/database.types'
@@ -121,11 +121,14 @@ function CycleToggle({ cycle, onChange }: { cycle: BillingCycle; onChange: (c: B
 
 /** Currency picker — popular African markets first, USD last as the
  * universal fallback for a prospect anywhere Paystack doesn't directly
- * settle locally (still works there via international card payment). */
+ * settle locally (still works there via international card payment).
+ * Only ever offers ENABLED_CURRENCIES — currently NGN only, since that's
+ * all the Paystack merchant account actually supports; the caller hides
+ * this whole control rather than rendering a single-option toggle. */
 function CurrencyToggle({ currency, onChange }: { currency: SupportedCurrency; onChange: (c: SupportedCurrency) => void }) {
   return (
     <div className="inline-flex flex-wrap justify-center gap-1 rounded-lg border border-border bg-muted/40 p-1">
-      {SUPPORTED_CURRENCIES.map((c) => (
+      {ENABLED_CURRENCIES.map((c) => (
         <button
           key={c}
           type="button"
@@ -273,9 +276,11 @@ export function PlanStep({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-center">
-        <CurrencyToggle currency={currency} onChange={setCurrency} />
-      </div>
+      {ENABLED_CURRENCIES.length > 1 && (
+        <div className="flex justify-center">
+          <CurrencyToggle currency={currency} onChange={setCurrency} />
+        </div>
+      )}
 
       {selected !== TRIAL && selectedPlan && !selectedPlan.is_custom && (
         <div className="flex justify-center">

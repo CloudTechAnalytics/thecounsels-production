@@ -99,6 +99,27 @@ export const branchesService = {
     })
   },
 
+  /** Permanent removal — distinct from setActive's deactivate. Every
+   * branch_id column outside the branches table itself is either
+   * ON DELETE SET NULL (matters, tasks, hearings, documents, appointments,
+   * clients, staff_profiles, log_audit) or a junction table that cascades
+   * cleanly (member_branches, invitation_branches, matter_branch_shares) —
+   * so this never destroys a matter/member/document, it just unassigns
+   * them from the deleted branch. The head office branch is never
+   * deletable (same guard the UI applies to deactivate); the caller must
+   * set a different branch as head office first. */
+  async remove(id: string, organizationId: string, name: string): Promise<void> {
+    const { error } = await supabase.from('branches').delete().eq('id', id)
+    if (error) throw error
+    await supabase.rpc('log_audit', {
+      p_org: organizationId,
+      p_action: 'branch.deleted',
+      p_entity_type: 'branch',
+      p_entity_id: id,
+      p_summary: `Deleted branch ${name}`,
+    })
+  },
+
   async setHeadOffice(organizationId: string, branchId: string, name: string): Promise<void> {
     const { error } = await supabase.rpc('set_head_office', { p_org: organizationId, p_branch: branchId })
     if (error) throw error

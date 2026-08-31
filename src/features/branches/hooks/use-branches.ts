@@ -58,6 +58,14 @@ export function useSetBranchActive(organizationId: string | null) {
   })
 }
 
+export function useDeleteBranch(organizationId: string | null) {
+  const invalidate = useInvalidate(organizationId)
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => branchesService.remove(id, organizationId!, name),
+    onSuccess: invalidate,
+  })
+}
+
 export function useSetHeadOffice(organizationId: string | null) {
   const invalidate = useInvalidate(organizationId)
   return useMutation({

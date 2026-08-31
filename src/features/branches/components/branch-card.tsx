@@ -1,4 +1,4 @@
-import { MoreHorizontal, Pencil, Star, Ban, RotateCcw, Users2, MapPin } from 'lucide-react'
+import { MoreHorizontal, Pencil, Star, Ban, RotateCcw, Trash2, Users2, MapPin } from 'lucide-react'
 import type { BranchWithStats } from '@/features/branches/types'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -12,6 +12,7 @@ export function BranchCard({
   onSetHeadOffice,
   onToggleActive,
   onViewMembers,
+  onDelete,
 }: {
   branch: BranchWithStats
   canManage: boolean
@@ -19,6 +20,7 @@ export function BranchCard({
   onSetHeadOffice: () => void
   onToggleActive: () => void
   onViewMembers: () => void
+  onDelete: () => void
 }) {
   const location = [branch.city, branch.country].filter(Boolean).join(', ')
   return (
@@ -53,6 +55,11 @@ export function BranchCard({
             {!branch.is_head_office && (
               <DropdownMenuItem onClick={onToggleActive}>
                 {branch.is_active ? <><Ban /> Deactivate</> : <><RotateCcw /> Reactivate</>}
+              </DropdownMenuItem>
+            )}
+            {!branch.is_head_office && (
+              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onDelete}>
+                <Trash2 /> Delete
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

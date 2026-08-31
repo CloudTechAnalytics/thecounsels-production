@@ -25,7 +25,7 @@ function loadTurnstileScript(): Promise<void> {
   if (!scriptPromise) {
     scriptPromise = new Promise((resolve, reject) => {
       const script = document.createElement('script')
-      script.src = 'https://challenge.cloudflare.com/turnstile/v0/api.js'
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
       script.async = true
       script.defer = true
       script.onload = () => resolve()

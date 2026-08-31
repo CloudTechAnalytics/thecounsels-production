@@ -2222,6 +2222,17 @@ export interface Database {
     Views: { [_ in never]: never }
     Functions: {
       is_platform_admin: { Args: Record<string, never>; Returns: boolean }
+      platform_resource_usage: {
+        Args: Record<string, never>
+        Returns: {
+          db_bytes: number
+          storage_bytes: number
+          db_cap_bytes: number
+          storage_cap_bytes: number
+          db_pct: number
+          storage_pct: number
+        }[]
+      }
       is_org_member: { Args: { org: string }; Returns: boolean }
       is_org_admin: { Args: { org: string }; Returns: boolean }
       has_permission: { Args: { org: string; perm: string }; Returns: boolean }
@@ -2337,6 +2348,8 @@ export interface Database {
           p_industry?: string | null
           p_user_count?: string | null
           p_practice_areas?: string[] | null
+          p_registrant_role?: string
+          p_currency?: string
         }
         Returns: Database['public']['Tables']['organizations']['Row']
       }

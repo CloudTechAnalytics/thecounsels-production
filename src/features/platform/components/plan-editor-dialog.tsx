@@ -1,7 +1,8 @@
 import * as React from 'react'
 import { Check } from 'lucide-react'
-import { useSavePlan } from '@/features/platform/hooks/use-platform'
+import { useSavePlan, usePlanPrices, useSavePlanPrices } from '@/features/platform/hooks/use-platform'
 import { PLAN_FEATURES } from '@/features/platform/types'
+import { SUPPORTED_CURRENCIES, CURRENCY_META, type SupportedCurrency } from '@/shared/lib/currencies'
 import type { Plan } from '@/shared/types/database.types'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
@@ -22,9 +23,6 @@ import { toast } from '@/shared/components/ui/sonner'
 type Draft = {
   name: string
   description: string
-  price_monthly: string
-  price_quarterly: string
-  price_yearly: string
   max_users: string
   storage_gb: string
   support_level: string
@@ -32,13 +30,13 @@ type Draft = {
   features: Record<string, boolean>
 }
 
+type PriceDraft = { monthly: string; quarterly: string; yearly: string }
+const emptyPrice: PriceDraft = { monthly: '', quarterly: '', yearly: '' }
+
 function toDraft(plan?: Plan | null): Draft {
   return {
     name: plan?.name ?? '',
     description: plan?.description ?? '',
-    price_monthly: plan ? String(plan.price_monthly) : '',
-    price_quarterly: plan?.price_quarterly != null ? String(plan.price_quarterly) : '',
-    price_yearly: plan ? String(plan.price_yearly) : '',
     max_users: plan?.max_users != null ? String(plan.max_users) : '',
     storage_gb: plan ? String(plan.storage_gb) : '',
     support_level: plan?.support_level ?? 'Community',
@@ -57,38 +55,73 @@ export function PlanEditorDialog({
   onOpenChange: (o: boolean) => void
 }) {
   const save = useSavePlan()
+  const savePrices = useSavePlanPrices()
+  const { data: existingPrices } = usePlanPrices(plan?.id)
   const [draft, setDraft] = React.useState<Draft>(toDraft(plan))
+  const [prices, setPrices] = React.useState<Record<SupportedCurrency, PriceDraft>>(
+    () => Object.fromEntries(SUPPORTED_CURRENCIES.map((c) => [c, emptyPrice])) as Record<SupportedCurrency, PriceDraft>,
+  )
+  const [activeCurrency, setActiveCurrency] = React.useState<SupportedCurrency>('NGN')
 
   // Quarterly/yearly auto-follow monthly (10% off quarterly, 2 months free
-  // yearly — the actual pattern already baked into every real plan's
-  // stored prices, reverse-engineered from the live numbers on the Plans &
-  // Pricing page) until the admin edits either field directly, the same
-  // "auto-follow until manually touched" convention firm-setup-step.tsx
-  // already uses for shortName-follows-firmName. An existing plan's
-  // already-stored prices count as "already edited" so opening this dialog
-  // to tweak one field never silently overwrites the other two.
-  const quarterlyEdited = React.useRef(Boolean(plan?.price_quarterly))
-  const yearlyEdited = React.useRef(Boolean(plan?.price_yearly))
+  // yearly) per currency independently, same "auto-follow until manually
+  // touched" convention as the rest of this dialog — an existing plan's
+  // already-stored prices for a currency count as already-edited, so
+  // opening this dialog never silently overwrites real numbers.
+  const editedRef = React.useRef<Record<SupportedCurrency, { q: boolean; y: boolean }>>(
+    Object.fromEntries(SUPPORTED_CURRENCIES.map((c) => [c, { q: false, y: false }])) as Record<
+      SupportedCurrency,
+      { q: boolean; y: boolean }
+    >,
+  )
 
   React.useEffect(() => {
-    if (open) {
-      setDraft(toDraft(plan))
-      quarterlyEdited.current = Boolean(plan?.price_quarterly)
-      yearlyEdited.current = Boolean(plan?.price_yearly)
+    if (!open) return
+    setDraft(toDraft(plan))
+    setActiveCurrency('NGN')
+    const next = Object.fromEntries(SUPPORTED_CURRENCIES.map((c) => [c, emptyPrice])) as Record<SupportedCurrency, PriceDraft>
+    // Legacy plans.price_* columns are always the NGN baseline (0161) — seed
+    // that first so an existing plan with no plan_prices rows yet (or one
+    // mid-migration) still shows its real current NGN price.
+    if (plan) {
+      next.NGN = {
+        monthly: String(plan.price_monthly),
+        quarterly: plan.price_quarterly != null ? String(plan.price_quarterly) : '',
+        yearly: String(plan.price_yearly),
+      }
     }
+    for (const row of existingPrices ?? []) {
+      if ((SUPPORTED_CURRENCIES as readonly string[]).includes(row.currency)) {
+        next[row.currency as SupportedCurrency] = {
+          monthly: String(row.price_monthly),
+          quarterly: row.price_quarterly != null ? String(row.price_quarterly) : '',
+          yearly: String(row.price_yearly),
+        }
+      }
+    }
+    setPrices(next)
+    editedRef.current = Object.fromEntries(
+      SUPPORTED_CURRENCIES.map((c) => [c, { q: Boolean(next[c].quarterly), y: Boolean(next[c].yearly) }]),
+    ) as Record<SupportedCurrency, { q: boolean; y: boolean }>
+    // existingPrices intentionally excluded — only needs to seed once per
+    // open, same reasoning as the Assigned Team checklist elsewhere.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, plan])
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }))
   const toggleFeature = (key: string) =>
     setDraft((d) => ({ ...d, features: { ...d.features, [key]: !d.features[key] } }))
 
-  const onMonthlyChange = (value: string) => {
+  const onMonthlyChange = (currency: SupportedCurrency, value: string) => {
     const n = Number(value)
-    setDraft((d) => ({
-      ...d,
-      price_monthly: value,
-      price_quarterly: !quarterlyEdited.current && value && n ? String(Math.round(n * 2.7)) : d.price_quarterly,
-      price_yearly: !yearlyEdited.current && value && n ? String(n * 10) : d.price_yearly,
+    const edited = editedRef.current[currency]
+    setPrices((p) => ({
+      ...p,
+      [currency]: {
+        monthly: value,
+        quarterly: !edited.q && value && n ? String(Math.round(n * 2.7)) : p[currency].quarterly,
+        yearly: !edited.y && value && n ? String(n * 10) : p[currency].yearly,
+      },
     }))
   }
 
@@ -97,19 +130,33 @@ export function PlanEditorDialog({
       toast.error('Plan name is required')
       return
     }
+    const ngn = prices.NGN
     try {
-      await save.mutateAsync({
+      const saved = await save.mutateAsync({
         id: plan?.id,
         name: draft.name.trim(),
         description: draft.description || null,
-        price_monthly: Number(draft.price_monthly) || 0,
-        price_quarterly: draft.price_quarterly === '' ? undefined : Number(draft.price_quarterly) || 0,
-        price_yearly: Number(draft.price_yearly) || 0,
+        // NGN stays mirrored onto the legacy plans columns — every part of
+        // the app not yet updated to read plan_prices directly (there
+        // shouldn't be much left, but this costs nothing) still sees the
+        // right NGN price.
+        price_monthly: Number(ngn.monthly) || 0,
+        price_quarterly: ngn.quarterly === '' ? undefined : Number(ngn.quarterly) || 0,
+        price_yearly: Number(ngn.yearly) || 0,
         max_users: draft.max_users === '' ? null : Number(draft.max_users),
         storage_gb: Number(draft.storage_gb) || 0,
         support_level: draft.support_level,
         highlights: draft.highlights.split('\n').map((s) => s.trim()).filter(Boolean),
         features: draft.features,
+      })
+      await savePrices.mutateAsync({
+        planId: saved.id,
+        prices: SUPPORTED_CURRENCIES.map((c) => ({
+          currency: c,
+          price_monthly: Number(prices[c].monthly) || 0,
+          price_quarterly: prices[c].quarterly === '' ? null : Number(prices[c].quarterly) || 0,
+          price_yearly: Number(prices[c].yearly) || 0,
+        })),
       })
       toast.success(plan ? 'Plan updated' : 'Plan created')
       onOpenChange(false)
@@ -117,6 +164,9 @@ export function PlanEditorDialog({
       toast.error('Could not save plan', { description: err instanceof Error ? err.message : undefined })
     }
   }
+
+  const p = prices[activeCurrency]
+  const symbol = CURRENCY_META[activeCurrency].symbol
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -142,33 +192,60 @@ export function PlanEditorDialog({
             <Input value={draft.description} onChange={(e) => set('description', e.target.value)} placeholder="For growing firms" />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label>Monthly (₦)</Label>
-              <Input type="number" value={draft.price_monthly} onChange={(e) => onMonthlyChange(e.target.value)} />
+          <div className="space-y-2">
+            <Label>Pricing by currency</Label>
+            <div className="inline-flex flex-wrap gap-1 rounded-lg border border-border bg-muted/40 p-1">
+              {SUPPORTED_CURRENCIES.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setActiveCurrency(c)}
+                  title={CURRENCY_META[c].label}
+                  className={cn(
+                    'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                    activeCurrency === c ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {c}
+                </button>
+              ))}
             </div>
-            <div className="space-y-1.5">
-              <Label>Quarterly (₦)</Label>
-              <Input
-                type="number"
-                value={draft.price_quarterly}
-                onChange={(e) => { quarterlyEdited.current = true; set('price_quarterly', e.target.value) }}
-                placeholder={draft.price_monthly ? String(Math.round(Number(draft.price_monthly) * 2.7)) : ''}
-              />
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label>Monthly ({symbol})</Label>
+                <Input type="number" value={p.monthly} onChange={(e) => onMonthlyChange(activeCurrency, e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Quarterly ({symbol})</Label>
+                <Input
+                  type="number"
+                  value={p.quarterly}
+                  onChange={(e) => {
+                    editedRef.current[activeCurrency].q = true
+                    setPrices((prev) => ({ ...prev, [activeCurrency]: { ...prev[activeCurrency], quarterly: e.target.value } }))
+                  }}
+                  placeholder={p.monthly ? String(Math.round(Number(p.monthly) * 2.7)) : ''}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Yearly ({symbol})</Label>
+                <Input
+                  type="number"
+                  value={p.yearly}
+                  onChange={(e) => {
+                    editedRef.current[activeCurrency].y = true
+                    setPrices((prev) => ({ ...prev, [activeCurrency]: { ...prev[activeCurrency], yearly: e.target.value } }))
+                  }}
+                  placeholder={p.monthly ? String(Number(p.monthly) * 10) : ''}
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Yearly (₦)</Label>
-              <Input
-                type="number"
-                value={draft.price_yearly}
-                onChange={(e) => { yearlyEdited.current = true; set('price_yearly', e.target.value) }}
-                placeholder={draft.price_monthly ? String(Number(draft.price_monthly) * 10) : ''}
-              />
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Quarterly and yearly auto-fill from monthly (10% off quarterly, 2 months free yearly) until you edit one
+              directly — per currency, independently. Leaving a currency at 0 means this plan isn't offered in it yet.
+            </p>
           </div>
-          <p className="-mt-2 text-xs text-muted-foreground">
-            Quarterly and yearly auto-fill from monthly (10% off quarterly, 2 months free yearly) until you edit one directly.
-          </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
@@ -222,7 +299,7 @@ export function PlanEditorDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={submit} loading={save.isPending}>
+          <Button onClick={submit} loading={save.isPending || savePrices.isPending}>
             {plan ? 'Save changes' : 'Create plan'}
           </Button>
         </DialogFooter>

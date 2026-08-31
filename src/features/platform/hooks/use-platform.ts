@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { platformService, type PlanInput } from '@/features/platform/services/platform.service'
+import { platformService, type PlanInput, type PlanPriceInput } from '@/features/platform/services/platform.service'
 import { supabase } from '@/shared/lib/supabase'
 import type { AuditLog } from '@/shared/types/database.types'
 
@@ -193,6 +193,23 @@ export function useSavePlan() {
   const invalidate = useInvalidateAll()
   return useMutation({
     mutationFn: (plan: PlanInput) => platformService.savePlan(plan),
+    onSuccess: invalidate,
+  })
+}
+/** 0161 — a plan's per-currency prices, loaded into the Plan Editor's
+ * currency tabs when editing an existing plan. */
+export function usePlanPrices(planId: string | undefined) {
+  return useQuery({
+    queryKey: ['platform', 'plan-prices', planId],
+    enabled: Boolean(planId),
+    queryFn: () => platformService.listPlanPrices(planId!),
+  })
+}
+export function useSavePlanPrices() {
+  const invalidate = useInvalidateAll()
+  return useMutation({
+    mutationFn: ({ planId, prices }: { planId: string; prices: PlanPriceInput[] }) =>
+      platformService.savePlanPrices(planId, prices),
     onSuccess: invalidate,
   })
 }

@@ -948,7 +948,7 @@ export function LandingPage() {
               <a href="/terms" className="transition-colors hover:text-primary">Terms &amp; Conditions</a>
               <a href="/privacy" className="transition-colors hover:text-primary">Privacy Policy</a>
             </div>
-            <p>Built for firms practicing under Nigerian law.</p>
+            <p>Built for firms practicing across Africa.</p>
           </div>
         </div>
       </footer>

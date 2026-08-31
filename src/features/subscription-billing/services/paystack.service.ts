@@ -23,11 +23,13 @@ export const paystackService = {
     planId: string,
     billingCycle: BillingCycle = 'monthly',
     context: 'onboarding' | 'existing' = 'onboarding',
+    currency = 'NGN',
   ): Promise<InitTransactionResult> {
     return invokeEdgeFunction<InitTransactionResult>('paystack-init-transaction', {
       organizationId,
       planId,
       billingCycle,
+      currency,
       callbackUrl: `${window.location.origin}/subscription/callback?context=${context}`,
     })
   },

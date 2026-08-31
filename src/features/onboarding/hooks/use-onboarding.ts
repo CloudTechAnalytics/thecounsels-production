@@ -36,8 +36,8 @@ export function useSelectablePlans() {
 
 export function useRegisterOrganization() {
   return useMutation({
-    mutationFn: ({ values, planId }: { values: FirmSetupValues; planId: string }) =>
-      onboardingService.registerOrganization(values, planId),
+    mutationFn: ({ values, planId, currency }: { values: FirmSetupValues; planId: string; currency?: string }) =>
+      onboardingService.registerOrganization(values, planId, currency),
   })
 }
 

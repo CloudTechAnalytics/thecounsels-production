@@ -9,6 +9,7 @@ import type {
   OrgStatus,
   Organization,
   Plan,
+  PlanPrice,
   PlatformSettings,
   SubscriptionStatus,
 } from '@/shared/types/database.types'
@@ -26,6 +27,15 @@ export interface PlanInput {
   features?: Json
   highlights?: string[]
   is_active?: boolean
+}
+
+/** One currency's pricing for a plan (0161) — price_quarterly stays
+ * optional/nullable, same as the legacy plans columns it mirrors. */
+export interface PlanPriceInput {
+  currency: string
+  price_monthly: number
+  price_quarterly: number | null
+  price_yearly: number
 }
 import type {
   GrowthPoint,
@@ -616,17 +626,42 @@ export const platformService = {
     return data ?? []
   },
 
-  async savePlan(plan: PlanInput): Promise<void> {
+  /** Returns the saved plan's id — a brand-new plan doesn't have one until
+   * this resolves, and the caller needs it right after to save this same
+   * plan's per-currency prices (0161) in the same "Save" action. */
+  async savePlan(plan: PlanInput): Promise<{ id: string }> {
     if (plan.id) {
       const { id, ...rest } = plan
       const { error } = await supabase.from('plans').update(rest).eq('id', id)
       if (error) throw error
+      return { id }
     } else {
       const { id: _omit, ...rest } = plan
       void _omit
-      const { error } = await supabase.from('plans').insert({ ...rest, is_custom: true, sort_order: 200 })
+      const { data, error } = await supabase.from('plans').insert({ ...rest, is_custom: true, sort_order: 200 }).select('id').single()
       if (error) throw error
+      return { id: data.id }
     }
+  },
+
+  async listPlanPrices(planId: string): Promise<PlanPrice[]> {
+    const { data, error } = await supabase.from('plan_prices').select('*').eq('plan_id', planId)
+    if (error) throw error
+    return data ?? []
+  },
+
+  /** Upserts every currency passed in one go — the Plan Editor always sends
+   * all 5 supported currencies (0161's SUPPORTED_CURRENCIES) together,
+   * blank ones included as 0, so this doesn't need to separately handle
+   * "remove a currency" — a 0 price just means not offered there yet. */
+  async savePlanPrices(planId: string, prices: PlanPriceInput[]): Promise<void> {
+    const { error } = await supabase
+      .from('plan_prices')
+      .upsert(
+        prices.map((p) => ({ plan_id: planId, ...p })),
+        { onConflict: 'plan_id,currency' },
+      )
+    if (error) throw error
   },
 
   // ── Subscriptions ─────────────────────────────────────────────────────────

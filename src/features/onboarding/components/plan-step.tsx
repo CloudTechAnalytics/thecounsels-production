@@ -1,15 +1,17 @@
 import * as React from 'react'
 import { CheckCircle2, Sparkles } from 'lucide-react'
 import { useRegistrationSettings, useSelectablePlans } from '@/features/onboarding/hooks/use-onboarding'
+import type { PlanWithPrices } from '@/features/onboarding/services/onboarding.service'
 import { Button } from '@/shared/components/ui/button'
 import { Card } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { formatNaira } from '@/shared/lib/format'
 import { BILLING_CYCLES, CYCLE_LABEL, CYCLE_SUFFIX, cyclePrice, cycleDiscountPercent } from '@/shared/lib/billing-cycle'
+import { SUPPORTED_CURRENCIES, CURRENCY_META, type SupportedCurrency } from '@/shared/lib/currencies'
 import { cn } from '@/shared/lib/utils'
 import { APP } from '@/shared/config/env'
-import type { BillingCycle, Plan } from '@/shared/types/database.types'
+import type { BillingCycle } from '@/shared/types/database.types'
 
 const TRIAL = 'trial' as const
 type Selection = typeof TRIAL | string
@@ -19,6 +21,22 @@ type Selection = typeof TRIAL | string
  * intent through the account-creation + email-verification gap — a query
  * param wouldn't survive Supabase's verification-link redirect. */
 const INTENDED_PLAN_KEY = 'counsel.intended_plan'
+
+/** This plan's pricing in the chosen currency (0161/0162) — falls back to
+ * the plan's own legacy single-currency columns when that's genuinely the
+ * currency they represent (today, always NGN) and no plan_prices row
+ * exists yet, same defensive fallback paystack-init-transaction itself
+ * uses server-side. Returns null when the plan simply isn't priced in
+ * this currency at all (a real possibility — not every plan has to be,
+ * e.g. Enterprise is deliberately "contact sales" in every currency). */
+function pricesFor(plan: PlanWithPrices, currency: SupportedCurrency) {
+  const row = plan.plan_prices?.find((p) => p.currency === currency)
+  if (row) return row
+  if (currency === (plan.currency || 'NGN')) {
+    return { price_monthly: plan.price_monthly, price_quarterly: plan.price_quarterly, price_yearly: plan.price_yearly }
+  }
+  return null
+}
 
 function CardShell({
   selected,
@@ -101,19 +119,46 @@ function CycleToggle({ cycle, onChange }: { cycle: BillingCycle; onChange: (c: B
   )
 }
 
+/** Currency picker — popular African markets first, USD last as the
+ * universal fallback for a prospect anywhere Paystack doesn't directly
+ * settle locally (still works there via international card payment). */
+function CurrencyToggle({ currency, onChange }: { currency: SupportedCurrency; onChange: (c: SupportedCurrency) => void }) {
+  return (
+    <div className="inline-flex flex-wrap justify-center gap-1 rounded-lg border border-border bg-muted/40 p-1">
+      {SUPPORTED_CURRENCIES.map((c) => (
+        <button
+          key={c}
+          type="button"
+          onClick={() => onChange(c)}
+          title={CURRENCY_META[c].label}
+          className={cn(
+            'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+            currency === c ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          {c}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function PlanCard({
   plan,
   cycle,
+  currency,
   selected,
   onSelect,
 }: {
-  plan: Plan
+  plan: PlanWithPrices
   cycle: BillingCycle
+  currency: SupportedCurrency
   selected: boolean
   onSelect: () => void
 }) {
   const recommended = plan.key === 'professional'
-  const discount = cycleDiscountPercent(cycle, plan)
+  const prices = plan.is_custom ? null : pricesFor(plan, currency)
+  const discount = prices ? cycleDiscountPercent(cycle, prices) : null
   return (
     <CardShell
       selected={selected}
@@ -123,16 +168,18 @@ function PlanCard({
       <p className="font-display text-base font-semibold">{plan.name}</p>
       {plan.is_custom ? (
         <p className="mt-1 font-display text-2xl font-semibold">Custom</p>
-      ) : (
+      ) : prices ? (
         <>
           <p className="mt-1 font-display text-2xl font-semibold">
-            {formatNaira(cyclePrice(cycle, plan))}
+            {formatNaira(cyclePrice(cycle, prices), currency)}
             <span className="text-sm font-normal text-muted-foreground">{CYCLE_SUFFIX[cycle]}</span>
           </p>
           {discount != null && (
             <Badge variant="secondary" className="mt-1">Save {discount}%</Badge>
           )}
         </>
+      ) : (
+        <p className="mt-1 text-sm text-muted-foreground">Not priced in {currency} yet — try another currency.</p>
       )}
       {plan.is_custom && <p className="text-xs text-muted-foreground">Tailored pricing — talk to sales</p>}
       <ul className="mt-4 space-y-1.5">
@@ -160,8 +207,8 @@ export function PlanStep({
   trialLoading,
   subscribeLoading,
 }: {
-  onStartTrial: (planId: string) => void
-  onSubscribeNow: (planId: string, billingCycle: BillingCycle) => void
+  onStartTrial: (planId: string, currency: string) => void
+  onSubscribeNow: (planId: string, billingCycle: BillingCycle, currency: string) => void
   trialLoading: boolean
   subscribeLoading: boolean
 }) {
@@ -173,6 +220,9 @@ export function PlanStep({
   const { data: settings } = useRegistrationSettings()
   const [selected, setSelected] = React.useState<Selection | null>(null)
   const [cycle, setCycle] = React.useState<BillingCycle>('monthly')
+  // NGN default — most registrants so far are Nigerian, and it's the one
+  // currency every existing plan is guaranteed to have real pricing for.
+  const [currency, setCurrency] = React.useState<SupportedCurrency>('NGN')
 
   // Trial is preselected by default — it's the recommended, no-payment path
   // — unless the landing page's pricing section pointed here with a
@@ -207,14 +257,18 @@ export function PlanStep({
 
   const handleContinue = () => {
     if (selected === TRIAL) {
-      if (trialPlanId) onStartTrial(trialPlanId)
+      if (trialPlanId) onStartTrial(trialPlanId, currency)
     } else if (selectedPlan) {
-      onSubscribeNow(selectedPlan.id, cycle)
+      onSubscribeNow(selectedPlan.id, cycle, currency)
     }
   }
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-center">
+        <CurrencyToggle currency={currency} onChange={setCurrency} />
+      </div>
+
       {selected !== TRIAL && selectedPlan && !selectedPlan.is_custom && (
         <div className="flex justify-center">
           <CycleToggle cycle={cycle} onChange={setCycle} />
@@ -224,7 +278,14 @@ export function PlanStep({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <TrialCard selected={selected === TRIAL} onSelect={() => setSelected(TRIAL)} days={trialDays} />
         {plans.map((plan) => (
-          <PlanCard key={plan.id} plan={plan} cycle={cycle} selected={plan.id === selected} onSelect={() => setSelected(plan.id)} />
+          <PlanCard
+            key={plan.id}
+            plan={plan}
+            cycle={cycle}
+            currency={currency}
+            selected={plan.id === selected}
+            onSelect={() => setSelected(plan.id)}
+          />
         ))}
       </div>
 
@@ -242,7 +303,7 @@ export function PlanStep({
         <Button
           size="lg"
           className="w-full"
-          disabled={!selected}
+          disabled={!selected || (selected !== TRIAL && !pricesFor(selectedPlan!, currency))}
           loading={selected === TRIAL ? trialLoading : subscribeLoading}
           onClick={handleContinue}
         >

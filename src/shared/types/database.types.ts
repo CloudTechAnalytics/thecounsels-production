@@ -470,6 +470,34 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['plans']['Insert']>
         Relationships: []
       }
+      plan_prices: {
+        Row: {
+          id: string
+          plan_id: string
+          currency: string
+          price_monthly: number
+          price_quarterly: number | null
+          price_yearly: number
+        } & Timestamps
+        Insert: {
+          id?: string
+          plan_id: string
+          currency: string
+          price_monthly?: number
+          price_quarterly?: number | null
+          price_yearly?: number
+        }
+        Update: Partial<Database['public']['Tables']['plan_prices']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'plan_prices_plan_id_fkey'
+            columns: ['plan_id']
+            isOneToOne: false
+            referencedRelation: 'plans'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       registration_settings: {
         Row: {
           id: boolean
@@ -2448,6 +2476,7 @@ export type Branch = Database['public']['Tables']['branches']['Row']
 export type MemberBranch = Database['public']['Tables']['member_branches']['Row']
 export type MatterBranchShare = Database['public']['Tables']['matter_branch_shares']['Row']
 export type Plan = Database['public']['Tables']['plans']['Row']
+export type PlanPrice = Database['public']['Tables']['plan_prices']['Row']
 export type Subscription = Database['public']['Tables']['subscriptions']['Row']
 export type PlatformSettings = Database['public']['Tables']['platform_settings']['Row']
 export type Client = Database['public']['Tables']['clients']['Row']

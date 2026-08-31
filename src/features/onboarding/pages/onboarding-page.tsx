@@ -112,11 +112,11 @@ export function OnboardingPage() {
       ? ' Since you signed up on the firm\'s behalf, remember to invite the Managing Partner once you\'re in — Firm Settings → Team.'
       : ''
 
-  const startTrial = async (planId: string) => {
+  const startTrial = async (planId: string, currency: string) => {
     if (!firmValues) return
     setPendingAction('trial')
     try {
-      await register.mutateAsync({ values: firmValues, planId })
+      await register.mutateAsync({ values: firmValues, planId, currency })
       // Deliberately doesn't stay signed in — the trial account/firm exist
       // now, but the flow sends them to a fresh sign-in instead of
       // continuing straight into the workspace.
@@ -135,13 +135,13 @@ export function OnboardingPage() {
     }
   }
 
-  const subscribeNow = async (planId: string, billingCycle: BillingCycle) => {
+  const subscribeNow = async (planId: string, billingCycle: BillingCycle, currency: string) => {
     if (!firmValues) return
     setPendingAction('subscribe')
 
     let org: { id: string } | null = null
     try {
-      org = (await register.mutateAsync({ values: firmValues, planId })) as { id: string }
+      org = (await register.mutateAsync({ values: firmValues, planId, currency })) as { id: string }
     } catch (err) {
       // Registration itself never happened — nothing was created, just
       // stay on this screen so they can retry.
@@ -155,7 +155,7 @@ export function OnboardingPage() {
     try {
       // On success this leaves the SPA entirely (Paystack's hosted
       // checkout) and never resolves normally — the browser navigates away.
-      await checkout.mutateAsync({ organizationId: org.id, planId, billingCycle })
+      await checkout.mutateAsync({ organizationId: org.id, planId, billingCycle, currency })
     } catch (err) {
       // Checkout failed to even start, but register_organization() already
       // created the org + a trial subscription unconditionally (same as

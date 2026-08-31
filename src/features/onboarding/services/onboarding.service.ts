@@ -1,6 +1,8 @@
 import { supabase } from '@/shared/lib/supabase'
 import type { FirmSetupValues } from '@/features/onboarding/schemas'
-import type { Plan } from '@/shared/types/database.types'
+import type { Plan, PlanPrice } from '@/shared/types/database.types'
+
+export type PlanWithPrices = Plan & { plan_prices: PlanPrice[] }
 
 export interface RegistrationSettingsRow {
   id: boolean
@@ -23,11 +25,17 @@ export const onboardingService = {
     return data as unknown as RegistrationSettingsRow
   },
 
-  /** The 4 plans the onboarding plan step lets a registering firm choose among. */
-  async getSelectablePlans(): Promise<Plan[]> {
-    const { data, error } = await supabase.from('plans').select('*').eq('is_active', true).order('sort_order')
+  /** The 4 plans the onboarding plan step lets a registering firm choose
+   * among, each carrying every currency it's priced in (0161) — the plan
+   * step picks whichever currency row matches the registrant's choice. */
+  async getSelectablePlans(): Promise<PlanWithPrices[]> {
+    const { data, error } = await supabase
+      .from('plans')
+      .select('*, plan_prices(*)')
+      .eq('is_active', true)
+      .order('sort_order')
     if (error) throw error
-    return (data ?? []) as Plan[]
+    return (data ?? []) as unknown as PlanWithPrices[]
   },
 
   /**
@@ -74,7 +82,7 @@ export const onboardingService = {
    * account ownership regardless, but their own membership role now
    * follows what they actually said they are, instead of unconditionally
    * becoming Managing Partner. */
-  async registerOrganization(values: FirmSetupValues, planId: string) {
+  async registerOrganization(values: FirmSetupValues, planId: string, currency = 'NGN') {
     const { data, error } = await supabase.rpc('register_organization', {
       p_name: values.firmName.trim(),
       p_slug: values.shortName.trim(),
@@ -87,6 +95,7 @@ export const onboardingService = {
       p_user_count: values.userCount ?? null,
       p_practice_areas: values.practiceAreas.length > 0 ? values.practiceAreas : null,
       p_registrant_role: values.registrantRole,
+      p_currency: currency,
     })
     if (error) throw error
     return data

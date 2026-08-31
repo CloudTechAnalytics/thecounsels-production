@@ -160,12 +160,19 @@ export function LoginPage() {
 
           {env.isTurnstileConfigured && <TurnstileWidget onToken={setCaptchaToken} />}
 
+          {/* Submission is never blocked on captchaToken client-side — the
+           * server (Supabase Auth's own captcha_enabled setting) is the
+           * real gate. A hard client-side disable here once locked out a
+           * real customer on 2026-08-31 when Turnstile silently failed to
+           * resolve for them; if enforcement is ever back on server-side
+           * and the widget genuinely can't produce a token, the normal
+           * sign-in error path below surfaces that instead of a dead
+           * button with no explanation. */}
           <Button
             type="submit"
             size="lg"
             className="w-full"
             loading={form.formState.isSubmitting}
-            disabled={env.isTurnstileConfigured && !captchaToken}
           >
             Sign in
           </Button>

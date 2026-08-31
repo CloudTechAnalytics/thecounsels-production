@@ -91,12 +91,13 @@ export function ForgotPasswordPage() {
           />
           {env.isTurnstileConfigured && <TurnstileWidget onToken={setCaptchaToken} />}
 
+          {/* Never hard-block on captchaToken client-side — see the same
+           * note on login-page.tsx's submit button (2026-08-31 lockout). */}
           <Button
             type="submit"
             size="lg"
             className="w-full"
             loading={form.formState.isSubmitting}
-            disabled={env.isTurnstileConfigured && !captchaToken}
           >
             Send reset link
           </Button>

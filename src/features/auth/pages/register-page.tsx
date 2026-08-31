@@ -11,7 +11,9 @@ import { authService } from '@/features/auth/services/auth.service'
 import { selfRegisterSchema, type SelfRegisterValues } from '@/features/auth/schemas'
 import { Button } from '@/shared/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
+import { TurnstileWidget } from '@/shared/components/turnstile-widget'
 import { toast } from '@/shared/components/ui/sonner'
+import { env } from '@/shared/config/env'
 import { errorMessage } from '@/shared/lib/errors'
 import { logClientError } from '@/shared/lib/error-log'
 import { supabase } from '@/shared/lib/supabase'
@@ -30,11 +32,13 @@ const RESEND_COOLDOWN_SECONDS = 30
  * completion (see register_organization() RPC).
  *
  * Verification is an inline email OTP, not a "click the link" email —
- * doubling as the anti-bot check in place of CAPTCHA (a bot can't read and
- * retype a code that only exists in an inbox it doesn't control), and
- * establishing a real signed-in session directly on success, so there's no
- * separate "now go log in" step afterward the way the old link-click flow
- * required.
+ * doubling as one anti-bot layer (a bot can't read and retype a code that
+ * only exists in an inbox it doesn't control), and establishing a real
+ * signed-in session directly on success, so there's no separate "now go log
+ * in" step afterward the way the old link-click flow required. Turnstile
+ * (2026-08-31) sits in front of it as a second, earlier layer — stops a
+ * scripted signup from even reaching the point of burning a real OTP send,
+ * same optional/no-op-until-configured pattern as login-page.tsx.
  */
 export function RegisterPage() {
   const [sentTo, setSentTo] = React.useState<string | null>(null)
@@ -44,6 +48,7 @@ export function RegisterPage() {
   const [verifying, setVerifying] = React.useState(false)
   const [resending, setResending] = React.useState(false)
   const [cooldown, setCooldown] = React.useState(0)
+  const [captchaToken, setCaptchaToken] = React.useState<string | null>(null)
 
   const form = useForm<SelfRegisterValues>({
     resolver: zodResolver(selfRegisterSchema),
@@ -77,6 +82,7 @@ export function RegisterPage() {
         values.email,
         values.password,
         `${values.firstName.trim()} ${values.lastName.trim()}`.trim(),
+        captchaToken ?? undefined,
       )
       setSentTo(values.email)
       setCooldown(RESEND_COOLDOWN_SECONDS)
@@ -90,6 +96,8 @@ export function RegisterPage() {
       } else {
         toast.error('Could not create account', { description: message || 'Please try again.' })
       }
+      // Turnstile tokens are single-use — a fresh one is required to retry.
+      setCaptchaToken(null)
     }
   }
 
@@ -328,7 +336,15 @@ export function RegisterPage() {
             )}
           />
 
-          <Button type="submit" size="lg" className="w-full" loading={form.formState.isSubmitting}>
+          {env.isTurnstileConfigured && <TurnstileWidget onToken={setCaptchaToken} />}
+
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            loading={form.formState.isSubmitting}
+            disabled={env.isTurnstileConfigured && !captchaToken}
+          >
             Sign Up
           </Button>
         </form>

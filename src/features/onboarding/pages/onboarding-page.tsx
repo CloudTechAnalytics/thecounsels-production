@@ -204,6 +204,7 @@ export function OnboardingPage() {
 
       {step === 'plan' && (
         <PlanStep
+          country={firmValues?.country}
           onStartTrial={startTrial}
           onSubscribeNow={subscribeNow}
           trialLoading={pendingAction === 'trial'}

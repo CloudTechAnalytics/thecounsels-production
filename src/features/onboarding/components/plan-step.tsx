@@ -8,7 +8,7 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { formatNaira } from '@/shared/lib/format'
 import { BILLING_CYCLES, CYCLE_LABEL, CYCLE_SUFFIX, cyclePrice, cycleDiscountPercent } from '@/shared/lib/billing-cycle'
-import { SUPPORTED_CURRENCIES, CURRENCY_META, type SupportedCurrency } from '@/shared/lib/currencies'
+import { SUPPORTED_CURRENCIES, CURRENCY_META, defaultCurrencyForCountry, type SupportedCurrency } from '@/shared/lib/currencies'
 import { cn } from '@/shared/lib/utils'
 import { APP } from '@/shared/config/env'
 import type { BillingCycle } from '@/shared/types/database.types'
@@ -202,11 +202,18 @@ function PlanCard({
  * straight from the plans table, never hardcoded.
  */
 export function PlanStep({
+  country,
   onStartTrial,
   onSubscribeNow,
   trialLoading,
   subscribeLoading,
 }: {
+  /** The country picked one step earlier (firm-setup-step.tsx) — nudges the
+   * currency picker's default, previously written (defaultCurrencyForCountry)
+   * but never actually wired up, a real reported gap: picking Ghana there
+   * did nothing to what currency showed up here. Still just a default —
+   * fully overridable in the currency picker itself. */
+  country?: string | null
   onStartTrial: (planId: string, currency: string) => void
   onSubscribeNow: (planId: string, billingCycle: BillingCycle, currency: string) => void
   trialLoading: boolean
@@ -220,9 +227,10 @@ export function PlanStep({
   const { data: settings } = useRegistrationSettings()
   const [selected, setSelected] = React.useState<Selection | null>(null)
   const [cycle, setCycle] = React.useState<BillingCycle>('monthly')
-  // NGN default — most registrants so far are Nigerian, and it's the one
-  // currency every existing plan is guaranteed to have real pricing for.
-  const [currency, setCurrency] = React.useState<SupportedCurrency>('NGN')
+  // Defaults from the country picked one step earlier when that's one of
+  // the four with a real mapping (Nigeria/Ghana/South Africa/Kenya),
+  // otherwise USD — still fully overridable right here either way.
+  const [currency, setCurrency] = React.useState<SupportedCurrency>(() => defaultCurrencyForCountry(country))
 
   // Trial is preselected by default — it's the recommended, no-payment path
   // — unless the landing page's pricing section pointed here with a

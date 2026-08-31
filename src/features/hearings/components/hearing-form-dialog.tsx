@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { UserPlus, X } from 'lucide-react'
+import { UserPlus, X, Users, Check } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useClients } from '@/features/clients/hooks/use-clients'
 import { useMatters, useFirmMembers } from '@/features/matters/hooks/use-matters'
@@ -12,6 +12,7 @@ import {
   useAddHearingSupportingLawyer,
   useRemoveHearingSupportingLawyer,
 } from '@/features/hearings/hooks/use-hearings'
+import { hearingsService } from '@/features/hearings/services/hearings.service'
 import { hearingSchema, type HearingFormValues } from '@/features/hearings/schemas'
 import { HEARING_TYPES, HEARING_STATUS_META, type HearingRow } from '@/features/hearings/types'
 import { Button } from '@/shared/components/ui/button'
@@ -30,9 +31,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { toast } from '@/shared/components/ui/sonner'
 import { friendlyErrorMessage } from '@/shared/lib/errors'
+import { cn } from '@/shared/lib/utils'
 import { isMatterClosed } from '@/features/matters/types'
 import { BranchPicker } from '@/features/branches/components/branch-picker'
 import { memberInBranch, memberLabel } from '@/shared/lib/member-picker'
+import type { MemberWithRelations } from '@/features/administration/types'
 import { initialsOf } from '@/shared/lib/format'
 
 const NONE = '__none__'
@@ -128,6 +131,62 @@ function SupportingLawyersSection({ hearingId, branchId }: { hearingId: string; 
   )
 }
 
+/** Create-mode counterpart to SupportingLawyersSection above — that one
+ * mutates hearing_supporting_lawyers immediately against a real hearing_id,
+ * which doesn't exist yet for a brand-new hearing. This just tracks picks
+ * locally; the form applies them via hearingsService directly once the new
+ * hearing's real id comes back from create.mutateAsync (see onSubmit) — same
+ * "toggle list, apply the diff on save" pattern matter-form-dialog.tsx uses
+ * for its own Assigned Team section. */
+function NewSupportingLawyersPicker({
+  options,
+  value,
+  onToggle,
+}: {
+  options: MemberWithRelations[]
+  value: Set<string>
+  onToggle: (userId: string) => void
+}) {
+  return (
+    <div className="space-y-2">
+      <FormLabel className="flex items-center gap-1.5">
+        <Users className="h-3.5 w-3.5 text-muted-foreground" /> Supporting lawyers
+      </FormLabel>
+      {options.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No one else in this branch to add yet.</p>
+      ) : (
+        <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
+          {options.map((m) => {
+            const checked = value.has(m.user_id)
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => onToggle(m.user_id)}
+                className={cn(
+                  'flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                  checked ? 'bg-primary/10 text-foreground' : 'hover:bg-accent text-muted-foreground',
+                )}
+              >
+                <span
+                  className={cn(
+                    'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
+                    checked ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
+                  )}
+                >
+                  {checked && <Check className="h-3 w-3" />}
+                </span>
+                <span className="truncate">{memberLabel(m)}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">Anyone checked here can also access this hearing (and its matter, if linked).</p>
+    </div>
+  )
+}
+
 export function HearingFormDialog({
   hearing,
   presetDate,
@@ -159,14 +218,30 @@ export function HearingFormDialog({
   const form = useForm<HearingFormValues>({ resolver: zodResolver(hearingSchema), defaultValues: toDefaults(hearing) })
   const matterIdWatch = form.watch('matterId')
   const branchIdWatch = form.watch('branchId') ?? ''
+  const assignedLawyerWatch = form.watch('assignedLawyerId') ?? ''
   // A matter-linked hearing inherits that matter's own branch for
   // filtering who's eligible as Assigned/Supporting Lawyer; a standalone
   // hearing uses its own branch field directly.
   const selectedMatter = matters.find((m) => m.id === matterIdWatch)
   const effectiveBranchId = selectedMatter?.branch_id ?? branchIdWatch
   const lawyerOptions = (members ?? []).filter((m) => memberInBranch(m, effectiveBranchId))
+  // Already covered via Assigned Lawyer — listing them again in the
+  // supporting-lawyers picker too would just be a confusing duplicate.
+  const newSupportingOptions = lawyerOptions.filter((m) => m.user_id !== assignedLawyerWatch)
+  const [newSupportingIds, setNewSupportingIds] = React.useState<Set<string>>(new Set())
+  const toggleNewSupporting = (userId: string) => {
+    setNewSupportingIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(userId)) next.delete(userId)
+      else next.add(userId)
+      return next
+    })
+  }
   React.useEffect(() => {
-    if (open) form.reset(toDefaults(hearing, presetDate, presetMatterId))
+    if (open) {
+      form.reset(toDefaults(hearing, presetDate, presetMatterId))
+      setNewSupportingIds(new Set())
+    }
   }, [open, hearing, presetDate, presetMatterId, form])
 
   const onSubmit = async (values: HearingFormValues) => {
@@ -176,8 +251,21 @@ export function HearingFormDialog({
       assignedLawyerId: values.assignedLawyerId === NONE ? '' : values.assignedLawyerId,
     }
     try {
-      if (hearing) await update.mutateAsync({ id: hearing.id, values: clean })
-      else await create.mutateAsync(clean)
+      if (hearing) {
+        await update.mutateAsync({ id: hearing.id, values: clean })
+      } else {
+        const created = await create.mutateAsync(clean)
+        // Supporting lawyers picked before the hearing existed — apply them
+        // now against the real id. Best-effort: the hearing itself is
+        // already saved at this point, so one failed add here shouldn't
+        // read as "the whole save failed" the way describeSaveError's
+        // catch below would imply.
+        for (const userId of newSupportingIds) {
+          await hearingsService.addSupportingLawyer(activeOrgId!, created.id, userId, profile?.id ?? null).catch((e) => {
+            console.error('Could not add supporting lawyer:', e)
+          })
+        }
+      }
       toast.success(hearing ? 'Hearing updated' : 'Hearing scheduled')
       onOpenChange(false)
     } catch (err) {
@@ -369,11 +457,11 @@ export function HearingFormDialog({
               />
             )}
 
-            {hearing && (
-              <>
-                <Separator />
-                <SupportingLawyersSection hearingId={hearing.id} branchId={effectiveBranchId} />
-              </>
+            <Separator />
+            {hearing ? (
+              <SupportingLawyersSection hearingId={hearing.id} branchId={effectiveBranchId} />
+            ) : (
+              <NewSupportingLawyersPicker options={newSupportingOptions} value={newSupportingIds} onToggle={toggleNewSupporting} />
             )}
 
             <Separator />

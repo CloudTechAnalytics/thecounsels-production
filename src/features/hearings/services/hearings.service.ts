@@ -55,7 +55,7 @@ export const hearingsService = {
     return (data ?? []) as unknown as HearingRow[]
   },
 
-  async create(organizationId: string, values: HearingFormValues, createdBy: string | null): Promise<void> {
+  async create(organizationId: string, values: HearingFormValues, createdBy: string | null): Promise<{ id: string }> {
     const { data, error } = await supabase
       .from('hearings')
       .insert({ organization_id: organizationId, created_by: createdBy, ...toRow(values) })
@@ -69,6 +69,10 @@ export const hearingsService = {
       p_entity_id: data.id,
       p_summary: `Scheduled ${values.title}`,
     })
+    // Returned so the caller can apply anything that needs a real hearing_id
+    // to exist first (e.g. supporting lawyers picked during creation, before
+    // this row existed at all — see hearing-form-dialog.tsx).
+    return { id: data.id }
   },
 
   async update(id: string, organizationId: string, values: HearingFormValues): Promise<void> {

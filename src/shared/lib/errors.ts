@@ -23,11 +23,20 @@ export function errorMessage(err: unknown, fallback?: string): string | undefine
  * table, not a reason. Anywhere a create/update can be blocked by a
  * closed-matter or similar access rule (not just a missing permission)
  * should use this instead of errorMessage() directly.
+ *
+ * Also translates Supabase Auth's own raw captcha-rejection text
+ * ("captcha protection: request disallowed (no captcha_token found)")
+ * into something that doesn't name an internal GoTrue setting — the three
+ * auth pages that render TurnstileWidget (login/register/forgot-password)
+ * should use this instead of errorMessage() directly.
  */
 export function friendlyErrorMessage(err: unknown, fallback?: string): string | undefined {
   const raw = errorMessage(err, fallback)
   if (raw?.includes('row-level security')) {
     return "You don't have permission to do this — the matter may be closed, or you may not have access to it."
+  }
+  if (raw?.toLowerCase().includes('captcha')) {
+    return "Please verify you're human before signing in."
   }
   return raw
 }

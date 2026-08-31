@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { TurnstileWidget } from '@/shared/components/turnstile-widget'
 import { toast } from '@/shared/components/ui/sonner'
 import { env } from '@/shared/config/env'
-import { errorMessage } from '@/shared/lib/errors'
+import { errorMessage, friendlyErrorMessage } from '@/shared/lib/errors'
 import { logClientError } from '@/shared/lib/error-log'
 import { supabase } from '@/shared/lib/supabase'
 
@@ -88,7 +88,7 @@ export function RegisterPage() {
       setCooldown(RESEND_COOLDOWN_SECONDS)
     } catch (err) {
       console.error('Sign-up failed:', err)
-      const message = errorMessage(err, '') ?? ''
+      const message = friendlyErrorMessage(err, '') ?? ''
       if (/already registered|already exists|already been registered/i.test(message)) {
         toast.error('Account already exists', {
           description: 'An account with this email already exists. Please sign in instead.',

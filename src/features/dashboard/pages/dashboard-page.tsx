@@ -37,6 +37,7 @@ import { MATTER_STATUS_META } from '@/features/matters/types'
 import { formatMoneyCompact, initialsOf } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
 import { PageHeader } from '@/shared/components/page-header'
+import { EmptyState } from '@/shared/components/empty-state'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Skeleton } from '@/shared/components/ui/skeleton'
@@ -217,7 +218,12 @@ export function DashboardPage() {
               })}
             </ul>
           ) : (
-            <p className="py-8 text-center text-sm text-muted-foreground">No matters yet.</p>
+            <EmptyState
+              icon={FolderOpen}
+              title="No matters yet"
+              description="Once you open your first matter, it'll show up here with its latest activity."
+              action={has('matters.create') ? { label: 'Create your first matter', to: '/matters' } : undefined}
+            />
           )}
         </CardContent>
       </Card>

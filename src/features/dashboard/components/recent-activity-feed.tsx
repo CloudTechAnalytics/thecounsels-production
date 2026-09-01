@@ -6,6 +6,7 @@ import { useRecentActivity } from '@/features/dashboard/hooks/use-recent-activit
 import { initialsOf } from '@/shared/lib/format'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { EmptyState } from '@/shared/components/empty-state'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 
 /** Firm-wide chronological activity feed — who did what, when, click through to it. */
@@ -48,7 +49,11 @@ export function RecentActivityFeed() {
             ))}
           </ul>
         ) : (
-          <p className="py-8 text-center text-sm text-muted-foreground">No activity has been recorded yet.</p>
+          <EmptyState
+            icon={Radio}
+            title="No activity yet"
+            description="As your team creates matters, logs hearings and updates records, it'll show up here."
+          />
         )}
       </CardContent>
     </Card>

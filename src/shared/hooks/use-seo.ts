@@ -29,7 +29,14 @@ export interface SeoMeta {
   canonicalPath: string
 }
 
-const ORIGIN = 'https://thecounsels.org'
+// The site's actual serving domain — thecounsels.org itself 308-redirects
+// here (Vercel's own domain config, www is primary). A canonical/OG url
+// pointing at the non-www host would point at a URL that immediately
+// redirects again, which is exactly what broke sitemap submission in
+// Search Console (2026-09-02) — keep this in sync with index.html's own
+// canonical/OG/JSON-LD, public/sitemap.xml and public/robots.txt if the
+// primary domain ever changes.
+const ORIGIN = 'https://www.thecounsels.org'
 
 function setAttr(selector: string, attr: string, value: string): (() => void) | null {
   const el = document.querySelector(selector)

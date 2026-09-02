@@ -50,7 +50,7 @@ function json(body: unknown, status = 200) {
 const GOLD = '#B38A3E'
 const INK = '#1c1917'
 const MUTED = '#78716c'
-const SITE_URL = Deno.env.get('SITE_URL') ?? 'https://thecounsels.org'
+const SITE_URL = Deno.env.get('SITE_URL') ?? 'https://www.thecounsels.org'
 
 function esc(s: string | null | undefined): string {
   return (s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string)

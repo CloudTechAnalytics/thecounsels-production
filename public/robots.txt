@@ -32,4 +32,4 @@ Disallow: /hr
 Disallow: /subscription
 Disallow: /w/
 
-Sitemap: https://thecounsels.org/sitemap.xml
+Sitemap: https://www.thecounsels.org/sitemap.xml

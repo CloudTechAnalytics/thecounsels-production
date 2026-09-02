@@ -8,36 +8,48 @@
     <meta name="theme-color" content="#1a1d21" />
 
     <!-- Kept in sync with APP.domain (src/shared/config/env.ts) — update
-         both together if the production domain ever changes. -->
-    <link rel="canonical" href="https://thecounsels.org/welcome" />
+         both together if the production domain ever changes. This is
+         also the sitewide DEFAULT every route falls back to; individual
+         public pages override title/description/canonical/OG/Twitter at
+         runtime via src/shared/hooks/use-seo.ts (updates these SAME tags
+         in place rather than adding new ones, so there is never a
+         duplicate). '/' is the canonical homepage — RequireAuth renders
+         the landing page directly at '/' for anonymous visitors (see
+         route-guards.tsx), with '/welcome' as a secondary alias to the
+         same content. -->
+    <link rel="canonical" href="https://thecounsels.org/" />
 
-    <title>The Counsel — Enterprise Legal Practice Management | CloudTech Legal Suite</title>
+    <title>Legal Practice Management Software for Law Firms | The Counsel</title>
     <meta
       name="description"
-      content="The Counsel is an enterprise legal practice management platform for Nigerian law firms — matters, clients, hearings, billing, documents and reports in one secure, role-based workspace. Start a free 30-day trial, no card required."
+      content="The Counsel is a legal practice management platform that helps law firms manage clients, matters, documents, hearings, tasks, billing, teams and firm operations in one secure system."
     />
-    <meta name="keywords" content="legal practice management software, law firm software Nigeria, case management system, legal billing software, matter management, law firm CRM, legal document management, court diary software" />
+    <meta name="keywords" content="legal practice management software Nigeria, law firm management software Nigeria, law firm management system Nigeria, legal case management software Nigeria, legal practice management system, law firm billing software Nigeria, legal document management software, case management software for law firms, law firm software Nigeria, legal technology Nigeria" />
     <meta name="author" content="CloudTech Legal Suite" />
+    <!-- Sitewide default is indexable (the marketing surface); the entire
+         authenticated app overrides this to noindex at runtime (see
+         useNoIndexWhenActive in RequireAuth, route-guards.tsx) so private
+         firm data can never end up indexed even if fetched directly. -->
     <meta name="robots" content="index, follow" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="The Counsel" />
-    <meta property="og:title" content="The Counsel — Enterprise Legal Practice Management" />
+    <meta property="og:title" content="Legal Practice Management Software for Law Firms | The Counsel" />
     <meta
       property="og:description"
-      content="Run your law firm with confidence — matters, billing, hearings, documents and reports in one secure workspace. Start a free 30-day trial, no card required."
+      content="The Counsel is a legal practice management platform that helps law firms manage clients, matters, documents, hearings, tasks, billing, teams and firm operations in one secure system."
     />
-    <meta property="og:url" content="https://thecounsels.org/welcome" />
+    <meta property="og:url" content="https://thecounsels.org/" />
     <meta property="og:image" content="https://thecounsels.org/og-image.svg" />
     <meta property="og:locale" content="en_NG" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="The Counsel — Enterprise Legal Practice Management" />
+    <meta name="twitter:title" content="Legal Practice Management Software for Law Firms | The Counsel" />
     <meta
       name="twitter:description"
-      content="Run your law firm with confidence — matters, billing, hearings, documents and reports in one secure workspace."
+      content="The Counsel is a legal practice management platform that helps law firms manage clients, matters, documents, hearings, tasks, billing, teams and firm operations in one secure system."
     />
     <meta name="twitter:image" content="https://thecounsels.org/og-image.svg" />
 
@@ -60,7 +72,7 @@
         "applicationSubCategory": "Legal Practice Management Software",
         "operatingSystem": "Web",
         "description": "Enterprise legal practice management platform for law firms — matters, clients, hearings, billing, documents and reports in one secure, role-based workspace.",
-        "url": "https://thecounsels.org/welcome",
+        "url": "https://thecounsels.org/",
         "offers": {
           "@type": "Offer",
           "price": "15000",
@@ -71,6 +83,41 @@
           "@type": "Organization",
           "name": "CloudTech Legal Suite",
           "email": "cloudtechanalytics.consultant@gmail.com"
+        }
+      }
+    </script>
+
+    <!-- Organization + WebSite structured data (2026-09-01). Only fields
+         that are actually true are included — no invented ratings,
+         reviews, awards, physical address or social profiles; add those
+         here later only once genuinely available. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "CloudTech Analytics",
+        "url": "https://thecounsels.org/",
+        "email": "cloudtechanalytics.consultant@gmail.com",
+        "makesOffer": {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "SoftwareApplication",
+            "name": "The Counsel",
+            "applicationCategory": "BusinessApplication",
+            "applicationSubCategory": "Legal Practice Management Software"
+          }
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "The Counsel",
+        "url": "https://thecounsels.org/",
+        "publisher": {
+          "@type": "Organization",
+          "name": "CloudTech Analytics"
         }
       }
     </script>

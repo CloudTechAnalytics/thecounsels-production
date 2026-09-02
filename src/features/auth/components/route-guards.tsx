@@ -9,11 +9,17 @@ import { Button } from '@/shared/components/ui/button'
 import { LandingPage } from '@/features/landing/pages/landing-page'
 import type { PermissionKey } from '@/shared/lib/permissions'
 import type { PlanFeatureKey } from '@/features/administration/lib/plan-features'
+import { useNoIndexWhenActive } from '@/shared/hooks/use-seo'
 
 /** Gate an entire route subtree behind an authenticated session. */
 export function RequireAuth() {
   const { status } = useAuth()
   const location = useLocation()
+  // Every real firm's private data lives behind this guard — none of it
+  // should ever be indexable, regardless of index.html's marketing-page
+  // default. A no-op while status isn't 'authenticated' (e.g. the '/'
+  // LandingPage branch below stays indexable).
+  useNoIndexWhenActive(status === 'authenticated')
 
   if (status === 'loading') return <LoadingScreen />
   if (status === 'unauthenticated') {

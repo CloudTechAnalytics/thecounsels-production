@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { APP } from '@/shared/config/env'
 import { CounselMark } from '@/shared/components/counsel-mark'
+import { useSeo } from '@/shared/hooks/use-seo'
 
 const EFFECTIVE_DATE = 'August 20, 2026'
 const CONTACT_EMAIL = 'cloudtechanalytics.consultant@gmail.com'
@@ -30,6 +31,11 @@ function Section({ n, title, children }: { n: number; title: string; children: R
  * Naira payments.
  */
 export function TermsPage() {
+  useSeo({
+    title: 'Terms & Conditions | The Counsel',
+    description: `Terms and Conditions governing access to and use of ${APP.product}, a product of CloudTech Analytics.`,
+    canonicalPath: '/terms',
+  })
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">

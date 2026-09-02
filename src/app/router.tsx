@@ -18,6 +18,10 @@ import type { PlanFeatureKey } from '@/features/administration/lib/plan-features
 import { LandingPage } from '@/features/landing/pages/landing-page'
 import { TermsPage } from '@/features/landing/pages/terms-page'
 import { PrivacyPage } from '@/features/landing/pages/privacy-page'
+import { LegalPracticeManagementSoftwareNigeriaPage } from '@/features/landing/pages/legal-practice-management-software-nigeria-page'
+import { LawFirmManagementSoftwarePage } from '@/features/landing/pages/law-firm-management-software-page'
+import { LegalCaseManagementSoftwarePage } from '@/features/landing/pages/legal-case-management-software-page'
+import { LawFirmBillingSoftwarePage } from '@/features/landing/pages/law-firm-billing-software-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { RegisterPage } from '@/features/auth/pages/register-page'
 import { AuthCallbackPage } from '@/features/auth/pages/auth-callback-page'
@@ -123,6 +127,11 @@ export const router = createBrowserRouter([
   { path: '/welcome', element: <LandingPage /> },
   { path: '/terms', element: <TermsPage /> },
   { path: '/privacy', element: <PrivacyPage /> },
+  // SEO content pages — public, indexable, no auth required.
+  { path: '/legal-practice-management-software-nigeria', element: <LegalPracticeManagementSoftwareNigeriaPage /> },
+  { path: '/law-firm-management-software', element: <LawFirmManagementSoftwarePage /> },
+  { path: '/legal-case-management-software', element: <LegalCaseManagementSoftwarePage /> },
+  { path: '/law-firm-billing-software', element: <LawFirmBillingSoftwarePage /> },
   // Workspace-branded login — temporary stand-in for {slug}.thecounsels.org
   // until wildcard subdomains are configured (see LoginPage's own comment).
   // Purely cosmetic: real auth + membership scoping is unchanged either way.

@@ -2,17 +2,34 @@
 # session and RLS-scoped data, so there's nothing there worth a crawler's
 # time; only the public marketing/auth surface is worth indexing.
 User-agent: *
+Allow: /$
 Allow: /welcome
+Allow: /terms
+Allow: /privacy
+Allow: /legal-practice-management-software-nigeria
+Allow: /law-firm-management-software
+Allow: /legal-case-management-software
+Allow: /law-firm-billing-software
 Allow: /auth/login
 Allow: /auth/register
 Disallow: /platform
 Disallow: /matters
 Disallow: /clients
+Disallow: /documents
+Disallow: /hearings
+Disallow: /appointments
+Disallow: /calendar
+Disallow: /tasks
+Disallow: /staff
 Disallow: /billing
+Disallow: /reports
 Disallow: /administration
 Disallow: /settings
 Disallow: /messages
 Disallow: /notifications
 Disallow: /onboarding
+Disallow: /hr
+Disallow: /subscription
+Disallow: /w/
 
 Sitemap: https://thecounsels.org/sitemap.xml

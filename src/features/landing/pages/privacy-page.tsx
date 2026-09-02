@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { APP } from '@/shared/config/env'
 import { CounselMark } from '@/shared/components/counsel-mark'
+import { useSeo } from '@/shared/hooks/use-seo'
 
 const EFFECTIVE_DATE = 'August 20, 2026'
 const CONTACT_EMAIL = 'cloudtechanalytics.consultant@gmail.com'
@@ -31,6 +32,11 @@ function Section({ n, title, children }: { n: number; title: string; children: R
  * this product handles law firms' own confidential client data.
  */
 export function PrivacyPage() {
+  useSeo({
+    title: 'Privacy Policy | The Counsel',
+    description: `Privacy Policy explaining how ${APP.product}, a product of CloudTech Analytics, collects, uses and protects personal data.`,
+    canonicalPath: '/privacy',
+  })
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">

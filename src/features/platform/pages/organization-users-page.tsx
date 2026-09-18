@@ -37,7 +37,23 @@ export function OrganizationUsersPage() {
 
   return (
     <div>
-      <PageHeader title="Organization Users" description="Every user across all customer firms — read only." />
+      <PageHeader
+        title="Organization Users"
+        description="Every user across all customer firms — read only."
+        actions={
+          organizations.length > 1 ? (
+            <Select value={orgFilter} onValueChange={setOrgFilter}>
+              <SelectTrigger className="w-56"><SelectValue placeholder="All organizations" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All organizations</SelectItem>
+                {organizations.map(([id, name]) => (
+                  <SelectItem key={id} value={id}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : undefined
+        }
+      />
 
       <div className="mb-5 flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -49,21 +65,10 @@ export function OrganizationUsersPage() {
       </div>
 
       {organizations.length > 1 && (
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            {filtered.length} {filtered.length === 1 ? 'user' : 'users'}
-            {orgFilter !== 'all' && organizations.find(([id]) => id === orgFilter) ? ` in ${organizations.find(([id]) => id === orgFilter)![1]}` : ''}
-          </p>
-          <Select value={orgFilter} onValueChange={setOrgFilter}>
-            <SelectTrigger className="w-56"><SelectValue placeholder="All organizations" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All organizations</SelectItem>
-              {organizations.map(([id, name]) => (
-                <SelectItem key={id} value={id}>{name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <p className="mb-4 text-sm text-muted-foreground">
+          {filtered.length} {filtered.length === 1 ? 'user' : 'users'}
+          {orgFilter !== 'all' && organizations.find(([id]) => id === orgFilter) ? ` in ${organizations.find(([id]) => id === orgFilter)![1]}` : ''}
+        </p>
       )}
 
       <Card className="overflow-hidden">

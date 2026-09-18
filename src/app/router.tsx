@@ -43,6 +43,7 @@ import { ClientsPage } from '@/features/clients/pages/clients-page'
 import { ClientDetailPage } from '@/features/clients/pages/client-detail-page'
 import { NotificationsPage } from '@/features/notifications/pages/notifications-page'
 import { MessagesPage } from '@/features/messaging/pages/messages-page'
+import { AssistantPage } from '@/features/assistant/pages/assistant-page'
 import { MattersPage } from '@/features/matters/pages/matters-page'
 import { MatterDetailPage } from '@/features/matters/pages/matter-detail-page'
 import { DocumentsPage } from '@/features/documents/pages/documents-page'
@@ -235,6 +236,7 @@ export const router = createBrowserRouter([
                       { path: 'reports', element: withPermission(<ReportsPage />, 'reports.view') },
                       { path: 'notifications', element: <NotificationsPage /> },
                       { path: 'messages', element: withPlanFeature(withPermission(<MessagesPage />, 'messaging.view'), 'messaging') },
+                      { path: 'assistant', element: withPlanFeature(<AssistantPage />, 'ai_summarization') },
                       {
                         path: 'administration',
                         element: withPermission(<AdministrationPage />, ['organization.view', 'members.view'], 'any'),

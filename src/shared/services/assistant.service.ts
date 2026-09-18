@@ -8,46 +8,58 @@ export interface AssistantMessageRow {
   created_at: string
 }
 
+export interface AssistantConversationRow {
+  id: string
+  title: string
+  updated_at: string
+}
+
 /** General schedule/workload AI assistant — cross-cutting (topbar entry
- * point, not scoped to any one matter). Business/Enterprise only; the real
- * enforcement lives server-side in the ask-assistant Edge Function. */
+ * point, not scoped to any one matter). Business/Enterprise (or whichever
+ * plans have ai_summarization toggled on) only; the real enforcement lives
+ * server-side in the ask-assistant Edge Function. Conversations (0166) —
+ * each a real row, not just an in-memory grouping — let a user keep
+ * several distinct threads side by side, ChatGPT-style. */
 export const assistantService = {
-  /** Per-(org, user) — RLS on assistant_messages scopes to user_id =
-   * auth.uid() only, so the org filter here keeps a user's history from
-   * mixing across firms if they belong to more than one. */
-  async listMessages(organizationId: string): Promise<AssistantMessageRow[]> {
+  /** Most-recently-active first — same ordering ChatGPT's own sidebar uses. */
+  async listConversations(organizationId: string): Promise<AssistantConversationRow[]> {
+    const { data, error } = await supabase
+      .from('assistant_conversations')
+      .select('id, title, updated_at')
+      .eq('organization_id', organizationId)
+      .order('updated_at', { ascending: false })
+    if (error) throw error
+    return data ?? []
+  },
+
+  async listMessages(conversationId: string): Promise<AssistantMessageRow[]> {
     const { data, error } = await supabase
       .from('assistant_messages')
       .select('id, role, content, created_at')
-      .eq('organization_id', organizationId)
+      .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true })
     if (error) throw error
     return (data ?? []) as AssistantMessageRow[]
   },
+
   /** No client-direct insert — ask-assistant (service-role) writes both the
-   * user's message and the assistant's reply in one call. */
-  sendMessage(organizationId: string, message: string): Promise<{ reply: string }> {
-    return invokeEdgeFunction('ask-assistant', { organizationId, message })
+   * user's message and the assistant's reply in one call. Pass
+   * conversationId null to start a brand-new conversation — the function
+   * creates it (titled from this first message) and returns its id. */
+  sendMessage(organizationId: string, conversationId: string | null, message: string): Promise<{ reply: string; conversationId: string }> {
+    return invokeEdgeFunction('ask-assistant', { organizationId, conversationId, message })
   },
-  /** Clears this user's own assistant history for this org (0127 — DELETE
-   * is self-service, unlike INSERT above). Filtered to organization_id
-   * explicitly: the RLS policy only scopes by user_id, not org, so an
-   * unfiltered delete here would wipe this user's history across every
-   * firm they belong to.
-   *
-   * .select('id') on the delete so we know how many rows actually went —
-   * a delete whose filter/RLS matches zero rows is NOT a Postgrest error,
-   * it's a normal 200 with an empty result, so without this check a real
-   * failure to delete anything looks identical to success: the UI clears
-   * its local cache, but nothing changed server-side, and the history
-   * reappears the next time this list refetches. Surfacing that as a real
-   * error here — instead of a silent no-op "success" — is what actually
-   * lets this get diagnosed if it happens again. */
-  async clearMessages(organizationId: string): Promise<void> {
-    const { data, error } = await supabase.from('assistant_messages').delete().eq('organization_id', organizationId).select('id')
+
+  /** Self-service — deleting a conversation cascades to its messages via
+   * the FK (0166), same "user managing their own chat history" reasoning
+   * 0127 already established. .select('id') so a filter/RLS mismatch that
+   * silently deletes nothing surfaces as a real error, not a false success
+   * (same defensive check the old bulk clearMessages() used). */
+  async deleteConversation(conversationId: string): Promise<void> {
+    const { data, error } = await supabase.from('assistant_conversations').delete().eq('id', conversationId).select('id')
     if (error) throw error
     if (!data || data.length === 0) {
-      throw new Error('Nothing was actually cleared. Please refresh the page and try again.')
+      throw new Error('Nothing was actually deleted. Please refresh the page and try again.')
     }
   },
 }

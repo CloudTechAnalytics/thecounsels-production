@@ -1274,6 +1274,7 @@ export interface Database {
           id: string
           organization_id: string
           user_id: string
+          conversation_id: string
           role: string
           content: string
           created_at: string
@@ -1282,11 +1283,32 @@ export interface Database {
           id?: string
           organization_id: string
           user_id: string
+          conversation_id: string
           role: string
           content: string
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['assistant_messages']['Insert']>
+        Relationships: []
+      }
+      assistant_conversations: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          title: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          title?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['assistant_conversations']['Insert']>
         Relationships: []
       }
       task_comments: {

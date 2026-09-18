@@ -126,7 +126,7 @@ Deno.serve(async (req: Request) => {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return json({ error: 'Missing authorization' }, 401)
 
-  let body: { organizationId?: string; message?: string }
+  let body: { organizationId?: string; message?: string; conversationId?: string }
   try {
     body = await req.json()
   } catch {
@@ -166,11 +166,36 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'The AI assistant is available on the Business plan and above. Upgrade to use it.' }, 403)
   }
 
+  // Resolve which conversation this message belongs to. A conversationId
+  // is verified through the CALLER-scoped client, not admin — RLS's own
+  // "select where user_id = auth.uid()" is what proves ownership; a
+  // caller passing someone else's id simply gets null back here, same as
+  // if it never existed, rather than trusting the client's own claim.
+  let conversationId = body.conversationId ?? null
+  if (conversationId) {
+    const { data: existing } = await caller
+      .from('assistant_conversations')
+      .select('id')
+      .eq('id', conversationId)
+      .eq('organization_id', organizationId)
+      .maybeSingle()
+    if (!existing) conversationId = null
+  }
+  if (!conversationId) {
+    const title = message.length > 60 ? `${message.slice(0, 60).trim()}…` : message
+    const { data: created, error: createErr } = await admin
+      .from('assistant_conversations')
+      .insert({ organization_id: organizationId, user_id: userId, title })
+      .select('id')
+      .single()
+    if (createErr || !created) return json({ error: 'Could not start a new conversation. Please try again.' }, 500)
+    conversationId = created.id
+  }
+
   const { data: history } = await admin
     .from('assistant_messages')
     .select('role, content, created_at')
-    .eq('organization_id', organizationId)
-    .eq('user_id', userId)
+    .eq('conversation_id', conversationId)
     .order('created_at', { ascending: false })
     .limit(HISTORY_LIMIT)
 
@@ -357,10 +382,14 @@ Deno.serve(async (req: Request) => {
   if (!reply) return json({ error: 'The assistant did not return a reply. Please try again.' }, 502)
 
   const { error: insertErr } = await admin.from('assistant_messages').insert([
-    { organization_id: organizationId, user_id: userId, role: 'user', content: message },
-    { organization_id: organizationId, user_id: userId, role: 'assistant', content: reply },
+    { organization_id: organizationId, user_id: userId, conversation_id: conversationId, role: 'user', content: message },
+    { organization_id: organizationId, user_id: userId, conversation_id: conversationId, role: 'assistant', content: reply },
   ])
   if (insertErr) console.error('Could not save assistant messages:', insertErr)
 
-  return json({ reply })
+  // Bumps updated_at so the sidebar's most-recently-active-first ordering
+  // reflects this exchange — best-effort, never fails the whole request.
+  await admin.from('assistant_conversations').update({ updated_at: new Date().toISOString() }).eq('id', conversationId)
+
+  return json({ reply, conversationId })
 })

@@ -82,7 +82,7 @@ export function RequireActiveSubscription() {
   // past_due/cancelled are deliberately still let through (grace-period-
   // style access, not a hard lock) — only these three are meant to be a
   // full stop.
-  if (sub && (sub.status === 'expired' || sub.status === 'suspended' || sub.status === 'paused')) {
+  if (sub && (sub.status === 'expired' || sub.status === 'suspended' || sub.status === 'paused' || sub.status === 'awaiting_payment')) {
     return <Navigate to="/subscription/expired" replace />
   }
   return <Outlet />
@@ -130,12 +130,18 @@ export function RequirePermission({
   return <>{children}</>
 }
 
+// Kept in sync with plans.features (Platform Console > Plans & Pricing) —
+// this only picks which upgrade-nudge wording to show when a feature is
+// actually locked, RequirePlanFeature's has(feature) check below is the
+// real gate either way. Was showing 'Business' for hr_module/appointments
+// after both moved to Professional (2026-09) — a real, previously-stale
+// copy bug caught while reviewing the pricing flow.
 const PLAN_FEATURE_COPY: Record<PlanFeatureKey, { label: string; plan: string }> = {
   messaging: { label: 'Messaging', plan: 'Professional' },
   whatsapp_reminders: { label: 'WhatsApp reminders', plan: 'Professional' },
-  hr_module: { label: 'HR & People Management', plan: 'Business' },
-  ai_summarization: { label: 'AI matter summaries & chat', plan: 'Business' },
-  appointments: { label: 'Appointments', plan: 'Business' },
+  hr_module: { label: 'HR & People Management', plan: 'Professional' },
+  ai_summarization: { label: 'AI matter summaries & chat', plan: 'Professional' },
+  appointments: { label: 'Appointments', plan: 'Professional' },
 }
 
 /** Guard a route by subscription plan; same in-place "restricted" panel

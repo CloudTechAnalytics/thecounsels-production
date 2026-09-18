@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { onboardingService } from '@/features/onboarding/services/onboarding.service'
 import type { FirmSetupValues } from '@/features/onboarding/schemas'
+import type { BillingCycle } from '@/shared/types/database.types'
 
 export function useRegistrationSettings() {
   return useQuery({
@@ -38,6 +39,24 @@ export function useRegisterOrganization() {
   return useMutation({
     mutationFn: ({ values, planId, currency }: { values: FirmSetupValues; planId: string; currency?: string }) =>
       onboardingService.registerOrganization(values, planId, currency),
+  })
+}
+
+export function useRequestManualPayment() {
+  return useMutation({
+    mutationFn: ({
+      organizationId,
+      planId,
+      currency,
+      billingCycle,
+      country,
+    }: {
+      organizationId: string
+      planId: string
+      currency: string
+      billingCycle: BillingCycle
+      country?: string | null
+    }) => onboardingService.requestManualPayment(organizationId, planId, currency, billingCycle, country),
   })
 }
 

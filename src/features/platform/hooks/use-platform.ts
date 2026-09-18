@@ -232,3 +232,16 @@ export function useUpdateSubscription() {
     },
   })
 }
+
+export function useReviewManualPayment() {
+  const invalidate = useInvalidateAll()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (args: { subscriptionId: string; action: 'verify_and_activate' | 'reject' }) =>
+      platformService.reviewManualPayment(args.subscriptionId, args.action),
+    onSuccess: () => {
+      invalidate()
+      void qc.invalidateQueries({ queryKey: ['administration', 'subscription'] })
+    },
+  })
+}

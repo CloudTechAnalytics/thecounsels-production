@@ -208,19 +208,29 @@ export function PlanStep({
   country,
   onStartTrial,
   onSubscribeNow,
+  onPayManually,
   trialLoading,
   subscribeLoading,
+  manualLoading,
 }: {
   /** The country picked one step earlier (firm-setup-step.tsx) — nudges the
    * currency picker's default, previously written (defaultCurrencyForCountry)
    * but never actually wired up, a real reported gap: picking Ghana there
    * did nothing to what currency showed up here. Still just a default —
-   * fully overridable in the currency picker itself. */
+   * fully overridable in the currency picker itself. Deliberately NOT used
+   * to restrict which plans/currencies are offered — country (where the
+   * firm is) and billing currency (what they're charged in) are separate
+   * concepts; a Sierra Leone firm can still be billed in NGN. */
   country?: string | null
   onStartTrial: (planId: string, currency: string) => void
   onSubscribeNow: (planId: string, billingCycle: BillingCycle, currency: string) => void
+  /** "Pay manually / Contact us" — the fallback for a country/card Paystack
+   * can't take payment from today. Never a fake success; see
+   * request_manual_payment() (migration 0167). */
+  onPayManually: (planId: string, billingCycle: BillingCycle, currency: string) => void
   trialLoading: boolean
   subscribeLoading: boolean
+  manualLoading: boolean
 }) {
   // Defaults to [] on error too (not just while loading) — after retries are
   // exhausted (see useSelectablePlans), falling back to an empty list means
@@ -282,6 +292,15 @@ export function PlanStep({
         </div>
       )}
 
+      {/* Country (wherever the firm actually is) never determines billing
+       * currency — this just says so plainly rather than leaving an
+       * international visitor to guess why every price is in Naira. */}
+      <p className="text-center text-xs text-muted-foreground">
+        International firms are welcome. Prices are currently displayed in NGN. Customers outside
+        Nigeria can pay using supported international cards or contact us for alternative payment
+        arrangements.
+      </p>
+
       {selected !== TRIAL && selectedPlan && !selectedPlan.is_custom && (
         <div className="flex justify-center">
           <CycleToggle cycle={cycle} onChange={setCycle} />
@@ -313,15 +332,36 @@ export function PlanStep({
           </Button>
         </Card>
       ) : (
-        <Button
-          size="lg"
-          className="w-full"
-          disabled={!selected || (selected !== TRIAL && !pricesFor(selectedPlan!, currency))}
-          loading={selected === TRIAL ? trialLoading : subscribeLoading}
-          onClick={handleContinue}
-        >
-          {selected === TRIAL ? 'Start Free Trial' : 'Continue'}
-        </Button>
+        <div className="space-y-2">
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={!selected || (selected !== TRIAL && !pricesFor(selectedPlan!, currency))}
+            loading={selected === TRIAL ? trialLoading : subscribeLoading}
+            onClick={handleContinue}
+          >
+            {selected === TRIAL ? 'Start Free Trial' : 'Continue'}
+          </Button>
+
+          {/* Manual-payment fallback — quiet, not alarming, only relevant
+           * once a real paid tier (not Trial) is picked. Never pretends to
+           * be a real payment; just starts the "we'll verify and activate
+           * it" flow (see onboarding-page.tsx's payManually). */}
+          {selected !== TRIAL && selectedPlan && (
+            <p className="text-center text-xs text-muted-foreground">
+              Having trouble paying online?{' '}
+              <button
+                type="button"
+                disabled={manualLoading}
+                onClick={() => onPayManually(selectedPlan.id, cycle, currency)}
+                className="font-medium text-primary underline-offset-2 hover:underline disabled:opacity-60"
+              >
+                Contact us for alternative payment arrangements
+              </button>
+              .
+            </p>
+          )}
+        </div>
       )}
     </div>
   )

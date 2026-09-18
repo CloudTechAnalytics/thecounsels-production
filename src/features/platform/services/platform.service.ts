@@ -719,4 +719,17 @@ export const platformService = {
       p_platform: true,
     })
   },
+
+  /** Manual-payment review queue actions — see platform_review_manual_
+   * payment() (migration 0167). Never activates a subscription just
+   * because "manual" was chosen; this is the one explicit, confirmed step
+   * that actually does. 'verify_and_activate' also flips the org's own
+   * status to 'active', same sync updateSubscription above already does. */
+  async reviewManualPayment(subscriptionId: string, action: 'verify_and_activate' | 'reject'): Promise<void> {
+    const { error } = await supabase.rpc('platform_review_manual_payment', {
+      p_subscription_id: subscriptionId,
+      p_action: action,
+    })
+    if (error) throw error
+  },
 }

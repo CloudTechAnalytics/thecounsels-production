@@ -1,10 +1,11 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, LockKeyhole, LogOut } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useSubscription } from '@/features/administration/hooks/use-administration'
-import { useSelectablePlans } from '@/features/onboarding/hooks/use-onboarding'
+import { useSelectablePlans, useRequestManualPayment } from '@/features/onboarding/hooks/use-onboarding'
 import { useStartCheckout } from '@/features/subscription-billing/hooks/use-paystack'
 import { GetStartedShell } from '@/shared/components/get-started-shell'
 import { Button } from '@/shared/components/ui/button'
@@ -42,6 +43,18 @@ const ADMIN_HOLD_COPY: Record<string, { stepLabel: string; heading: string; body
     heading: "Your firm's workspace has been suspended",
     body: 'Reach out to us to find out why and get access restored.',
   },
+  // A real "Pay manually" request (0167) — never a fake success. Same
+  // plain, no-self-serve-checkout treatment as paused/suspended: nothing
+  // here activates itself, a platform admin has to verify the payment
+  // first. Deliberately reassuring wording either way (pending vs already
+  // reviewed-and-declined) rather than alarming — payment_status tells
+  // the org's admin which one it is without this screen needing a second
+  // branch.
+  awaiting_payment: {
+    stepLabel: 'Payment pending',
+    heading: "We're verifying your payment",
+    body: "Thanks for reaching out — we're confirming your payment and will activate your workspace as soon as that's done. Contact us if it's been more than a day, or if anything's changed.",
+  },
 }
 
 /**
@@ -61,6 +74,7 @@ export function ExpiredSubscriptionPage() {
   const holdCopy = sub?.status ? ADMIN_HOLD_COPY[sub.status] : undefined
   const { data: plans, isLoading } = useSelectablePlans()
   const checkout = useStartCheckout()
+  const manualPayment = useRequestManualPayment()
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
   const [cycle, setCycle] = React.useState<BillingCycle>('monthly')
 
@@ -89,6 +103,22 @@ export function ExpiredSubscriptionPage() {
       await checkout.mutateAsync({ organizationId: orgId, planId, billingCycle: cycle, context: 'existing' })
     } catch (err) {
       toast.error('Could not start checkout', { description: err instanceof Error ? err.message : undefined })
+    }
+  }
+
+  const qc = useQueryClient()
+  const payManually = async (planId: string) => {
+    if (!orgId) return
+    try {
+      // Never a fake success — moves status to 'awaiting_payment', which
+      // RequireActiveSubscription still treats as a full stop. Refetching
+      // the subscription here is what flips this same screen over to the
+      // ADMIN_HOLD_COPY['awaiting_payment'] branch above automatically.
+      await manualPayment.mutateAsync({ organizationId: orgId, planId, currency: 'NGN', billingCycle: cycle })
+      await qc.invalidateQueries({ queryKey: ['administration', 'subscription', orgId] })
+      toast.success("Payment request received — we'll verify it and activate your workspace shortly.")
+    } catch (err) {
+      toast.error('Could not submit your payment request', { description: err instanceof Error ? err.message : undefined })
     }
   }
 
@@ -194,15 +224,35 @@ export function ExpiredSubscriptionPage() {
             })}
           </div>
 
+          <p className="text-center text-xs text-muted-foreground">
+            International firms are welcome. Prices are currently displayed in NGN. Customers outside
+            Nigeria can pay using supported international cards or contact us for alternative payment
+            arrangements.
+          </p>
+
           {selectedId && (
             plans.find((p) => p.id === selectedId)?.is_custom ? (
               <Button asChild size="lg" className="w-full">
                 <a href={`mailto:${APP.contactEmail}?subject=The Counsel — Enterprise plan`}>Contact sales</a>
               </Button>
             ) : (
-              <Button size="lg" className="w-full" loading={checkout.isPending} onClick={() => subscribe(selectedId)}>
-                Subscribe now
-              </Button>
+              <div className="space-y-2">
+                <Button size="lg" className="w-full" loading={checkout.isPending} onClick={() => subscribe(selectedId)}>
+                  Subscribe now
+                </Button>
+                <p className="text-center text-xs text-muted-foreground">
+                  Having trouble paying online?{' '}
+                  <button
+                    type="button"
+                    disabled={manualPayment.isPending}
+                    onClick={() => payManually(selectedId)}
+                    className="font-medium text-primary underline-offset-2 hover:underline disabled:opacity-60"
+                  >
+                    Contact us for alternative payment arrangements
+                  </button>
+                  .
+                </p>
+              </div>
             )
           )}
         </div>

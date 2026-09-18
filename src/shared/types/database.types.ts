@@ -20,7 +20,7 @@ export type OrganizationType = 'customer' | 'demo' | 'internal'
 export type MembershipStatus = 'invited' | 'active' | 'suspended' | 'disabled'
 export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired'
 export type AccessScope = 'organization' | 'branch' | 'multiple_branches' | 'personal'
-export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'paused' | 'cancelled' | 'expired' | 'suspended'
+export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'paused' | 'cancelled' | 'expired' | 'suspended' | 'awaiting_payment'
 export type BillingCycle = 'monthly' | 'quarterly' | 'yearly'
 export type ClientType = 'individual' | 'corporate'
 export type ClientStatus = 'active' | 'inactive' | 'prospect'
@@ -1884,6 +1884,10 @@ export interface Database {
           last_trial_reminder_days: number | null
           last_payment_at: string | null
           additional_storage_gb: number
+          billing_country: string | null
+          payment_method: string
+          payment_status: string
+          provider: string
         } & Timestamps
         Insert: {
           id?: string
@@ -1909,6 +1913,10 @@ export interface Database {
           last_trial_reminder_days?: number | null
           last_payment_at?: string | null
           additional_storage_gb?: number
+          billing_country?: string | null
+          payment_method?: string
+          payment_status?: string
+          provider?: string
         }
         Update: Partial<Database['public']['Tables']['subscriptions']['Insert']>
         Relationships: [
@@ -2378,6 +2386,20 @@ export interface Database {
       get_organization_by_slug: {
         Args: { p_slug: string }
         Returns: { id: string; name: string; slug: string; logo_url: string | null }[]
+      }
+      request_manual_payment: {
+        Args: {
+          p_org: string
+          p_plan_id: string
+          p_currency?: string
+          p_billing_cycle?: BillingCycle
+          p_country?: string | null
+        }
+        Returns: Database['public']['Tables']['subscriptions']['Row']
+      }
+      platform_review_manual_payment: {
+        Args: { p_subscription_id: string; p_action: string }
+        Returns: Database['public']['Tables']['subscriptions']['Row']
       }
       email_is_registered: {
         Args: { p_email: string }

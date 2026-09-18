@@ -1,6 +1,6 @@
 import { supabase } from '@/shared/lib/supabase'
 import type { FirmSetupValues } from '@/features/onboarding/schemas'
-import type { Plan, PlanPrice } from '@/shared/types/database.types'
+import type { BillingCycle, Plan, PlanPrice } from '@/shared/types/database.types'
 
 export type PlanWithPrices = Plan & { plan_prices: PlanPrice[] }
 
@@ -96,6 +96,24 @@ export const onboardingService = {
       p_practice_areas: values.practiceAreas.length > 0 ? values.practiceAreas : null,
       p_registrant_role: values.registrantRole,
       p_currency: currency,
+    })
+    if (error) throw error
+    return data
+  },
+
+  /** "Pay manually / Contact us" — the fallback for a country/card Paystack
+   * can't currently take payment from. Never marks anything paid: moves the
+   * subscription to payment_status='pending', status='awaiting_payment',
+   * fully blocked (RequireActiveSubscription) until a platform admin
+   * reviews it in the Platform Console. See request_manual_payment()
+   * (migration 0167) for the real amount/currency resolution. */
+  async requestManualPayment(organizationId: string, planId: string, currency: string, billingCycle: BillingCycle, country?: string | null) {
+    const { data, error } = await supabase.rpc('request_manual_payment', {
+      p_org: organizationId,
+      p_plan_id: planId,
+      p_currency: currency,
+      p_billing_cycle: billingCycle,
+      p_country: country || null,
     })
     if (error) throw error
     return data

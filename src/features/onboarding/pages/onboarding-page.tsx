@@ -5,7 +5,7 @@ import { PartyPopper } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { FirmSetupStep } from '@/features/onboarding/components/firm-setup-step'
 import { PlanStep } from '@/features/onboarding/components/plan-step'
-import { useRegisterOrganization } from '@/features/onboarding/hooks/use-onboarding'
+import { useRegisterOrganization, useRequestManualPayment } from '@/features/onboarding/hooks/use-onboarding'
 import { useStartCheckout } from '@/features/subscription-billing/hooks/use-paystack'
 import type { FirmSetupValues } from '@/features/onboarding/schemas'
 import type { BillingCycle } from '@/shared/types/database.types'
@@ -98,9 +98,10 @@ export function OnboardingPage() {
   const navigate = useNavigate()
   const register = useRegisterOrganization()
   const checkout = useStartCheckout()
+  const manualPayment = useRequestManualPayment()
   const [step, setStep] = React.useState<Step>('firm')
   const [firmValues, setFirmValues] = React.useState<FirmSetupValues | null>(null)
-  const [pendingAction, setPendingAction] = React.useState<'trial' | 'subscribe' | null>(null)
+  const [pendingAction, setPendingAction] = React.useState<'trial' | 'subscribe' | 'manual' | null>(null)
   const [welcomeMessage, setWelcomeMessage] = React.useState<string | undefined>(undefined)
 
   // 0154 — the registrant isn't necessarily the Managing Partner anymore
@@ -177,6 +178,42 @@ export function OnboardingPage() {
     }
   }
 
+  const payManually = async (planId: string, billingCycle: BillingCycle, currency: string) => {
+    if (!firmValues) return
+    setPendingAction('manual')
+
+    let org: { id: string } | null = null
+    try {
+      org = (await register.mutateAsync({ values: firmValues, planId, currency })) as { id: string }
+    } catch (err) {
+      toast.error('Could not set up your firm', {
+        description: errorMessage(err, 'Please try again.'),
+      })
+      setPendingAction(null)
+      return
+    }
+
+    try {
+      // Never a fake success — this only moves the subscription to
+      // payment_status='pending' / status='awaiting_payment'. The org
+      // stays fully blocked (RequireActiveSubscription) until a platform
+      // admin verifies and activates it from the Platform Console.
+      await manualPayment.mutateAsync({ organizationId: org.id, planId, currency, billingCycle, country: firmValues.country })
+      setWelcomeMessage(
+        "Your workspace is ready and we've received your payment request. We'll verify it and activate your " +
+          `subscription shortly — you'll get full access as soon as that's done. Sign in any time to check on it.${mpReminder}`,
+      )
+      setStep('welcome')
+    } catch (err) {
+      const reason = errorMessage(err, 'Unknown error')
+      console.error('Manual payment request failed:', err)
+      logClientError(err, { source: 'onboarding.payManually', context: { organizationId: org.id, planId, billingCycle } })
+      toast.error('Could not submit your payment request', { description: reason })
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
   const goToSignIn = async () => {
     await signOut()
     navigate('/auth/login', { replace: true })
@@ -207,8 +244,10 @@ export function OnboardingPage() {
           country={firmValues?.country}
           onStartTrial={startTrial}
           onSubscribeNow={subscribeNow}
+          onPayManually={payManually}
           trialLoading={pendingAction === 'trial'}
           subscribeLoading={pendingAction === 'subscribe'}
+          manualLoading={pendingAction === 'manual'}
         />
       )}
 

@@ -1,9 +1,11 @@
 import * as React from 'react'
-import { CreditCard, TrendingUp, CircleDollarSign, Building2, Hourglass } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { CreditCard, TrendingUp, CircleDollarSign, Building2, Hourglass, Mail, CheckCircle2, XCircle } from 'lucide-react'
 import {
   usePlans,
   useSubscriptions,
   useUpdateSubscription,
+  useReviewManualPayment,
   usePlatformStats,
 } from '@/features/platform/hooks/use-platform'
 import type { SubscriptionRow } from '@/features/platform/types'
@@ -14,6 +16,9 @@ import { Card } from '@/shared/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { Skeleton } from '@/shared/components/ui/skeleton'
+import { Badge } from '@/shared/components/ui/badge'
+import { Button } from '@/shared/components/ui/button'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { initialsOf, formatNaira, formatMoneyCompact, daysUntil } from '@/shared/lib/format'
 import { monthlyEquivalent } from '@/shared/lib/billing-cycle'
 import { cn } from '@/shared/lib/utils'
@@ -23,6 +28,7 @@ const STATUS_OPTIONS: { value: SubscriptionStatus; label: string }[] = [
   { value: 'trialing', label: 'Trial' },
   { value: 'active', label: 'Active' },
   { value: 'past_due', label: 'Past due' },
+  { value: 'awaiting_payment', label: 'Awaiting payment' },
   { value: 'suspended', label: 'Suspended' },
   { value: 'paused', label: 'Paused' },
   { value: 'cancelled', label: 'Cancelled' },
@@ -116,9 +122,99 @@ function SubscriptionRowItem({ row }: { row: SubscriptionRow }) {
           )}
         </div>
       </TableCell>
+      <TableCell className="text-sm text-muted-foreground">{row.billing_country ?? '—'}</TableCell>
+      <TableCell>
+        {row.payment_method === 'manual' ? (
+          <Badge variant={row.payment_status === 'verified' ? 'success' : row.payment_status === 'rejected' ? 'destructive' : 'secondary'}>
+            Manual · {row.payment_status === 'verified' ? 'Verified' : row.payment_status === 'rejected' ? 'Rejected' : 'Pending'}
+          </Badge>
+        ) : (
+          <Badge variant="outline">Paystack</Badge>
+        )}
+      </TableCell>
       <TableCell className="text-sm text-muted-foreground">{row.seats}</TableCell>
       <TableCell className="text-right text-sm font-medium">{formatNaira(monthlyPrice(row))}</TableCell>
     </TableRow>
+  )
+}
+
+/** One pending manual-payment request — its own review queue, separate
+ * from the main table, since this is the one thing on this whole page
+ * that actually needs an admin's attention today. Both actions require
+ * confirmation (§ spec) and neither ever runs without an explicit click —
+ * "manual" was chosen by the customer, but nothing here activates itself. */
+function ManualPaymentRow({ row }: { row: SubscriptionRow }) {
+  const review = useReviewManualPayment()
+  const [confirmAction, setConfirmAction] = React.useState<'verify_and_activate' | 'reject' | null>(null)
+
+  const run = async () => {
+    if (!confirmAction) return
+    try {
+      await review.mutateAsync({ subscriptionId: row.id, action: confirmAction })
+      toast.success(confirmAction === 'verify_and_activate' ? 'Payment verified — subscription activated' : 'Payment rejected')
+      setConfirmAction(null)
+    } catch (err) {
+      toast.error('Could not update this payment', { description: err instanceof Error ? err.message : undefined })
+    }
+  }
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5 last:border-b-0">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/12 text-[10px] font-semibold text-primary">
+            {initialsOf(row.organization?.name, 'OR')}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{row.organization?.name ?? '—'}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {row.plan?.name ?? 'No plan'} · {row.billing_country ?? 'Country not set'} · {formatNaira(Number(row.amount ?? 0), row.currency)}
+              /{row.billing_cycle === 'yearly' ? 'yr' : row.billing_cycle === 'quarterly' ? 'qtr' : 'mo'} ·{' '}
+              {formatDistanceToNow(new Date(row.updated_at), { addSuffix: true })}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setConfirmAction('reject')}>
+            <XCircle className="h-3.5 w-3.5" /> Reject
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setConfirmAction('verify_and_activate')}>
+            <CheckCircle2 className="h-3.5 w-3.5" /> Mark verified &amp; activate
+          </Button>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={confirmAction === 'verify_and_activate'}
+        onOpenChange={(o) => !o && setConfirmAction(null)}
+        title="Activate this subscription?"
+        confirmLabel="Verify & activate"
+        loading={review.isPending}
+        description={
+          <>
+            Confirms <strong>{row.organization?.name}</strong>'s payment of{' '}
+            <strong>{formatNaira(Number(row.amount ?? 0), row.currency)}</strong> was received outside Paystack, and
+            activates their <strong>{row.plan?.name}</strong> subscription immediately.
+          </>
+        }
+        onConfirm={run}
+      />
+      <ConfirmDialog
+        open={confirmAction === 'reject'}
+        onOpenChange={(o) => !o && setConfirmAction(null)}
+        title="Reject this payment?"
+        destructive
+        confirmLabel="Reject"
+        loading={review.isPending}
+        description={
+          <>
+            <strong>{row.organization?.name}</strong> stays blocked from the workspace. They can reach out again or
+            try paying online instead.
+          </>
+        }
+        onConfirm={run}
+      />
+    </>
   )
 }
 
@@ -127,6 +223,7 @@ export function SubscriptionsPage() {
   const stats = usePlatformStats()
   const [filter, setFilter] = React.useState<FilterKey>('all')
   const trials = (data ?? []).filter((s) => s.status === 'trialing').length
+  const pendingManual = (data ?? []).filter((s) => s.payment_method === 'manual' && s.payment_status === 'pending')
 
   const filtered = (data ?? []).filter((row) => {
     if (filter === 'all') return true
@@ -147,6 +244,20 @@ export function SubscriptionsPage() {
         <KpiCard label="Customers" value={data?.length ?? 0} hint="Paying + trial tenants" icon={Building2} loading={isLoading} />
         <KpiCard label="Trials" value={trials} hint="Not yet billing (excluded from MRR)" icon={Hourglass} loading={isLoading} />
       </div>
+
+      {pendingManual.length > 0 && (
+        <Card className="mt-6 overflow-hidden border-primary/30">
+          <div className="flex items-center gap-2 border-b border-border bg-primary/5 px-5 py-3.5">
+            <Mail className="h-4 w-4 text-primary" />
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-primary">
+              Pending manual payments — {pendingManual.length} awaiting review
+            </h2>
+          </div>
+          {pendingManual.map((row) => (
+            <ManualPaymentRow key={row.id} row={row} />
+          ))}
+        </Card>
+      )}
 
       <div className="mt-6 flex flex-wrap gap-1.5">
         {FILTERS.map((f) => (
@@ -181,6 +292,8 @@ export function SubscriptionsPage() {
                 <TableHead>Organization</TableHead>
                 <TableHead>Plan</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Country</TableHead>
+                <TableHead>Payment</TableHead>
                 <TableHead>Seats</TableHead>
                 <TableHead className="text-right">Monthly</TableHead>
               </TableRow>

@@ -172,14 +172,14 @@ const PLANS = [
     name: 'Basic',
     price: '₦15,000',
     tagline: 'For solo lawyers and small law firms',
-    features: ['Up to 3 users', 'Core matter & client management', 'Documents, hearings & calendar', 'Time tracking & expenses', 'Basic billing & reports'],
+    features: ['Up to 3 users', 'Core matter management', 'Client management', 'Contacts', 'Documents, hearings & calendar'],
   },
   {
     key: 'professional',
     name: 'Professional',
     price: '₦50,000',
     tagline: 'For growing and established law firms',
-    features: ['Up to 10 users', 'Everything in Basic', 'Advanced tasks & notifications', 'Email + WhatsApp reminders', 'Advanced billing & reports'],
+    features: ['Up to 10 users', 'Everything in Basic', 'AI Workspace', 'HR Workspace', 'Team messaging & WhatsApp reminders'],
     highlight: true,
   },
   {
@@ -187,14 +187,14 @@ const PLANS = [
     name: 'Business',
     price: '₦100,000',
     tagline: 'For larger law firms',
-    features: ['Up to 25 users', 'Everything in Professional', 'Advanced analytics', 'Workflow automation', 'Advanced firm controls'],
+    features: ['Up to 25 users', 'Everything in Professional', 'Advanced HR & People Management', 'Branch / multi-office support', 'Workflow automation'],
   },
   {
     key: 'enterprise',
     name: 'Enterprise',
     price: 'Custom',
     tagline: 'Tailored pricing — talk to sales',
-    features: ['Custom users & storage', 'Custom features & workflows', 'Custom integrations', 'Custom support requirements'],
+    features: ['Custom number of users', 'Everything in Business', 'Custom storage & integrations', 'Custom workflows'],
   },
 ]
 

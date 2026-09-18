@@ -61,6 +61,13 @@ export function FirmSetupStep({
   }
   const shortName = form.watch('shortName')
 
+  // Whether the country field shows the free-text "Other" input — seeded
+  // from a resumed draft's own country if it isn't one of COUNTRIES, so
+  // reopening this step doesn't silently drop back to the dropdown.
+  const [otherCountry, setOtherCountry] = React.useState(
+    () => Boolean(defaultValues?.country) && !(COUNTRIES as readonly string[]).includes(defaultValues!.country!),
+  )
+
   const practiceAreas = form.watch('practiceAreas')
   const toggleArea = (area: string) => {
     const set = new Set(practiceAreas)
@@ -188,20 +195,50 @@ export function FirmSetupStep({
           <FormField
             control={form.control}
             name="country"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Country<span className="text-destructive"> *</span></FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <FormControl>
-                    <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {COUNTRIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              // "Other" is a UI-only sentinel, never the stored value — the
+              // Select shows it while otherCountry is true, but the actual
+              // form field holds whatever the firm typed underneath, and
+              // that's what ends up in the database. Initialized from any
+              // default value that isn't in COUNTRIES, so resuming a draft
+              // with a typed-in country re-opens the text input instead of
+              // silently showing a blank/mismatched Select.
+              const knownCountry = (COUNTRIES as readonly string[]).includes(field.value)
+              return (
+                <FormItem>
+                  <FormLabel>Country<span className="text-destructive"> *</span></FormLabel>
+                  <Select
+                    value={otherCountry ? 'Other' : field.value}
+                    onValueChange={(v) => {
+                      if (v === 'Other') {
+                        setOtherCountry(true)
+                        field.onChange('')
+                      } else {
+                        setOtherCountry(false)
+                        field.onChange(v)
+                      }
+                    }}
+                  >
+                    <FormControl>
+                      <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {COUNTRIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {(otherCountry || !knownCountry) && (
+                    <HintInput
+                      hint="A-Z"
+                      placeholder="Enter your country"
+                      className="mt-2"
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )
+            }}
           />
           <FormField
             control={form.control}

@@ -44,7 +44,11 @@ export const firmSetupSchema = z.object({
     .min(2, 'Enter a short name')
     .regex(/^[a-z0-9-]+$/, 'Lowercase letters, numbers and hyphens only'),
   legalName: z.string().optional(),
-  country: z.string().min(1, 'Select your country'),
+  // Plain, unconstrained string — deliberately not an enum, so a firm whose
+  // real country isn't in COUNTRIES can still type it in (see "Other" in
+  // firm-setup-step.tsx) and have that exact name stored, not a generic
+  // "Other" sentinel. Still required either way.
+  country: z.string().min(1, 'Country is required'),
   timezone: z.string().min(1, 'Select your timezone'),
   website: z.string().optional(),
   industry: z.string().optional(),

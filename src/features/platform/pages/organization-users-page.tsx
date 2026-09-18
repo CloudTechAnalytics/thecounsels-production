@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { format } from 'date-fns'
 import { Info } from 'lucide-react'
 import { useAllMembers } from '@/features/platform/hooks/use-platform'
@@ -5,6 +6,7 @@ import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Badge, type BadgeProps } from '@/shared/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { initialsOf } from '@/shared/lib/format'
 
@@ -17,6 +19,21 @@ const STATUS: Record<string, BadgeProps['variant']> = {
 
 export function OrganizationUsersPage() {
   const { data, isLoading } = useAllMembers()
+  const [orgFilter, setOrgFilter] = React.useState('all')
+
+  // Every distinct organization actually present in the directory, not a
+  // separate query — this page is already a full member list, so deriving
+  // the filter options from it keeps them in sync for free and never shows
+  // an org with zero users to filter by.
+  const organizations = React.useMemo(() => {
+    const map = new Map<string, string>()
+    for (const m of data ?? []) {
+      if (m.organization?.id) map.set(m.organization.id, m.organization.name)
+    }
+    return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1]))
+  }, [data])
+
+  const filtered = orgFilter === 'all' ? (data ?? []) : (data ?? []).filter((m) => m.organization?.id === orgFilter)
 
   return (
     <div>
@@ -31,6 +48,24 @@ export function OrganizationUsersPage() {
         </p>
       </div>
 
+      {organizations.length > 1 && (
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            {filtered.length} {filtered.length === 1 ? 'user' : 'users'}
+            {orgFilter !== 'all' && organizations.find(([id]) => id === orgFilter) ? ` in ${organizations.find(([id]) => id === orgFilter)![1]}` : ''}
+          </p>
+          <Select value={orgFilter} onValueChange={setOrgFilter}>
+            <SelectTrigger className="w-56"><SelectValue placeholder="All organizations" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All organizations</SelectItem>
+              {organizations.map(([id, name]) => (
+                <SelectItem key={id} value={id}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="space-y-2 p-4">
@@ -38,7 +73,7 @@ export function OrganizationUsersPage() {
               <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
-        ) : data && data.length > 0 ? (
+        ) : filtered.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -50,7 +85,7 @@ export function OrganizationUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((m) => (
+              {filtered.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -88,7 +123,9 @@ export function OrganizationUsersPage() {
           </Table>
         ) : (
           <div className="px-6 py-16 text-center text-sm text-muted-foreground">
-            No users yet. They appear here once organizations start adding their team.
+            {data && data.length > 0
+              ? 'No users match this filter.'
+              : 'No users yet. They appear here once organizations start adding their team.'}
           </div>
         )}
       </Card>

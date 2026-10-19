@@ -1,52 +1,80 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Banknote, Briefcase, Gavel, TrendingUp, type LucideIcon } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { formatPostDate, type BlogPost } from '@/features/blog/posts'
 
-const CATEGORY_ICON: Record<BlogPost['category'], LucideIcon> = {
-  'Practice management': Briefcase,
-  Litigation: Gavel,
-  Billing: Banknote,
-  'Growing a firm': TrendingUp,
-}
+export const AUTHOR = 'The Counsel Team'
 
-/** Cover art without image files: a gold-washed panel with the category icon. */
-export function PostCover({ category, className = '' }: { category: BlogPost['category']; className?: string }) {
-  const Icon = CATEGORY_ICON[category]
+export function CategoryChip({ category }: { category: BlogPost['category'] }) {
   return (
-    <div
-      className={`relative flex items-center justify-center overflow-hidden bg-gradient-to-br from-primary/25 via-primary/10 to-card ${className}`}
-    >
-      <div aria-hidden className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/15 blur-2xl" />
-      <Icon className="relative h-12 w-12 text-primary" strokeWidth={1.5} />
-    </div>
+    <span className="rounded-full bg-primary/12 px-2.5 py-1 text-xs font-semibold text-primary">{category}</span>
   )
 }
 
-export function PostCard({ post, featured = false }: { post: BlogPost; featured?: boolean }) {
+export function PostMeta({ post }: { post: BlogPost }) {
+  return (
+    <p className="text-xs text-muted-foreground">
+      {AUTHOR} <span aria-hidden>·</span> {formatPostDate(post.date)} <span aria-hidden>·</span> {post.readMinutes} min
+      read
+    </p>
+  )
+}
+
+/** Top-of-index card: big 16:9 cover over the text. */
+export function PostCard({ post }: { post: BlogPost }) {
   return (
     <Link
       to={`/blog/${post.slug}`}
-      className={`group flex overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-all hover:-translate-y-1 hover:shadow-elevated ${
-        featured ? 'flex-col md:flex-row' : 'flex-col'
-      }`}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-all hover:-translate-y-1 hover:shadow-elevated"
     >
-      <PostCover category={post.category} className={featured ? 'h-52 md:h-auto md:w-2/5' : 'h-40'} />
-      <div className={`flex flex-1 flex-col p-6 ${featured ? 'md:p-9' : ''}`}>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="rounded-full bg-primary/12 px-2.5 py-1 font-semibold text-primary">{post.category}</span>
-          <span>{formatPostDate(post.date)}</span>
-          <span aria-hidden>·</span>
-          <span>{post.readMinutes} min read</span>
+      <div className="aspect-video overflow-hidden bg-muted">
+        <img
+          src={post.cover}
+          alt=""
+          width={1200}
+          height={675}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+        />
+      </div>
+      <div className="flex flex-1 flex-col p-6">
+        <CategoryChip category={post.category} />
+        <h2 className="mt-4 font-display text-xl font-semibold leading-snug">{post.title}</h2>
+        <p className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-muted-foreground">{post.excerpt}</p>
+        <div className="mt-5">
+          <PostMeta post={post} />
         </div>
-        <h2
-          className={`mt-4 font-display font-semibold leading-snug ${featured ? 'text-2xl sm:text-3xl' : 'text-xl'}`}
-        >
-          {post.title}
-        </h2>
-        <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground sm:text-base">{post.excerpt}</p>
-        <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
-          Read article <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-        </span>
+      </div>
+    </Link>
+  )
+}
+
+/** List row on the index: cover on the left, text on the right. */
+export function PostRow({ post }: { post: BlogPost }) {
+  return (
+    <Link
+      to={`/blog/${post.slug}`}
+      className="group grid gap-5 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-elevated sm:grid-cols-[17rem_1fr] sm:items-center sm:gap-7"
+    >
+      <div className="aspect-video overflow-hidden rounded-xl bg-muted">
+        <img
+          src={post.cover}
+          alt=""
+          width={1200}
+          height={675}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+        />
+      </div>
+      <div className="min-w-0 pr-2 sm:py-2">
+        <CategoryChip category={post.category} />
+        <h2 className="mt-3 font-display text-xl font-semibold leading-snug">{post.title}</h2>
+        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{post.excerpt}</p>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <PostMeta post={post} />
+          <span className="hidden items-center gap-1 text-sm font-semibold text-primary sm:inline-flex">
+            Read <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </span>
+        </div>
       </div>
     </Link>
   )

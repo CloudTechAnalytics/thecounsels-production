@@ -14,6 +14,8 @@ export type PostBlock =
 
 export interface BlogPost {
   slug: string
+  /** Cover image under /public/blog (1200x675). */
+  cover: string
   title: string
   /** One or two sentences, shown on cards and used as the meta description. */
   excerpt: string
@@ -26,7 +28,177 @@ export interface BlogPost {
 
 export const POSTS: BlogPost[] = [
   {
+    slug: 'from-work-done-to-money-collected',
+    cover: '/blog/from-work-done-to-money-collected.webp',
+    title: 'From work done to money collected: where law firm revenue leaks',
+    excerpt:
+      'Most firms do not lose money on the work. They lose it in the gaps between doing it, recording it, invoicing it and collecting it.',
+    category: 'Growing a firm',
+    date: '2026-10-19',
+    readMinutes: 4,
+    body: [
+      {
+        type: 'p',
+        text: 'Think of revenue as a pipeline with four steps: the work is done, the time is recorded, the invoice is sent and the payment is collected. A firm can be busy and still short of cash because it leaks at one of those steps.',
+      },
+      { type: 'h2', text: 'Leak one: work that is never recorded' },
+      {
+        type: 'p',
+        text: 'A quick call, a review of a draft, a trip to the registry. If it is not logged the day it happens, it is rarely logged at all. Ask lawyers to record time at the end of each day, against the matter, while it is fresh.',
+      },
+      { type: 'h2', text: 'Leak two: recorded work that is never invoiced' },
+      {
+        type: 'p',
+        text: 'Unbilled time quietly piles up behind busy weeks. Pick a fixed day each month to review everything recorded but not yet invoiced, matter by matter, and decide what is billed, held or written off.',
+      },
+      { type: 'h2', text: 'Leak three: invoices nobody follows up' },
+      {
+        type: 'p',
+        text: 'An invoice that is sent and forgotten is a loan. Know which invoices are overdue and by how long, and make one named person responsible for the follow-up call.',
+      },
+      {
+        type: 'ul',
+        items: [
+          'Log time daily, not monthly.',
+          'Review unbilled work on a fixed date each month.',
+          'Check overdue invoices every week.',
+          'Keep a record of every payment against its invoice.',
+        ],
+      },
+      {
+        type: 'quote',
+        text: 'You cannot fix a leak you cannot see. Put earned, billed and collected side by side.',
+      },
+      {
+        type: 'p',
+        text: 'The Counsel keeps time entries, invoices and payments next to the matter they belong to, and its reports show revenue, collection rate and work in progress, so each of these leaks is visible before it becomes a loss.',
+      },
+    ],
+  },
+  {
+    slug: 'the-twenty-minute-partner-meeting',
+    cover: '/blog/the-twenty-minute-partner-meeting.webp',
+    title: 'A weekly partner meeting that takes twenty minutes',
+    excerpt:
+      'Long meetings usually mean the numbers live in people’s heads. A shared view of the week makes a short meeting possible.',
+    category: 'Growing a firm',
+    date: '2026-10-19',
+    readMinutes: 3,
+    body: [
+      {
+        type: 'p',
+        text: 'Partner meetings run long when the first half hour is spent collecting information that should already be on the table: who is in court, what is overdue, what is unpaid. Fix that and the meeting shrinks.',
+      },
+      { type: 'h2', text: 'A simple agenda' },
+      {
+        type: 'ol',
+        items: [
+          'The week ahead: hearings, filing deadlines and who is covering what.',
+          'What slipped: tasks and deadlines that are overdue.',
+          'Cash: invoices overdue and payments received.',
+          'New work: matters opened and enquiries waiting.',
+          'One decision that needs a partner.',
+        ],
+      },
+      { type: 'h2', text: 'Come with the numbers, not the stories' },
+      {
+        type: 'p',
+        text: 'Everything above should be readable from one screen before the meeting starts. If a partner has to ask an associate for the figures, the system is the problem, not the people.',
+      },
+      { type: 'h2', text: 'End with owners and dates' },
+      {
+        type: 'p',
+        text: 'Every item that leaves the room needs a name and a date next to it. Put them straight onto the matter as tasks, so next week’s meeting starts from what was actually done.',
+      },
+      {
+        type: 'p',
+        text: 'With hearings on a shared calendar, tasks assigned per matter and a dashboard for the whole firm, The Counsel gives partners that single screen to open the meeting with.',
+      },
+    ],
+  },
+  {
+    slug: 'organise-legal-documents-so-anyone-can-find-them',
+    cover: '/blog/organise-legal-documents-so-anyone-can-find-them.webp',
+    title: 'Organising legal documents so anyone on the team can find them',
+    excerpt:
+      'A signed agreement that only one person can locate is a risk. Four habits that make every document easy to find.',
+    category: 'Practice management',
+    date: '2026-10-19',
+    readMinutes: 3,
+    body: [
+      {
+        type: 'p',
+        text: 'Every firm has had the moment: the client calls, the partner needs the signed copy, and the one person who knows where it is is in court. Good document habits remove that dependency on any one person.',
+      },
+      { type: 'h2', text: '1. File against the matter, the day it arrives' },
+      {
+        type: 'p',
+        text: 'A document that waits in an inbox or a phone gallery is already half lost. Attach it to its matter as soon as it arrives, and delete the loose copies.',
+      },
+      { type: 'h2', text: '2. Name files so they explain themselves' },
+      {
+        type: 'p',
+        text: 'Agree one pattern, for example date, document type and party: 2026-10-12 Sale Agreement Okafor. A stranger should be able to tell what a file is without opening it.',
+      },
+      { type: 'h2', text: '3. Separate final from draft' },
+      {
+        type: 'p',
+        text: 'Keep signed and filed versions clearly apart from working drafts, so nobody sends the wrong version to a client or to court.',
+      },
+      { type: 'h2', text: '4. Control who can open what' },
+      {
+        type: 'p',
+        text: 'Not every document is for every eye. Limit sensitive files to the people on the matter, and keep a record of who opened them.',
+      },
+      {
+        type: 'p',
+        text: 'The Counsel stores documents against each matter in private, role-controlled storage, with common file types viewable in the app, so the right person finds the right file in seconds.',
+      },
+    ],
+  },
+  {
+    slug: 'delegate-tasks-without-chasing',
+    cover: '/blog/delegate-tasks-without-chasing.webp',
+    title: 'How to delegate in a law firm without chasing people',
+    excerpt:
+      'Delegation fails when the task lives in a conversation. Put it on the matter with an owner, a date and a priority.',
+    category: 'Practice management',
+    date: '2026-10-19',
+    readMinutes: 3,
+    body: [
+      {
+        type: 'p',
+        text: 'A partner says “please prepare the bundle” in the corridor. A week later nobody remembers who agreed to what. The task was never written down anywhere that anyone else could see.',
+      },
+      { type: 'h2', text: 'What a good task contains' },
+      {
+        type: 'ul',
+        items: [
+          'One named owner, not a group.',
+          'A due date that someone chose.',
+          'A priority, so the urgent is separated from the routine.',
+          'A link to the matter it belongs to.',
+        ],
+      },
+      { type: 'h2', text: 'Make follow-up the system’s job' },
+      {
+        type: 'p',
+        text: 'If following up depends on a partner remembering, it will stop on the busiest week. Overdue items should surface on their own, so the conversation can be about the work rather than about whether it was done.',
+      },
+      { type: 'h2', text: 'Review, do not nag' },
+      {
+        type: 'p',
+        text: 'Use the weekly meeting to look at what slipped and why. Often a deadline was unrealistic or the instruction was unclear, and that is worth fixing once instead of chasing every time.',
+      },
+      {
+        type: 'p',
+        text: 'In The Counsel, tasks carry an owner, due date and priority and link to their matter, so the whole team sees what is open and what is late without anyone asking.',
+      },
+    ],
+  },
+  {
     slug: 'never-miss-a-court-date',
+    cover: '/blog/never-miss-a-court-date.webp',
     title: '4 habits that stop law firms missing court dates',
     excerpt:
       'A missed hearing costs a client’s trust and your reputation. These four habits close the gaps where dates usually get lost.',
@@ -67,6 +239,7 @@ export const POSTS: BlogPost[] = [
   },
   {
     slug: 'billing-terms-every-lawyer-should-know',
+    cover: '/blog/billing-terms-every-lawyer-should-know.webp',
     title: 'Retainer, WIP, disbursement, write-off: four billing terms explained',
     excerpt:
       'Clear billing language prevents awkward conversations. Here is what each term means and why tracking them well protects your revenue.',
@@ -110,6 +283,7 @@ export const POSTS: BlogPost[] = [
   },
   {
     slug: 'five-questions-every-managing-partner-should-answer',
+    cover: '/blog/five-questions-every-managing-partner-should-answer.webp',
     title: 'Five questions every managing partner should answer in seconds',
     excerpt:
       'If answering these takes a phone call, your firm is running on memory. A quick self-test for partners.',
@@ -154,6 +328,7 @@ export const POSTS: BlogPost[] = [
   },
   {
     slug: 'opening-a-new-matter-checklist',
+    cover: '/blog/opening-a-new-matter-checklist.webp',
     title: 'Opening a new matter: the five things to capture on day one',
     excerpt:
       'Get these five details right at intake and everything after it, from tasks to billing to reporting, falls into place.',

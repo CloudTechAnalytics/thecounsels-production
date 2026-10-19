@@ -4,13 +4,19 @@ import { useSeo } from '@/shared/hooks/use-seo'
 import { SiteHeader } from '@/features/landing/components/site-header'
 import { SiteFooter } from '@/features/landing/components/site-footer'
 import { SeoCtaBand } from '@/features/landing/components/seo-cta-band'
-import { POSTS, formatPostDate, getPost, type PostBlock } from '@/features/blog/posts'
-import { PostCard, PostCover } from '@/features/blog/components/post-card'
+import { POSTS, getPost, type PostBlock } from '@/features/blog/posts'
+import { AUTHOR, CategoryChip, PostCard, PostMeta } from '@/features/blog/components/post-card'
+
+const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 
 function Block({ block }: { block: PostBlock }) {
   switch (block.type) {
     case 'h2':
-      return <h2 className="mt-10 font-display text-2xl font-semibold">{block.text}</h2>
+      return (
+        <h2 id={slugify(block.text)} className="mt-10 scroll-mt-6 font-display text-2xl font-semibold">
+          {block.text}
+        </h2>
+      )
     case 'p':
       return <p className="mt-4 text-base leading-[1.8] text-foreground/90">{block.text}</p>
     case 'ul':
@@ -51,14 +57,17 @@ export function BlogPostPage() {
 
   if (!post) return <Navigate to="/blog" replace />
 
-  const more = POSTS.filter((p) => p.slug !== post.slug).slice(0, 2)
+  const headings = post.body.filter((b): b is Extract<PostBlock, { type: 'h2' }> => b.type === 'h2')
+  const more = POSTS.filter((p) => p.slug !== post.slug && p.category === post.category)
+    .concat(POSTS.filter((p) => p.slug !== post.slug && p.category !== post.category))
+    .slice(0, 3)
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <SiteHeader />
 
       <main>
-        <article className="mx-auto max-w-3xl px-6 pb-16 pt-14">
+        <article className="mx-auto max-w-6xl px-6 pb-16 pt-12">
           <Link
             to="/blog"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
@@ -66,29 +75,73 @@ export function BlogPostPage() {
             <ArrowLeft className="h-4 w-4" /> All articles
           </Link>
 
-          <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            <span className="rounded-full bg-primary/12 px-2.5 py-1 font-semibold text-primary">{post.category}</span>
-            <span>{formatPostDate(post.date)}</span>
-            <span aria-hidden>·</span>
-            <span>{post.readMinutes} min read</span>
-          </div>
-          <h1 className="mt-4 font-display text-3xl font-semibold leading-tight sm:text-4xl">{post.title}</h1>
-          <p className="mt-4 text-lg leading-relaxed text-muted-foreground">{post.excerpt}</p>
+          <header className="mx-auto mt-6 max-w-3xl text-center">
+            <CategoryChip category={post.category} />
+            <h1 className="mt-4 font-display text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl">
+              {post.title}
+            </h1>
+            <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-muted-foreground">{post.excerpt}</p>
+            <div className="mt-5 flex justify-center">
+              <PostMeta post={post} />
+            </div>
+          </header>
 
-          <PostCover category={post.category} className="mt-8 h-44 rounded-2xl border border-border" />
+          <img
+            src={post.cover}
+            alt=""
+            width={1200}
+            height={675}
+            className="mx-auto mt-10 aspect-video w-full max-w-4xl rounded-2xl border border-border object-cover shadow-card"
+          />
 
-          <div className="mt-6">
-            {post.body.map((b, i) => (
-              <Block key={i} block={b} />
-            ))}
+          <div className="mx-auto mt-10 grid max-w-4xl gap-10 lg:max-w-5xl lg:grid-cols-[1fr_15rem]">
+            <div className="max-w-3xl">
+              {post.body.map((b, i) => (
+                <Block key={i} block={b} />
+              ))}
+
+              <div className="mt-12 flex items-center gap-4 rounded-xl border border-border bg-card p-5">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 font-display text-lg font-semibold text-primary">
+                  C
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">{AUTHOR}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Practical notes for law firms across Africa from the team building The Counsel.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {headings.length > 1 && (
+              <aside className="hidden lg:block">
+                <nav aria-label="In this article" className="sticky top-8 rounded-xl border border-border bg-card p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    In this article
+                  </p>
+                  <ul className="mt-3 space-y-2.5 text-sm">
+                    {headings.map((h) => (
+                      <li key={h.text}>
+                        <a
+                          href={`#${slugify(h.text)}`}
+                          className="text-muted-foreground transition-colors hover:text-primary"
+                        >
+                          {h.text}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              </aside>
+            )}
           </div>
         </article>
 
         {more.length > 0 && (
           <section className="border-t border-border bg-card/40">
-            <div className="mx-auto max-w-5xl px-6 py-16">
+            <div className="mx-auto max-w-6xl px-6 py-16">
               <h2 className="font-display text-2xl font-semibold">Keep reading</h2>
-              <div className="mt-8 grid gap-8 md:grid-cols-2">
+              <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {more.map((p) => (
                   <PostCard key={p.slug} post={p} />
                 ))}

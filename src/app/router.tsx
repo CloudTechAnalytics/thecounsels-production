@@ -20,6 +20,9 @@ import { TermsPage } from '@/features/landing/pages/terms-page'
 import { PrivacyPage } from '@/features/landing/pages/privacy-page'
 import { LegalPracticeManagementSoftwareNigeriaPage } from '@/features/landing/pages/legal-practice-management-software-nigeria-page'
 import { LegalPracticeManagementSoftwareAfricaPage } from '@/features/landing/pages/legal-practice-management-software-africa-page'
+import { FeaturesPage } from '@/features/landing/pages/features-page'
+import { BlogPage } from '@/features/blog/pages/blog-page'
+import { BlogPostPage } from '@/features/blog/pages/blog-post-page'
 import { LawFirmManagementSoftwarePage } from '@/features/landing/pages/law-firm-management-software-page'
 import { LegalCaseManagementSoftwarePage } from '@/features/landing/pages/legal-case-management-software-page'
 import { LawFirmBillingSoftwarePage } from '@/features/landing/pages/law-firm-billing-software-page'
@@ -132,6 +135,9 @@ export const router = createBrowserRouter([
   // SEO content pages — public, indexable, no auth required.
   { path: '/legal-practice-management-software-nigeria', element: <LegalPracticeManagementSoftwareNigeriaPage /> },
   { path: '/legal-practice-management-software-africa', element: <LegalPracticeManagementSoftwareAfricaPage /> },
+  { path: '/features', element: <FeaturesPage /> },
+  { path: '/blog', element: <BlogPage /> },
+  { path: '/blog/:slug', element: <BlogPostPage /> },
   { path: '/law-firm-management-software', element: <LawFirmManagementSoftwarePage /> },
   { path: '/legal-case-management-software', element: <LegalCaseManagementSoftwarePage /> },
   { path: '/law-firm-billing-software', element: <LawFirmBillingSoftwarePage /> },

@@ -22,12 +22,15 @@ export function SiteHeader() {
           <Link to="/" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Home
           </Link>
-          <a href="/#features" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+          <Link to="/features" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Features
-          </a>
+          </Link>
           <a href="/#pricing" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Pricing
           </a>
+          <Link to="/blog" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Blog
+          </Link>
         </nav>
         <div className="flex items-center gap-3">
           <Button asChild size="sm" variant="outline" className="border-border bg-transparent">

@@ -164,50 +164,6 @@ const STEPS = [
   },
 ]
 
-// Mirrors the plans table (migration 0053) — keep in sync if pricing changes
-// there. Public pricing isn't queried live here since anonymous visitors
-// can't read `plans` under RLS, and we don't weaken RLS to expose it.
-const PLANS = [
-  {
-    key: 'starter',
-    name: 'Basic',
-    price: '₦15,000',
-    tagline: 'For solo lawyers and small law firms',
-    features: ['Up to 3 users', 'Core matter management', 'Client management', 'Contacts', 'Documents, hearings & calendar'],
-  },
-  {
-    key: 'professional',
-    name: 'Professional',
-    price: '₦50,000',
-    tagline: 'For growing and established law firms',
-    features: ['Up to 10 users', 'Everything in Basic', 'AI Workspace', 'HR Workspace', 'Team messaging & WhatsApp reminders'],
-    highlight: true,
-  },
-  {
-    key: 'business',
-    name: 'Business',
-    price: '₦100,000',
-    tagline: 'For larger law firms',
-    features: ['Up to 25 users', 'Everything in Professional', 'Advanced HR & People Management', 'Branch / multi-office support', 'Workflow automation'],
-  },
-  {
-    key: 'enterprise',
-    name: 'Enterprise',
-    price: 'Custom',
-    tagline: 'Tailored pricing — talk to sales',
-    features: ['Custom number of users', 'Everything in Business', 'Custom storage & integrations', 'Custom workflows'],
-  },
-]
-
-/** Landing-page plan buttons lead toward payment, not another trial CTA —
- * "Start Free"/"Start Free Trial" already exist in the nav and hero for
- * that. Clicking a paid tier here stashes the intent so the onboarding
- * wizard's plan step preselects it (instead of defaulting to Trial),
- * surviving the account-creation + email-verification gap in between —
- * a query param wouldn't (Supabase's verification link redirects to a
- * fixed callback URL). Cleared once the wizard reads it. */
-const INTENDED_PLAN_KEY = 'counsel.intended_plan'
-
 const COMPLIANCE = [
   { icon: ShieldCheck, label: 'Row-level tenant isolation' },
   { icon: Lock, label: 'Encrypted document storage' },
@@ -727,73 +683,6 @@ export function LandingPage() {
       </section>
 
       {/* ── Pricing ─────────────────────────────────────────── */}
-      <section id="pricing" className="mx-auto max-w-6xl px-6 py-24">
-        <Reveal className="mx-auto max-w-2xl text-center">
-          <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Pricing
-          </motion.p>
-          <motion.h2 variants={fadeUp} className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
-            Simple plans, per firm
-          </motion.h2>
-          <motion.p variants={fadeUp} className="mt-4 text-muted-foreground">
-            Start free for 30 days. No payment required.
-          </motion.p>
-        </Reveal>
-
-        <Reveal className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {PLANS.map((p) => (
-            <motion.div
-              key={p.name}
-              variants={fadeUp}
-              whileHover={reduce ? undefined : { y: -6 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-              className={cn(
-                'relative flex flex-col rounded-xl border bg-card p-6 shadow-card',
-                p.highlight ? 'border-primary shadow-gold' : 'border-border',
-              )}
-            >
-              {p.highlight && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground">
-                  Recommended
-                </span>
-              )}
-              <h3 className="font-display text-xl font-semibold">{p.name}</h3>
-              <p className="mt-1 min-h-[2.75rem] text-sm text-muted-foreground">{p.tagline}</p>
-              <p className="mt-5 border-b border-border pb-5">
-                <span className="font-display text-3xl font-semibold">{p.price}</span>
-                {p.price !== 'Custom' && <span className="text-sm text-muted-foreground"> /month</span>}
-              </p>
-              <ul className="mt-5 flex-1 space-y-2.5">
-                {p.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> {f}
-                  </li>
-                ))}
-              </ul>
-              {p.name === 'Enterprise' ? (
-                <Button asChild className="mt-6" variant="outline">
-                  <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — Enterprise plan`}>Contact sales</a>
-                </Button>
-              ) : (
-                <Button asChild className="mt-6" variant={p.highlight ? 'default' : 'outline'}>
-                  <Link to="/auth/register" onClick={() => localStorage.setItem(INTENDED_PLAN_KEY, p.key)}>
-                    Get Started
-                  </Link>
-                </Button>
-              )}
-            </motion.div>
-          ))}
-        </Reveal>
-
-        <p className="mx-auto mt-10 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground">
-          Prices are shown in naira (₦). Practising outside Nigeria? Start your free trial and we&rsquo;ll
-          confirm pricing in your own currency.{' '}
-          <Link to="/pricing" className="font-medium text-primary hover:underline">
-            Compare plans and billing cycles
-          </Link>
-        </p>
-      </section>
-
       {/* ── FAQ ─────────────────────────────────────────────── */}
       <section id="faq" className="border-y border-border bg-card/60">
         <div className="mx-auto max-w-3xl px-6 py-24">

@@ -29,6 +29,7 @@ import { APP } from '@/shared/config/env'
 import { cn } from '@/shared/lib/utils'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { CounselMark } from '@/shared/components/counsel-mark'
+import { AfricaReach } from '@/features/landing/components/africa-reach'
 
 const CONTACT_EMAIL = 'cloudtechanalytics.consultant@gmail.com'
 const CONTACT_PHONE_DISPLAY = '+234 813 386 0143'
@@ -676,6 +677,9 @@ export function LandingPage() {
           ))}
         </Reveal>
       </section>
+
+      {/* ── Across Africa ─────────────────────────────────────── */}
+      <AfricaReach />
 
       {/* ── Trust ─────────────────────────────────────────────── */}
       <section className="border-y border-border bg-card/60">

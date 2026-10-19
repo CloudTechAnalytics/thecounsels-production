@@ -737,7 +737,7 @@ export function LandingPage() {
           </motion.p>
         </Reveal>
 
-        <Reveal className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <Reveal className="mx-auto mt-14 grid max-w-5xl gap-8 md:grid-cols-2">
           {PLANS.map((p) => (
             <motion.div
               key={p.name}
@@ -745,7 +745,7 @@ export function LandingPage() {
               whileHover={reduce ? undefined : { y: -6 }}
               transition={{ type: 'spring', stiffness: 300, damping: 22 }}
               className={cn(
-                'relative flex flex-col rounded-xl border bg-card p-7 shadow-card',
+                'relative flex flex-col rounded-2xl border bg-card p-8 shadow-card sm:p-10',
                 p.highlight ? 'border-primary shadow-gold' : 'border-border',
               )}
             >
@@ -754,25 +754,25 @@ export function LandingPage() {
                   Recommended
                 </span>
               )}
-              <h3 className="font-display text-xl font-semibold">{p.name}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{p.tagline}</p>
-              <p className="mt-5">
-                <span className="font-display text-4xl font-semibold">{p.price}</span>
-                {p.price !== 'Custom' && <span className="text-sm text-muted-foreground"> /month</span>}
+              <h3 className="font-display text-2xl font-semibold">{p.name}</h3>
+              <p className="mt-1.5 text-sm text-muted-foreground sm:text-base">{p.tagline}</p>
+              <p className="mt-7 border-b border-border pb-7">
+                <span className="font-display text-5xl font-semibold">{p.price}</span>
+                {p.price !== 'Custom' && <span className="text-base text-muted-foreground"> /month</span>}
               </p>
-              <ul className="mt-6 flex-1 space-y-2.5">
+              <ul className="mt-7 flex-1 space-y-3.5">
                 {p.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> {f}
+                  <li key={f} className="flex items-start gap-3 text-sm sm:text-base">
+                    <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-primary" /> {f}
                   </li>
                 ))}
               </ul>
               {p.name === 'Enterprise' ? (
-                <Button asChild className="mt-7" variant="outline">
+                <Button asChild size="lg" className="mt-9" variant="outline">
                   <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — Enterprise plan`}>Contact sales</a>
                 </Button>
               ) : (
-                <Button asChild className="mt-7" variant={p.highlight ? 'default' : 'outline'}>
+                <Button asChild size="lg" className="mt-9" variant={p.highlight ? 'default' : 'outline'}>
                   <Link to="/auth/register" onClick={() => localStorage.setItem(INTENDED_PLAN_KEY, p.key)}>
                     Get Started
                   </Link>
@@ -781,6 +781,11 @@ export function LandingPage() {
             </motion.div>
           ))}
         </Reveal>
+
+        <p className="mx-auto mt-10 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground">
+          Prices are shown in naira (₦). Practising outside Nigeria? Start your free trial and we&rsquo;ll
+          confirm pricing in your own currency.
+        </p>
       </section>
 
       {/* ── FAQ ─────────────────────────────────────────────── */}

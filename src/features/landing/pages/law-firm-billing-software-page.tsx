@@ -9,7 +9,7 @@ const BILLING_AREAS = [
   { icon: Clock, title: 'Time entries', text: 'Lawyers log billable time against the matter they did the work for, as the day happens — not reconstructed from memory at month end.' },
   { icon: Receipt, title: 'Legal fees & expenses', text: 'Disbursements and expenses are recorded alongside time, so nothing billable gets missed when it comes time to invoice.' },
   { icon: FileCheck, title: 'Invoices', text: 'Unbilled time and expenses for a matter — or a client, across all their matters — sweep into a numbered draft invoice in seconds, ready for review.' },
-  { icon: Banknote, title: 'Payments', text: 'Record payments against an invoice as they land, in naira, and see its status update automatically as it\'s partly or fully paid.' },
+  { icon: Banknote, title: 'Payments', text: 'Record payments against an invoice as they land, and see its status update automatically as it\'s partly or fully paid.' },
   { icon: Wallet, title: 'Outstanding balances', text: 'See what\'s invoiced but not yet collected across the whole firm, not client by client in a spreadsheet.' },
   { icon: Eye, title: 'Billing visibility', text: 'Firm-wide revenue and collections are visible to managing partners, partners and finance; everyone else sees their own billable hours and unbilled work instead — real numbers, scoped to the role that should see them.' },
   { icon: AlertCircle, title: 'Overdue tracking', text: 'Invoices past their due date are flagged clearly, so collections don\'t depend on someone remembering to check.' },
@@ -21,7 +21,7 @@ export function LawFirmBillingSoftwarePage() {
   useSeo({
     title: 'Law Firm Billing & Invoicing Software | The Counsel',
     description:
-      'Billing and invoicing software for law firms — track time entries, legal fees, expenses, invoices, payments, outstanding balances and financial reporting in one system.',
+      'Billing and invoicing software for law firms — track time entries, legal fees, expenses, invoices, payments, outstanding balances and financial reporting in one system, built for firms across Africa.',
     canonicalPath: '/law-firm-billing-software',
   })
 

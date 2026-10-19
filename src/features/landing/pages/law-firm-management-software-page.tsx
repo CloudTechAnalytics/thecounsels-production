@@ -24,7 +24,7 @@ const AREAS = [
   { icon: FolderLock, title: 'Documents', text: 'Firm-wide or matter-specific document storage, access-controlled by role, with common file types viewable inside the app.' },
   { icon: CheckSquare, title: 'Tasks', text: 'Work assigned with owners and deadlines, so follow-ups don’t depend on someone remembering to chase them.' },
   { icon: Gavel, title: 'Hearings', text: 'Court dates and outcomes tracked against the matter they belong to and reflected on a shared calendar.' },
-  { icon: Banknote, title: 'Billing', text: 'Time, expenses, invoices and payments in one place, in naira, so finance isn’t reconciling a separate spreadsheet against what lawyers logged.' },
+  { icon: Banknote, title: 'Billing', text: 'Time, expenses, invoices and payments in one place, so finance isn’t reconciling a separate spreadsheet against what lawyers logged.' },
   { icon: BarChart3, title: 'Reports', text: 'Firm-wide reporting for the roles who should see it — financial performance, productivity, and the state of the caseload.' },
   { icon: Building2, title: 'Branches', text: 'For firms with more than one office, scope members and matters to a branch while leadership retains a firm-wide view.' },
   { icon: Lock, title: 'Permissions', text: 'Role-based access means a paralegal, an associate and a managing partner each see exactly what their role calls for — nothing more.' },
@@ -35,7 +35,7 @@ export function LawFirmManagementSoftwarePage() {
   useSeo({
     title: 'Law Firm Management Software | The Counsel',
     description:
-      'The Counsel is law firm management software that brings clients, matters, lawyers, documents, tasks, hearings, billing and reporting into one workspace for modern legal practices.',
+      'The Counsel is law firm management software that brings clients, matters, lawyers, documents, tasks, hearings, billing and reporting into one workspace for modern legal practices across Africa.',
     canonicalPath: '/law-firm-management-software',
   })
 
@@ -47,7 +47,7 @@ export function LawFirmManagementSoftwarePage() {
         <section className="mx-auto max-w-4xl px-6 pb-16 pt-20 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Law Firm Management</p>
           <h1 className="mt-3 font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
-            Law Firm Management Software for Modern Legal Practices
+            Law Firm Management Software for Modern African Practices
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             Running a firm means managing more than any one case — it's the people, the workload across the

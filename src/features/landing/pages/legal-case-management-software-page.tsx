@@ -53,7 +53,7 @@ export function LegalCaseManagementSoftwarePage() {
   useSeo({
     title: 'Legal Case Management Software | The Counsel',
     description:
-      'Manage legal cases and matters in one place with The Counsel — status tracking, assigned lawyers, documents, notes, tasks, hearings and a full audit trail per matter.',
+      'Manage legal cases and matters in one place with The Counsel — status tracking, assigned lawyers, documents, notes, tasks, hearings and a full audit trail per matter, for law firms across Africa.',
     canonicalPath: '/legal-case-management-software',
   })
 

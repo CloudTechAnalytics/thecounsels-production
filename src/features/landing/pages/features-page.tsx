@@ -1,123 +1,282 @@
-import { motion, useReducedMotion } from 'framer-motion'
+import { useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
   LayoutDashboard,
   Briefcase,
+  Users,
   Gavel,
   FolderLock,
   Banknote,
-  KeyRound,
-  Users,
+  BarChart3,
+  Sparkles,
   CheckCircle2,
+  KeyRound,
+  Building2,
+  ShieldCheck,
+  FileSpreadsheet,
+  CalendarDays,
+  Bell,
+  History,
   type LucideIcon,
 } from 'lucide-react'
 import { useSeo } from '@/shared/hooks/use-seo'
+import { cn } from '@/shared/lib/utils'
 import { SiteHeader } from '@/features/landing/components/site-header'
 import { SiteFooter } from '@/features/landing/components/site-footer'
 import { SeoCtaBand } from '@/features/landing/components/seo-cta-band'
 
-interface Feature {
+interface Tab {
+  id: string
+  label: string
   icon: LucideIcon
+  image: string
+  path: string
   title: string
   text: string
-  replaces: string
   points: string[]
 }
 
-const FEATURES: Feature[] = [
+const TABS: Tab[] = [
   {
+    id: 'dashboard',
+    label: 'Dashboard',
     icon: LayoutDashboard,
-    title: 'Know where the firm stands the moment you log in',
-    text: 'Open the dashboard and see what matters today: active matters, this week’s hearings, billable hours, revenue and overdue invoices. Each role sees the view that suits it.',
-    replaces: 'Morning status calls and “let me check” answers',
-    points: ['Matters in court and hearings this week', 'Billable hours, revenue and outstanding invoices', 'Role-aware views for partners, associates and finance'],
+    image: '/features/dashboard.webp',
+    path: 'dashboard',
+    title: 'Your firm at a glance',
+    text: 'Log in and see what needs you today, without opening five tools or calling the office.',
+    points: [
+      'Active matters and this week’s hearings',
+      'Billable hours, revenue and overdue invoices',
+      'Views that match each person’s role',
+    ],
   },
   {
+    id: 'matters',
+    label: 'Matters',
     icon: Briefcase,
-    title: 'Every client and matter on one record',
-    text: 'Individual and corporate clients, their contacts and every matter they are connected to live in one searchable place. Each matter is numbered, has a status and a named lead lawyer.',
-    replaces: 'Client spreadsheets and scattered case notes',
-    points: ['Individual and corporate client records', 'Numbered matters with status and lead lawyer', 'Notes and a full activity timeline per matter'],
+    image: '/features/matters.webp',
+    path: 'matters',
+    title: 'Every case, from intake to close',
+    text: 'Each matter is numbered, has a status, a client, a practice area and a named lead lawyer, so nobody has to ask where a case stands.',
+    points: [
+      'Status from new to resolved and closed',
+      'Search by title or matter number',
+      'Filter by practice area, export when you need to',
+    ],
   },
   {
-    icon: Gavel,
-    title: 'Court dates the whole firm can see',
-    text: 'Record each hearing with its court, judge, date and outcome. Dates appear on one shared calendar, and reminders reach your team by email and WhatsApp before the day.',
-    replaces: 'Paper diaries and dates buried in WhatsApp chats',
-    points: ['Hearings with court, judge, status and outcome', 'A shared firm calendar', 'Email and WhatsApp reminders'],
-  },
-  {
-    icon: FolderLock,
-    title: 'Case files that do not live in a cabinet',
-    text: 'File contracts, court documents and evidence against the matter in private, access-controlled storage. View PDFs and images in the app without downloading them.',
-    replaces: 'Shared drives and email attachments',
-    points: ['Documents filed on the matter', 'Private, role-controlled storage', 'View PDFs and images in the browser'],
-  },
-  {
-    icon: Banknote,
-    title: 'Time, invoices and payments without the spreadsheet',
-    text: 'Log billable time against a matter, turn unbilled work into a numbered invoice and record payments as they arrive. Expenses and disbursements sit beside the time, so you see earned, collected and owed.',
-    replaces: 'Separate billing spreadsheets and forgotten invoices',
-    points: ['Time entries to numbered invoices', 'Payments, expenses and disbursements', 'Naira billing today, built for firms across Africa'],
-  },
-  {
-    icon: KeyRound,
-    title: 'The right access for every role',
-    text: 'Managing partners, partners, associates, paralegals, finance and support staff each get access scoped to what their role needs. Firms with several offices can scope people and reporting by branch.',
-    replaces: 'Shared logins and “ask the partner for access”',
-    points: ['Role-based permissions', 'Branches for multi-office firms', 'Every firm’s data isolated, with an audit log'],
-  },
-  {
+    id: 'clients',
+    label: 'Clients',
     icon: Users,
-    title: 'Your team, tasks and AI assistant in one place',
-    text: 'Assign tasks with due dates, message your team next to the matter and keep staff records in the HR workspace. On qualifying plans, an AI assistant answers questions about your own hearings, tasks and appointments.',
-    replaces: 'Scattered chat groups, task lists and HR files',
-    points: ['Tasks tied to matters, with owners and deadlines', 'Team messaging and an HR workspace', 'An AI assistant on qualifying plans'],
+    image: '/features/clients.webp',
+    path: 'clients',
+    title: 'One record for every client',
+    text: 'Individuals and companies, their contacts and every matter they are connected to, in one searchable place.',
+    points: [
+      'Individual and corporate clients',
+      'Contacts, location and status on the record',
+      'Find anyone by name, company, contact or email',
+    ],
+  },
+  {
+    id: 'hearings',
+    label: 'Hearings',
+    icon: Gavel,
+    image: '/features/hearings.webp',
+    path: 'hearings',
+    title: 'Court dates the whole team can see',
+    text: 'Record the court, judge, courtroom, date and outcome on the matter. Everyone sees the same date, and reminders go out before the day.',
+    points: [
+      'Court, judge, courtroom and assigned lawyer',
+      'A shared calendar of hearings and appointments',
+      'Email reminders, plus WhatsApp on Professional and above',
+    ],
+  },
+  {
+    id: 'documents',
+    label: 'Documents',
+    icon: FolderLock,
+    image: '/features/documents.webp',
+    path: 'documents',
+    title: 'Files kept with the case they belong to',
+    text: 'Contracts, filings and evidence live against the matter in private storage, so finding a document never means searching someone’s inbox.',
+    points: [
+      'Documents filed on the matter',
+      'Private storage with role-based access',
+      'View PDFs and images without downloading',
+    ],
+  },
+  {
+    id: 'billing',
+    label: 'Billing',
+    icon: Banknote,
+    image: '/features/billing.webp',
+    path: 'billing',
+    title: 'From time entry to payment received',
+    text: 'Log time and expenses, turn unbilled work into numbered invoices and record payments, with earned, collected and owed always in view.',
+    points: [
+      'Time entries, expenses and invoices together',
+      'Unbilled work, invoiced, collected and outstanding',
+      'Naira billing today, built for firms across Africa',
+    ],
+  },
+  {
+    id: 'reports',
+    label: 'Reports',
+    icon: BarChart3,
+    image: '/features/reports.webp',
+    path: 'reports',
+    title: 'Reports a partner can act on',
+    text: 'Financial, productivity, matter and client reports that are already there when you need them, filtered by date, lawyer, client or practice area.',
+    points: [
+      'Collection rate, outstanding and revenue views',
+      'Productivity by lawyer',
+      'Export to Excel in one click',
+    ],
+  },
+  {
+    id: 'ai',
+    label: 'AI assistant',
+    icon: Sparkles,
+    image: '/features/ai.webp',
+    path: 'assistant',
+    title: 'An assistant that knows your firm',
+    text: 'Ask about your own hearings, tasks and appointments in plain language, or have a matter summarised. Available on qualifying plans.',
+    points: [
+      '“What hearings do I have this week?”',
+      'Summaries of a specific matter',
+      'A fast first look: always check the details that matter',
+    ],
   },
 ]
 
-function FeatureSection({ f, index }: { f: Feature; index: number }) {
-  const reduce = useReducedMotion()
+const MORE: { title: string; text: string; image: string; icon: LucideIcon }[] = [
+  {
+    title: 'Tasks with owners and deadlines',
+    text: 'Assign work to a named person, tie it to a matter, set a priority and a due date.',
+    image: '/features/tasks.webp',
+    icon: CheckCircle2,
+  },
+  {
+    title: 'Team messaging next to the work',
+    text: 'Firm channels and direct messages live beside your matters, not in five separate chat groups.',
+    image: '/features/messages.webp',
+    icon: Users,
+  },
+  {
+    title: 'People and leave in one system',
+    text: 'Staff records, departments, leave and HR requests in a workspace that sits beside your cases.',
+    image: '/features/hr.webp',
+    icon: Building2,
+  },
+]
+
+const INCLUDED: { icon: LucideIcon; label: string }[] = [
+  { icon: KeyRound, label: 'Roles and permissions' },
+  { icon: Building2, label: 'Branches for multi-office firms' },
+  { icon: History, label: 'Audit log of every action' },
+  { icon: ShieldCheck, label: 'Each firm’s data isolated' },
+  { icon: FileSpreadsheet, label: 'Excel export' },
+  { icon: CalendarDays, label: 'Shared firm calendar' },
+  { icon: Bell, label: 'Notifications and reminders' },
+]
+
+function BrowserFrame({ src, path, alt }: { src: string; path: string; alt: string }) {
   return (
-    <motion.section
-      initial={reduce ? false : { opacity: 0, y: 28 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="grid gap-8 border-t border-border py-14 first:border-t-0 md:grid-cols-[6rem_1fr] md:gap-10"
-    >
-      <div className="flex items-start gap-5 md:flex-col md:gap-4">
-        <span className="font-display text-5xl font-semibold leading-none text-primary/70">
-          {String(index + 1).padStart(2, '0')}
-        </span>
-        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/12 text-primary">
-          <f.icon className="h-6 w-6" />
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-elevated">
+      <div className="flex items-center gap-2 border-b border-border bg-muted/60 px-4 py-2.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#e5736b]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#e6b84f]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#6cc07a]" />
+        <span className="ml-3 truncate rounded-md bg-background px-3 py-1 text-[11px] text-muted-foreground">
+          thecounsels.org / {path}
         </span>
       </div>
-      <div>
-        <h2 className="max-w-2xl font-display text-2xl font-semibold leading-snug sm:text-3xl">{f.title}</h2>
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">{f.text}</p>
-        <ul className="mt-6 space-y-2.5">
-          {f.points.map((p) => (
-            <li key={p} className="flex items-start gap-3 text-sm sm:text-base">
-              <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-primary" /> {p}
-            </li>
-          ))}
-        </ul>
-        <p className="mt-6 inline-flex flex-wrap items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-xs sm:text-sm">
-          <span className="font-semibold uppercase tracking-[0.16em] text-primary">Replaces</span>
-          <span className="text-muted-foreground">{f.replaces}</span>
-        </p>
+      <img src={src} alt={alt} width={1280} height={800} className="block h-auto w-full" />
+    </div>
+  )
+}
+
+function Explorer() {
+  const [active, setActive] = useState(TABS[0].id)
+  const reduce = useReducedMotion()
+  const tab = TABS.find((t) => t.id === active) ?? TABS[0]
+
+  return (
+    <section className="mx-auto max-w-6xl px-6 pb-20">
+      <div
+        role="tablist"
+        aria-label="Parts of The Counsel"
+        className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-2 sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0"
+      >
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={t.id === active}
+            onClick={() => setActive(t.id)}
+            className={cn(
+              'flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all',
+              t.id === active
+                ? 'border-primary bg-primary text-primary-foreground shadow-gold'
+                : 'border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground',
+            )}
+          >
+            <t.icon className="h-4 w-4" /> {t.label}
+          </button>
+        ))}
       </div>
-    </motion.section>
+
+      <div className="mt-10 grid items-center gap-10 lg:grid-cols-[5fr_7fr] lg:gap-14">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab.id + '-text'}
+            role="tabpanel"
+            initial={reduce ? false : { opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? undefined : { opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+          >
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/12 text-primary">
+              <tab.icon className="h-6 w-6" />
+            </span>
+            <h2 className="mt-5 font-display text-3xl font-semibold leading-tight">{tab.title}</h2>
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground">{tab.text}</p>
+            <ul className="mt-6 space-y-3">
+              {tab.points.map((p) => (
+                <li key={p} className="flex items-start gap-3 text-sm sm:text-base">
+                  <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-primary" /> {p}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        </AnimatePresence>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab.id + '-img'}
+            initial={reduce ? false : { opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={reduce ? undefined : { opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.35 }}
+          >
+            <BrowserFrame src={tab.image} path={tab.path} alt={`${tab.label} screen in The Counsel (sample data)`} />
+            <p className="mt-3 text-center text-xs text-muted-foreground">Sample data from a demo firm.</p>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </section>
   )
 }
 
 /** Features overview at /features. */
 export function FeaturesPage() {
+  const reduce = useReducedMotion()
   useSeo({
     title: 'Features: Legal Practice Management for Law Firms | The Counsel',
     description:
-      'Matters, clients, court dates, documents, billing, roles, tasks and an AI assistant in one workspace for law firms across Africa. See everything The Counsel replaces.',
+      'See The Counsel in action: matters, clients, hearings, documents, billing, reports and an AI assistant in one workspace for law firms across Africa.',
     canonicalPath: '/features',
   })
 
@@ -126,22 +285,67 @@ export function FeaturesPage() {
       <SiteHeader />
 
       <main>
-        <section className="mx-auto max-w-4xl px-6 pb-8 pt-20 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Features</p>
+        <section className="mx-auto max-w-4xl px-6 pb-12 pt-20 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Inside the product</p>
           <h1 className="mt-3 font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
-            The whole practice, in one workspace
+            See how your firm would run on The Counsel
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Seven parts of running a law firm, brought together. Each one replaces a tool, a spreadsheet or a
-            habit that was costing your team time.
+            Pick a part of your practice below and look at the real screen, not a mock-up.
           </p>
         </section>
 
-        <div className="mx-auto max-w-4xl px-6 pb-12">
-          {FEATURES.map((f, i) => (
-            <FeatureSection key={f.title} f={f} index={i} />
-          ))}
-        </div>
+        <Explorer />
+
+        <section className="border-y border-border bg-card/50">
+          <div className="mx-auto max-w-6xl px-6 py-20">
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Around the cases</p>
+              <h2 className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
+                The rest of the practice, in the same place
+              </h2>
+            </div>
+            <div className="mt-12 grid gap-8 md:grid-cols-3">
+              {MORE.map((m, i) => (
+                <motion.article
+                  key={m.title}
+                  initial={reduce ? false : { opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-60px' }}
+                  transition={{ duration: 0.5, delay: i * 0.08 }}
+                  className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+                >
+                  <img
+                    src={m.image}
+                    alt={`${m.title} (sample data)`}
+                    width={1280}
+                    height={800}
+                    loading="lazy"
+                    className="block h-auto w-full border-b border-border"
+                  />
+                  <div className="p-6">
+                    <h3 className="font-display text-xl font-semibold">{m.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{m.text}</p>
+                  </div>
+                </motion.article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-5xl px-6 py-20 text-center">
+          <h2 className="font-display text-2xl font-semibold sm:text-3xl">Built for the whole firm, not just the partners</h2>
+          <ul className="mt-8 flex flex-wrap justify-center gap-3">
+            {INCLUDED.map((i) => (
+              <li
+                key={i.label}
+                className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm shadow-sm"
+              >
+                <i.icon className="h-4 w-4 text-primary" /> {i.label}
+              </li>
+            ))}
+          </ul>
+        </section>
 
         <SeoCtaBand heading="See it working for your firm" />
       </main>

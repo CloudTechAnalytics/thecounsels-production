@@ -98,7 +98,7 @@ export function LawFirmManagementSoftwarePage() {
             users, more branches, and finer-grained reporting as the firm grows, without switching tools
             partway through. For the pieces that deserve a closer look, see{' '}
             <Link to="/legal-practice-management-software-nigeria" className="text-primary hover:underline">
-              legal practice management for Nigerian firms
+              legal practice management for law firms across Africa
             </Link>
             ,{' '}
             <Link to="/legal-case-management-software" className="text-primary hover:underline">

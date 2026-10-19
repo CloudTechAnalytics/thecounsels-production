@@ -31,6 +31,7 @@ export function SiteFooter() {
             <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
               <li><Link to="/" className="transition-colors hover:text-primary">Home</Link></li>
               <li><Link to="/legal-practice-management-software-nigeria" className="transition-colors hover:text-primary">Legal Practice Management</Link></li>
+              <li><Link to="/legal-practice-management-software-africa" className="transition-colors hover:text-primary">For African Law Firms</Link></li>
               <li><Link to="/law-firm-management-software" className="transition-colors hover:text-primary">Law Firm Management</Link></li>
               <li><Link to="/legal-case-management-software" className="transition-colors hover:text-primary">Case Management</Link></li>
               <li><Link to="/law-firm-billing-software" className="transition-colors hover:text-primary">Billing &amp; Invoicing</Link></li>

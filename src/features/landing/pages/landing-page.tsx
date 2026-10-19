@@ -61,7 +61,7 @@ function Reveal({ children, className }: { children: React.ReactNode; className?
 
 const STATS = [
   { value: '6', label: 'Purpose-built modules, working as one workspace' },
-  { value: '₦', label: 'Native naira billing & invoicing' },
+  { value: '₦', label: 'Naira billing & invoicing, built for law firms across Africa' },
   { value: 'Row-level', label: 'Security isolating every firm’s data by default' },
   { value: '30-day', label: 'Free trial on any plan, no card required' },
 ]

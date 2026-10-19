@@ -7,6 +7,7 @@ Allow: /welcome
 Allow: /terms
 Allow: /privacy
 Allow: /legal-practice-management-software-nigeria
+Allow: /legal-practice-management-software-africa
 Allow: /law-firm-management-software
 Allow: /legal-case-management-software
 Allow: /law-firm-billing-software

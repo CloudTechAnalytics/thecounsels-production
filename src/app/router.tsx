@@ -19,6 +19,7 @@ import { LandingPage } from '@/features/landing/pages/landing-page'
 import { TermsPage } from '@/features/landing/pages/terms-page'
 import { PrivacyPage } from '@/features/landing/pages/privacy-page'
 import { LegalPracticeManagementSoftwareNigeriaPage } from '@/features/landing/pages/legal-practice-management-software-nigeria-page'
+import { LegalPracticeManagementSoftwareAfricaPage } from '@/features/landing/pages/legal-practice-management-software-africa-page'
 import { LawFirmManagementSoftwarePage } from '@/features/landing/pages/law-firm-management-software-page'
 import { LegalCaseManagementSoftwarePage } from '@/features/landing/pages/legal-case-management-software-page'
 import { LawFirmBillingSoftwarePage } from '@/features/landing/pages/law-firm-billing-software-page'
@@ -130,6 +131,7 @@ export const router = createBrowserRouter([
   { path: '/privacy', element: <PrivacyPage /> },
   // SEO content pages — public, indexable, no auth required.
   { path: '/legal-practice-management-software-nigeria', element: <LegalPracticeManagementSoftwareNigeriaPage /> },
+  { path: '/legal-practice-management-software-africa', element: <LegalPracticeManagementSoftwareAfricaPage /> },
   { path: '/law-firm-management-software', element: <LawFirmManagementSoftwarePage /> },
   { path: '/legal-case-management-software', element: <LegalCaseManagementSoftwarePage /> },
   { path: '/law-firm-billing-software', element: <LawFirmBillingSoftwarePage /> },

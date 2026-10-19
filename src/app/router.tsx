@@ -20,6 +20,8 @@ import { TermsPage } from '@/features/landing/pages/terms-page'
 import { PrivacyPage } from '@/features/landing/pages/privacy-page'
 import { LegalPracticeManagementSoftwareNigeriaPage } from '@/features/landing/pages/legal-practice-management-software-nigeria-page'
 import { LegalPracticeManagementSoftwareAfricaPage } from '@/features/landing/pages/legal-practice-management-software-africa-page'
+import { PricingPage } from '@/features/landing/pages/pricing-page'
+import { NotFoundPage } from '@/features/landing/pages/not-found-page'
 import { FeaturesPage } from '@/features/landing/pages/features-page'
 import { BlogPage } from '@/features/blog/pages/blog-page'
 import { BlogPostPage } from '@/features/blog/pages/blog-post-page'
@@ -136,6 +138,7 @@ export const router = createBrowserRouter([
   { path: '/legal-practice-management-software-nigeria', element: <LegalPracticeManagementSoftwareNigeriaPage /> },
   { path: '/legal-practice-management-software-africa', element: <LegalPracticeManagementSoftwareAfricaPage /> },
   { path: '/features', element: <FeaturesPage /> },
+  { path: '/pricing', element: <PricingPage /> },
   { path: '/blog', element: <BlogPage /> },
   { path: '/blog/:slug', element: <BlogPostPage /> },
   { path: '/law-firm-management-software', element: <LawFirmManagementSoftwarePage /> },
@@ -277,5 +280,5 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: '*', element: <Navigate to="/" replace /> },
+  { path: '*', element: <NotFoundPage /> },
 ])

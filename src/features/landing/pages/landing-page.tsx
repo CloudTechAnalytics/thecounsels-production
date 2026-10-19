@@ -437,9 +437,9 @@ export function LandingPage() {
             <a href="#how-it-works" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               Solutions
             </a>
-            <a href="#pricing" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            <Link to="/pricing" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               Pricing
-            </a>
+            </Link>
             <Link to="/blog" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               Blog
             </Link>
@@ -787,7 +787,10 @@ export function LandingPage() {
 
         <p className="mx-auto mt-10 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground">
           Prices are shown in naira (₦). Practising outside Nigeria? Start your free trial and we&rsquo;ll
-          confirm pricing in your own currency.
+          confirm pricing in your own currency.{' '}
+          <Link to="/pricing" className="font-medium text-primary hover:underline">
+            Compare plans and billing cycles
+          </Link>
         </p>
       </section>
 
@@ -894,9 +897,9 @@ export function LandingPage() {
                   </a>
                 </li>
                 <li>
-                  <a href="#pricing" className="transition-colors hover:text-primary">
+                  <Link to="/pricing" className="transition-colors hover:text-primary">
                     Pricing
-                  </a>
+                  </Link>
                 </li>
                 <li>
                   <a href="#faq" className="transition-colors hover:text-primary">

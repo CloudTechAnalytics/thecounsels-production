@@ -796,7 +796,7 @@ export function LandingPage() {
                   </a>
                 </li>
                 <li>
-                  <Link to="/legal-practice-management-software-nigeria" className="transition-colors hover:text-primary">
+                  <Link to="/legal-practice-management-software-africa" className="transition-colors hover:text-primary">
                     Legal Practice Management
                   </Link>
                 </li>

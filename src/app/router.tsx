@@ -18,7 +18,6 @@ import type { PlanFeatureKey } from '@/features/administration/lib/plan-features
 import { LandingPage } from '@/features/landing/pages/landing-page'
 import { TermsPage } from '@/features/landing/pages/terms-page'
 import { PrivacyPage } from '@/features/landing/pages/privacy-page'
-import { LegalPracticeManagementSoftwareNigeriaPage } from '@/features/landing/pages/legal-practice-management-software-nigeria-page'
 import { LegalPracticeManagementSoftwareAfricaPage } from '@/features/landing/pages/legal-practice-management-software-africa-page'
 import { PricingPage } from '@/features/landing/pages/pricing-page'
 import { NotFoundPage } from '@/features/landing/pages/not-found-page'
@@ -135,7 +134,7 @@ export const router = createBrowserRouter([
   { path: '/terms', element: <TermsPage /> },
   { path: '/privacy', element: <PrivacyPage /> },
   // SEO content pages — public, indexable, no auth required.
-  { path: '/legal-practice-management-software-nigeria', element: <LegalPracticeManagementSoftwareNigeriaPage /> },
+  { path: '/legal-practice-management-software-nigeria', element: <Navigate to="/legal-practice-management-software-africa" replace /> },
   { path: '/legal-practice-management-software-africa', element: <LegalPracticeManagementSoftwareAfricaPage /> },
   { path: '/features', element: <FeaturesPage /> },
   { path: '/pricing', element: <PricingPage /> },

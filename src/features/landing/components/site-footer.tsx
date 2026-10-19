@@ -33,7 +33,6 @@ export function SiteFooter() {
               <li><Link to="/features" className="transition-colors hover:text-primary">Features</Link></li>
               <li><Link to="/pricing" className="transition-colors hover:text-primary">Pricing</Link></li>
               <li><Link to="/blog" className="transition-colors hover:text-primary">Blog</Link></li>
-              <li><Link to="/legal-practice-management-software-nigeria" className="transition-colors hover:text-primary">Legal Practice Management</Link></li>
               <li><Link to="/legal-practice-management-software-africa" className="transition-colors hover:text-primary">For African Law Firms</Link></li>
               <li><Link to="/law-firm-management-software" className="transition-colors hover:text-primary">Law Firm Management</Link></li>
               <li><Link to="/legal-case-management-software" className="transition-colors hover:text-primary">Case Management</Link></li>

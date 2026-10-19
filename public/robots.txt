@@ -6,7 +6,6 @@ Allow: /$
 Allow: /welcome
 Allow: /terms
 Allow: /privacy
-Allow: /legal-practice-management-software-nigeria
 Allow: /legal-practice-management-software-africa
 Allow: /features
 Allow: /pricing

@@ -106,7 +106,7 @@ export function LegalCaseManagementSoftwarePage() {
               separate tracker someone has to keep in sync, a partner can see the real state of the whole
               caseload — what's open, what's in court, what's stalled — without pulling every lawyer aside
               for an update. That same status data feeds straight into{' '}
-              <Link to="/legal-practice-management-software-nigeria" className="text-primary hover:underline">
+              <Link to="/legal-practice-management-software-africa" className="text-primary hover:underline">
                 firm-wide reporting
               </Link>
               , and once a matter starts generating billable work, into{' '}

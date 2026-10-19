@@ -97,7 +97,7 @@ export function LawFirmManagementSoftwarePage() {
             A solo practitioner and a twenty-partner chambers use the same system, scoped differently — more
             users, more branches, and finer-grained reporting as the firm grows, without switching tools
             partway through. For the pieces that deserve a closer look, see{' '}
-            <Link to="/legal-practice-management-software-nigeria" className="text-primary hover:underline">
+            <Link to="/legal-practice-management-software-africa" className="text-primary hover:underline">
               legal practice management for law firms across Africa
             </Link>
             ,{' '}

@@ -29,6 +29,204 @@ export interface BlogPost {
 
 export const POSTS: BlogPost[] = [
   {
+    slug: 'keeping-clients-informed-without-the-phone-calls',
+    cover: '/blog/keeping-clients-informed-without-the-phone-calls.webp',
+    title: 'Keeping clients informed without answering the same call ten times',
+    excerpt:
+      'Most client complaints are not about the result. They are about silence. A simple update routine keeps clients calm and frees your day.',
+    category: 'Practice management',
+    date: '2026-10-20',
+    readMinutes: 6,
+    body: [
+      {
+        type: 'p',
+        text: 'Ask clients why they leave a firm and the answer is rarely the outcome of their case. It is that they did not know what was happening. They called and nobody could say. They waited weeks for a reply. The work may have been excellent, but from the client’s side of the table it looked like silence.',
+      },
+      {
+        type: 'p',
+        text: 'The cost of silence lands on the firm too. Every “any update on my matter?” call interrupts a lawyer who then has to dig through files to answer. The fix is not to be more available. It is to make updates routine, so that clients rarely need to ask.',
+      },
+      { type: 'h2', text: 'Decide what clients need to hear, and when' },
+      {
+        type: 'p',
+        text: 'Clients do not need every detail. They need to know what has happened, what happens next, when, and whether anything is needed from them. Four moments cover almost everything: when the matter is opened, after every hearing or significant step, when a deadline or cost changes, and when the matter closes.',
+      },
+      { type: 'h2', text: 'Send a short update after every hearing' },
+      {
+        type: 'p',
+        text: 'The most valuable update is the one that follows a court appearance. Within a day, tell the client what happened, what the court ordered, and the next date. Three or four lines are enough. It takes two minutes and prevents the longest phone call of the week.',
+      },
+      {
+        type: 'ul',
+        items: [
+          'What happened in court, in plain language.',
+          'What the court decided or directed.',
+          'The next date and what it is for.',
+          'Anything you need from the client before then.',
+        ],
+      },
+      { type: 'h2', text: 'Tell clients about money before they ask' },
+      {
+        type: 'p',
+        text: 'Billing surprises damage trust faster than a lost motion. Say at the start how fees and disbursements will be charged, send invoices with clear lines, and mention in advance when a larger cost is coming, such as a filing fee or an expert’s charge. Clients forgive expense they expected. They resent expense they did not.',
+      },
+      { type: 'h2', text: 'Keep one record of every conversation' },
+      {
+        type: 'p',
+        text: 'When a client calls and the lawyer who handled the matter is out, whoever picks up should be able to see the latest step, the next date and the last conversation in seconds. Record calls and decisions as short notes on the matter, not in a personal notebook, so any colleague can continue the conversation without starting it again.',
+      },
+      { type: 'h2', text: 'Set expectations on response time' },
+      {
+        type: 'p',
+        text: 'Tell clients how quickly you normally respond and how to reach you for something urgent. A client who knows to expect a reply within one working day is far calmer than one who is left guessing, even if the reply itself takes the same time.',
+      },
+      {
+        type: 'quote',
+        text: 'Clients rarely mind waiting. They mind not knowing.',
+      },
+      { type: 'h2', text: 'Make it part of the matter, not an extra chore' },
+      {
+        type: 'p',
+        text: 'Update routines fail when they depend on goodwill. The simplest way to keep them is to attach them to events that already happen: a hearing recorded, a status changed, an invoice issued. Each of those is a natural prompt to tell the client.',
+      },
+      {
+        type: 'p',
+        text: 'The Counsel keeps hearings, status changes, notes, documents and invoices on the matter itself, so the facts for an update are one click away, and anyone in the team can answer a client’s question without chasing the lawyer in charge.',
+      },
+    ],
+  },
+  {
+    slug: 'time-tracking-habits-lawyers-actually-keep',
+    cover: '/blog/time-tracking-habits-lawyers-actually-keep.webp',
+    title: 'Time tracking habits lawyers actually keep',
+    excerpt:
+      'Time recorded at month end is time half-forgotten. Five small habits that make daily time entry quick enough to stick.',
+    category: 'Billing',
+    date: '2026-10-20',
+    readMinutes: 6,
+    body: [
+      {
+        type: 'p',
+        text: 'Almost every lawyer agrees time should be recorded. Almost every firm struggles to make it happen. The reasons are rarely about discipline. Time entry competes with the work itself, it feels like admin, and when it is done late the details have already faded. The habits below are about making it small enough to survive a busy week.',
+      },
+      { type: 'h2', text: '1. Record at the end of each day, not each month' },
+      {
+        type: 'p',
+        text: 'Ten minutes at the end of the day, while you still remember what you did, beats an hour at the end of the month spent reconstructing it from a diary. Entries made late are shorter, vaguer and lower. Entries made on the day are accurate and need little editing.',
+      },
+      { type: 'h2', text: '2. Always record against the matter' },
+      {
+        type: 'p',
+        text: 'Time without a matter is time that cannot be invoiced, so it never gets billed. Make the matter the first thing chosen when an entry is created. It also gives partners a true picture of how much effort each matter consumes, which is the basis for pricing similar work in future.',
+      },
+      { type: 'h2', text: '3. Describe the work in one clear line' },
+      {
+        type: 'p',
+        text: 'A good description tells the client what they paid for: “Reviewed draft sale agreement and advised on clauses 4 and 7”, not “work on file”. Clear descriptions make invoices easier to approve, reduce queries, and make write-off decisions easier because the value of the work is visible.',
+      },
+      {
+        type: 'ul',
+        items: [
+          'Start with a verb: reviewed, drafted, attended, advised, researched.',
+          'Name the document or event: the agreement, the hearing, the call.',
+          'Keep it to one line. Detail belongs in notes, not in the time entry.',
+        ],
+      },
+      { type: 'h2', text: '4. Capture the small things' },
+      {
+        type: 'p',
+        text: 'Short calls, quick emails and brief reviews are the work that quietly disappears. Each seems too small to record, yet a lawyer who spends two hours a week on such tasks loses a hundred hours a year. Record them in batches if you must, but record them.',
+      },
+      { type: 'h2', text: '5. Look at the numbers together' },
+      {
+        type: 'p',
+        text: 'Time entry becomes a habit when people see it matters. Review recorded hours, billable hours and unbilled work in the weekly or monthly meeting. When the data is used to make decisions, entries get better without anyone being nagged.',
+      },
+      { type: 'h2', text: 'What good looks like' },
+      {
+        type: 'ol',
+        items: [
+          'Every lawyer records time daily, against a matter.',
+          'Descriptions are clear enough for the client to read.',
+          'Unbilled time is reviewed monthly and swept into invoices.',
+          'Partners see billable hours and utilisation by lawyer.',
+        ],
+      },
+      {
+        type: 'quote',
+        text: 'The best time tracking system is the one lawyers use without thinking about it.',
+      },
+      { type: 'h2', text: 'Reduce the effort per entry' },
+      {
+        type: 'p',
+        text: 'The fewer clicks an entry takes, the more entries get made. In The Counsel, time is logged against the matter in a few seconds, flows straight into unbilled work, and sweeps into a numbered invoice, so recording time feeds billing directly instead of being a separate chore.',
+      },
+    ],
+  },
+  {
+    slug: 'running-a-law-firm-across-more-than-one-office',
+    cover: '/blog/running-a-law-firm-across-more-than-one-office.webp',
+    title: 'Running a law firm across more than one office',
+    excerpt:
+      'A second office doubles the places where information can get stuck. How to keep branches connected without drowning partners in reports.',
+    category: 'Growing a firm',
+    date: '2026-10-20',
+    readMinutes: 6,
+    body: [
+      {
+        type: 'p',
+        text: 'A second office is a sign of success, and also the point where many firms discover how much they relied on everyone sitting in the same building. Questions that used to be answered across a corridor now take a call or a message. Files are in two places. Partners cannot tell, at a glance, how each branch is doing.',
+      },
+      {
+        type: 'p',
+        text: 'Running several offices well is less about tighter control than about shared structure. The aim is that each office can work independently day to day, while leadership keeps one clear view of the whole firm.',
+      },
+      { type: 'h2', text: 'Use the same process everywhere' },
+      {
+        type: 'p',
+        text: 'If each branch opens matters, records hearings and bills clients its own way, the firm has several small practices wearing one name. Agree one way to open a matter, one set of fields, one naming pattern for documents and one billing routine, and use them in every office. Consistency is what makes comparison and cover possible.',
+      },
+      { type: 'h2', text: 'Give each branch its own space' },
+      {
+        type: 'p',
+        text: 'People in a branch mostly need to see their own branch’s matters, clients and calendar. Showing everything to everyone creates noise and exposes information that does not need to travel. Scoping members and matters to a branch keeps daily work focused, while leadership retains access to the full picture.',
+      },
+      { type: 'h2', text: 'Give leadership one view of the firm' },
+      {
+        type: 'p',
+        text: 'Partners should be able to see hearings, overdue tasks, billing and collections across every office on a single screen, and to filter by branch when they want to. If getting a firm-wide figure means asking each office manager for a spreadsheet, the information will always be late and slightly different from branch to branch.',
+      },
+      {
+        type: 'ul',
+        items: [
+          'Hearings across all branches on one calendar.',
+          'Revenue, collections and unbilled work by branch.',
+          'Workload by lawyer, so cover can cross offices.',
+          'Overdue tasks and deadlines, wherever they sit.',
+        ],
+      },
+      { type: 'h2', text: 'Make cover between offices easy' },
+      {
+        type: 'p',
+        text: 'The advantage of several offices is that a lawyer in one can cover for a lawyer in another. That only works if the covering lawyer can open the matter and see its notes, documents and dates immediately. If they have to ask for the file, cover is slower than not having it.',
+      },
+      { type: 'h2', text: 'Keep culture and communication open' },
+      {
+        type: 'p',
+        text: 'Offices drift apart when they only hear from each other in a crisis. A short weekly meeting across branches, a shared place for team messages, and regular visits keep a single firm culture. Reports tell you how a branch is performing. Conversation tells you why.',
+      },
+      {
+        type: 'quote',
+        text: 'A multi-office firm is one firm with several rooms, not several firms sharing a name.',
+      },
+      { type: 'h2', text: 'Tools that treat branches as a first-class idea' },
+      {
+        type: 'p',
+        text: 'The Counsel supports branches directly: matters and members can be scoped to a branch while leadership keeps a firm-wide view, with permissions by role, a shared calendar, team messaging and consolidated reports, so a second or third office adds capacity without adding confusion.',
+      },
+    ],
+  },
+  {
     slug: 'from-work-done-to-money-collected',
     cover: '/blog/from-work-done-to-money-collected.webp',
     title: 'From work done to money collected: where law firm revenue leaks',

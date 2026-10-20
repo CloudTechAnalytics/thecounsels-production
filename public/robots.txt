@@ -10,6 +10,9 @@ Allow: /legal-practice-management-software-africa
 Allow: /features
 Allow: /pricing
 Allow: /blog
+Allow: /blog/keeping-clients-informed-without-the-phone-calls
+Allow: /blog/time-tracking-habits-lawyers-actually-keep
+Allow: /blog/running-a-law-firm-across-more-than-one-office
 Allow: /blog/from-work-done-to-money-collected
 Allow: /blog/the-twenty-minute-partner-meeting
 Allow: /blog/organise-legal-documents-so-anyone-can-find-them

@@ -100,4 +100,19 @@
     <changefreq>yearly</changefreq>
     <priority>0.7</priority>
   </url>
+  <url>
+    <loc>https://www.thecounsels.org/blog/keeping-clients-informed-without-the-phone-calls</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.thecounsels.org/blog/time-tracking-habits-lawyers-actually-keep</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.thecounsels.org/blog/running-a-law-firm-across-more-than-one-office</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>

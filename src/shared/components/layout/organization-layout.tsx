@@ -7,6 +7,8 @@ import { SidebarCollapseToggle } from '@/shared/components/layout/sidebar-collap
 import { NoOrganizationState } from '@/shared/components/layout/no-organization-state'
 import { SupportModeBanner } from '@/shared/components/layout/support-mode-banner'
 import { SupportAccessRequestBanner } from '@/shared/components/layout/support-access-request-banner'
+import { MobileTabBar } from '@/shared/components/layout/mobile-tab-bar'
+import { InstallAppBanner } from '@/shared/components/install-app'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useSidebarCollapsed } from '@/shared/hooks/use-sidebar-collapsed'
 import { useMessagingBadgeRealtime } from '@/features/messaging/hooks/use-messaging'
@@ -37,7 +39,7 @@ export function OrganizationLayout() {
       action: { label: 'View', onClick: () => navigate(info.href) },
     })
     if (prefs?.browser_enabled) {
-      fireBrowserNotification(info.title, { body: info.body, tag: info.href, onClick: () => navigate(info.href) })
+      fireBrowserNotification(info.title, { body: info.body, tag: info.href, url: info.href, onClick: () => navigate(info.href) })
     }
   })
 
@@ -90,12 +92,17 @@ export function OrganizationLayout() {
          * nothing to scroll — the page had silently blown out past the
          * screen edge instead of the table's own scroll container
          * engaging. */}
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        {/* Bottom padding on phones keeps the last row clear of the tab bar
+         * (4rem) and the iPhone home indicator. */}
+        <main className="min-w-0 flex-1 overflow-y-auto pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
+          <InstallAppBanner />
           <div className="mx-auto w-full max-w-[1800px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             {hasWorkspace ? <Outlet /> : <NoOrganizationState />}
           </div>
         </main>
       </div>
+
+      {hasWorkspace && <MobileTabBar onMore={() => setMobileOpen(true)} />}
     </div>
   )
 }

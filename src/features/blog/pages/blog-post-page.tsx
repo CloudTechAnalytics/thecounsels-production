@@ -6,6 +6,7 @@ import { SiteFooter } from '@/features/landing/components/site-footer'
 import { SeoCtaBand } from '@/features/landing/components/seo-cta-band'
 import { POSTS, getPost, type PostBlock } from '@/features/blog/posts'
 import { AUTHOR, CategoryChip, PostCard, PostMeta } from '@/features/blog/components/post-card'
+import { MaskWords, Rise, StaggerGrid } from '@/features/landing/components/motion-kit'
 
 const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 
@@ -77,10 +78,8 @@ export function BlogPostPage() {
 
           <header className="mx-auto mt-6 max-w-3xl text-center">
             <CategoryChip category={post.category} />
-            <h1 className="mt-4 font-display text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl">
-              {post.title}
-            </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-muted-foreground">{post.excerpt}</p>
+            <MaskWords as="h1" play text={post.title} className="mt-4 font-display text-[2.1rem] font-semibold leading-tight sm:text-5xl lg:text-6xl" />
+            <Rise as="p" delay={0.35} className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-muted-foreground">{post.excerpt}</Rise>
             <div className="mt-5 flex justify-center">
               <PostMeta post={post} />
             </div>
@@ -140,12 +139,12 @@ export function BlogPostPage() {
         {more.length > 0 && (
           <section className="border-t border-border bg-card/40">
             <div className="mx-auto max-w-6xl px-6 py-16">
-              <h2 className="font-display text-2xl font-semibold">Keep reading</h2>
-              <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <MaskWords as="h2" text="Keep reading" className="font-display text-2xl font-semibold" />
+              <StaggerGrid className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {more.map((p) => (
                   <PostCard key={p.slug} post={p} />
                 ))}
-              </div>
+              </StaggerGrid>
             </div>
           </section>
         )}

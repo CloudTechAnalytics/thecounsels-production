@@ -1,8 +1,7 @@
+import * as React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ThemeToggle } from '@/shared/components/theme-toggle'
-import { motion, useReducedMotion, type Variants } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
-  Scale,
   Briefcase,
   Banknote,
   Gavel,
@@ -10,9 +9,6 @@ import {
   BarChart3,
   ShieldCheck,
   ArrowRight,
-  Sparkles,
-  Clock,
-  CheckCircle2,
   ChevronDown,
   User,
   Users,
@@ -26,46 +22,21 @@ import {
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { APP } from '@/shared/config/env'
-import { cn } from '@/shared/lib/utils'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { CounselMark } from '@/shared/components/counsel-mark'
-import { AfricaReach } from '@/features/landing/components/africa-reach'
+import { AfricaReach, AFRICA_TOTAL } from '@/features/landing/components/africa-reach'
+import { SiteHeader } from '@/features/landing/components/site-header'
+import { EXPO, Eyebrow, MaskLines, NightSection, Odometer, Rise, Stagger, StaggerItem } from '@/features/landing/components/motion-kit'
+import { Arrival, useArrival } from '@/features/landing/components/home/arrival'
+import { Hero } from '@/features/landing/components/home/hero'
+import { OldWay } from '@/features/landing/components/home/old-way'
+import { DayInChambers } from '@/features/landing/components/home/day-in-chambers'
+import { FeaturesFan } from '@/features/landing/components/home/features-fan'
+import { CollectionsTrack } from '@/features/landing/components/home/collections-track'
 
 const CONTACT_EMAIL = 'cloudtechanalytics.consultant@gmail.com'
 const CONTACT_PHONE_DISPLAY = '+234 813 386 0143'
 const CONTACT_PHONE_TEL = '+2348133860143'
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 28 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
-}
-
-const stagger: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.12 } },
-}
-
-/** Section wrapper that reveals its children as they scroll into view. */
-function Reveal({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <motion.div
-      className={className}
-      variants={stagger}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: '-80px' }}
-    >
-      {children}
-    </motion.div>
-  )
-}
-
-const STATS = [
-  { value: '6', label: 'Purpose-built modules, working as one workspace' },
-  { value: '₦', label: 'Naira billing & invoicing, built for law firms across Africa' },
-  { value: 'Row-level', label: 'Security isolating every firm’s data by default' },
-  { value: '30-day', label: 'Free trial on any plan, no card required' },
-]
 
 const SEGMENTS = [
   {
@@ -146,24 +117,6 @@ const FEATURES = [
   },
 ]
 
-const STEPS = [
-  {
-    icon: Clock,
-    title: 'Capture the work',
-    text: 'Lawyers log time, hearings, tasks and documents against matters as the day happens.',
-  },
-  {
-    icon: Banknote,
-    title: 'Bill without friction',
-    text: 'Finance sweeps unbilled work into invoices in seconds and records payments as they land.',
-  },
-  {
-    icon: Sparkles,
-    title: 'See the whole firm',
-    text: 'Partners get live dashboards, risk insights and exportable reports. No spreadsheet stitching.',
-  },
-]
-
 const COMPLIANCE = [
   { icon: ShieldCheck, label: 'Row-level tenant isolation' },
   { icon: Lock, label: 'Encrypted document storage' },
@@ -194,175 +147,37 @@ const FAQS = [
   },
 ]
 
-/** The Counsel emblem: a firm seal — scales of justice ringed by the practice. */
-const ORBIT = [
-  { icon: Briefcase, label: 'Matters' },
-  { icon: Gavel, label: 'Hearings' },
-  { icon: FolderLock, label: 'Documents' },
-  { icon: Banknote, label: 'Billing' },
-  { icon: BarChart3, label: 'Reports' },
-  { icon: ShieldCheck, label: 'Security' },
-]
+/** What a firm leaves behind when it moves in. Struck through as the list scrolls into view. */
+const LEFT_BEHIND = ['Spreadsheets nobody trusts', 'Shared drives with four versions of everything', 'Hearing dates in a group chat']
 
-function HeroEmblem() {
+function StruckList() {
   const reduce = useReducedMotion()
-  const spin = 56 // seconds per revolution
-
   return (
-    <div
-      className="relative mx-auto flex aspect-square w-[min(84vw,430px)] items-center justify-center"
-      aria-hidden
-    >
-      {/* concentric seal rings */}
-      <div className="absolute inset-0 rounded-full border border-dashed border-primary/30" />
-      <div className="absolute inset-[13%] rounded-full border border-primary/15" />
-      <div className="absolute inset-[26%] rounded-full border border-foreground/10 bg-foreground/[0.03]" />
-
-      {/* orbiting practice modules (counter-rotated to stay upright) */}
-      <motion.div
-        className="absolute inset-0"
-        animate={reduce ? undefined : { rotate: 360 }}
-        transition={{ duration: spin, repeat: Infinity, ease: 'linear' }}
-      >
-        {ORBIT.map((o, i) => {
-          const angle = (i / ORBIT.length) * 2 * Math.PI - Math.PI / 2
-          const x = 50 + Math.cos(angle) * 44
-          const y = 50 + Math.sin(angle) * 44
-          return (
-            <div
-              key={o.label}
-              className="absolute -translate-x-1/2 -translate-y-1/2"
-              style={{ left: `${x}%`, top: `${y}%` }}
-            >
-              <motion.div
-                animate={reduce ? undefined : { rotate: -360 }}
-                transition={{ duration: spin, repeat: Infinity, ease: 'linear' }}
-                className="flex flex-col items-center gap-1"
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/40 bg-background text-primary shadow-elevated sm:h-12 sm:w-12 sm:rounded-xl">
-                  <o.icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
-                </span>
-                <span className="text-[7px] font-medium uppercase tracking-wider text-foreground/40 sm:text-[10px]">
-                  {o.label}
-                </span>
-              </motion.div>
-            </div>
-          )
-        })}
-      </motion.div>
-
-      {/* golden center — the scales */}
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.9, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="relative flex h-[30%] w-[30%] flex-col items-center justify-center rounded-full bg-gradient-to-b from-primary to-[#8a6428] p-2 text-center text-primary-foreground shadow-gold"
-      >
-        <Scale className="h-[26%] w-[26%]" strokeWidth={1.25} />
-        <p className="mt-[6%] font-display text-[10px] font-semibold leading-tight tracking-wide sm:text-sm">
-          {APP.product}
-        </p>
-        <p className="text-[5px] uppercase leading-tight tracking-[0.18em] opacity-80 sm:text-[9px] sm:tracking-[0.22em]">
-          Est. one firm · one system
-        </p>
-      </motion.div>
-    </div>
-  )
-}
-
-const PREVIEW_NAV = ['Dashboard', 'Matters', 'Clients', 'Hearings', 'Billing', 'Reports']
-const PREVIEW_STATS = ['Active matters', 'Hearings this week', 'Revenue this month']
-
-/** An illustrated mockup of the real dashboard's actual layout (sidebar,
- * stat tiles, recent-activity list) — hand-built to match the app's own
- * look, not a literal screenshot standing in for one. */
-function DashboardPreview() {
-  return (
-    <div className="relative mx-auto w-full max-w-xl">
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-elevated">
-        <div className="flex items-center gap-1.5 border-b border-border bg-muted/40 px-4 py-2.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-destructive/50" />
-          <span className="h-2.5 w-2.5 rounded-full bg-warning/50" />
-          <span className="h-2.5 w-2.5 rounded-full bg-success/50" />
-          <span className="ml-3 flex-1 truncate rounded-md bg-background px-3 py-1 text-[10px] text-muted-foreground">
-            app.{APP.domain}/dashboard
-          </span>
-        </div>
-        <div className="flex h-72 sm:h-80">
-          <div className="hidden w-36 shrink-0 border-r border-border bg-sidebar p-3 sm:block">
-            <div className="mb-4 flex items-center gap-2 px-1">
-              <CounselMark variant="small" className="h-6 w-6" />
-              <span className="text-[10px] font-semibold text-sidebar-foreground">{APP.product}</span>
-            </div>
-            <div className="space-y-1">
-              {PREVIEW_NAV.map((label, i) => (
-                <div
-                  key={label}
-                  className={cn(
-                    'rounded-md px-2 py-1.5 text-[10px]',
-                    i === 0 ? 'bg-sidebar-hover font-medium text-sidebar-foreground' : 'text-sidebar-muted',
-                  )}
-                >
-                  {label}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="flex-1 space-y-3 overflow-hidden bg-background p-4">
-            <div>
-              <p className="font-display text-sm font-semibold">Welcome back</p>
-              <p className="text-[10px] text-muted-foreground">Here's what's happening at your firm today.</p>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {PREVIEW_STATS.map((label) => (
-                <div key={label} className="rounded-lg border border-border bg-card p-2.5">
-                  <p className="text-[9px] leading-tight text-muted-foreground">{label}</p>
-                  <p className="mt-1 font-display text-base font-semibold text-primary">••</p>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-lg border border-border bg-card p-3">
-              <p className="mb-2.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Recently updated matters
-              </p>
-              <div className="space-y-2.5">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="h-5 w-5 shrink-0 rounded-full bg-primary/15" />
-                    <span className="h-1.5 flex-1 rounded-full bg-muted" style={{ opacity: 1 - i * 0.15 }} />
-                    <span className="h-4 w-10 shrink-0 rounded-full bg-muted" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ delay: 0.3, duration: 0.6 }}
-        className="absolute -bottom-6 -left-6 hidden items-center gap-2.5 rounded-xl border border-border bg-card p-3 shadow-elevated sm:flex"
-      >
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/12 text-success">
-          <CheckCircle2 className="h-4 w-4" />
-        </span>
-        <div>
-          <p className="text-[10px] font-semibold">Invoice paid</p>
-          <p className="text-[9px] text-muted-foreground">₦450,000 received</p>
-        </div>
-      </motion.div>
-    </div>
+    <ul className="mt-8 space-y-3">
+      {LEFT_BEHIND.map((t, i) => (
+        <li key={t} className="relative w-fit text-base text-muted-foreground sm:text-lg">
+          {t}
+          <motion.span
+            aria-hidden
+            className="absolute left-0 top-1/2 h-[2px] w-full origin-left bg-primary"
+            initial={reduce ? false : { scaleX: 0 }}
+            whileInView={{ scaleX: 1 }}
+            viewport={{ once: true, margin: '-80px' }}
+            transition={{ duration: 0.6, ease: [0.87, 0, 0.13, 1], delay: 0.3 + i * 0.25 }}
+          />
+        </li>
+      ))}
+    </ul>
   )
 }
 
 export function LandingPage() {
-  const reduce = useReducedMotion()
   const year = new Date().getFullYear()
   const navigate = useNavigate()
   const { status, signOut } = useAuth()
+  const arrival = useArrival()
+  const [play, setPlay] = React.useState(arrival.arrived)
+  const lift = React.useCallback(() => setPlay(true), [])
 
   const goToLogin = async () => {
     // A stale session must never bounce this click straight to the dashboard —
@@ -373,386 +188,168 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
-      {/* ── Nav ─────────────────────────────────────────────── */}
-      <motion.header
-        initial={{ y: -24, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
-        className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background"
-      >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <div className="flex items-center gap-2.5">
-            <CounselMark className="h-9 w-9" />
-            <p className="font-display text-lg font-semibold text-foreground">{APP.product}</p>
-          </div>
+      {arrival.show && <Arrival onLift={lift} onDone={arrival.done} />}
+      <SiteHeader />
 
-          <nav className="hidden items-center gap-8 md:flex">
-            <Link to="/features" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Features
-            </Link>
-            <a href="#how-it-works" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Solutions
-            </a>
-            <Link to="/pricing" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Pricing
-            </Link>
-            <Link to="/blog" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Blog
-            </Link>
-            <a href="#contact" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Contacts
-            </a>
-          </nav>
+      <main>
+        <Hero play={play} contactEmail={CONTACT_EMAIL} />
 
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-border bg-transparent text-foreground hover:bg-accent hover:text-foreground"
-              onClick={goToLogin}
-            >
-              Log in
-            </Button>
-            <Button asChild size="sm" className="shadow-gold">
-              <Link to="/auth/register">Start Free</Link>
-            </Button>
-          </div>
-        </div>
-      </motion.header>
+        <OldWay />
 
-      {/* ── Hero ────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-background pb-24 pt-36 text-foreground">
-        {/* judicial backdrop: crisp watermark scales + gold hairlines */}
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <Scale
-            className="absolute -bottom-24 -left-28 h-[30rem] w-[30rem] text-primary/[0.055]"
-            strokeWidth={0.5}
-          />
-          <Gavel
-            className="absolute -right-16 -top-10 h-72 w-72 rotate-12 text-primary/[0.05]"
-            strokeWidth={0.5}
-          />
-          {/* fine columns of gold hairlines, like a courthouse colonnade */}
-          <div className="absolute inset-y-0 left-1/2 hidden w-px bg-gradient-to-b from-transparent via-primary/15 to-transparent lg:block" />
-          <div className="absolute inset-y-0 left-[8%] w-px bg-gradient-to-b from-transparent via-primary/10 to-transparent" />
-          <div className="absolute inset-y-0 right-[8%] w-px bg-gradient-to-b from-transparent via-primary/10 to-transparent" />
-          {/* hairline base rule */}
-          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-        </div>
+        <DayInChambers />
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-6 lg:grid-cols-2">
-          <motion.div variants={stagger} initial="hidden" animate="show">
-            <motion.p
-              variants={fadeUp}
-              className="mb-4 flex items-center gap-2 text-sm font-medium uppercase tracking-[0.18em] text-foreground/50"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-primary" /> {APP.brand}
-            </motion.p>
-            <motion.h1
-              variants={fadeUp}
-              className="font-display text-4xl font-semibold leading-[1.1] sm:text-5xl lg:text-[3.4rem]"
-            >
-              Run Your
-              <br />
-              <span className="text-primary">Law Firm</span>
-              <br />
-              with Confidence.
-            </motion.h1>
-            <motion.p variants={fadeUp} className="mt-6 max-w-lg text-lg leading-relaxed text-muted-foreground">
-              No task, deadline, or follow-up should ever get buried in someone's inbox or a
-              spreadsheet. The Counsel keeps every matter, from first filing to final invoice,
-              visible, assigned, and on schedule.
-            </motion.p>
-            <motion.div variants={fadeUp} className="mt-9 flex flex-wrap items-center gap-4">
-              <Button asChild size="lg" variant="outline" className="border-border bg-transparent text-foreground hover:bg-accent hover:text-foreground">
-                <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Book a Demo</a>
-              </Button>
-              <Button asChild size="lg" className="shadow-gold">
-                <Link to="/auth/register">
-                  Start Free Trial <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </motion.div>
-            <motion.p variants={fadeUp} className="mt-6 text-xs text-foreground/35">
-              30 days free, no card required. Set up your firm in minutes.
-            </motion.p>
-          </motion.div>
+        <FeaturesFan features={FEATURES} />
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.94 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.9, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <HeroEmblem />
-          </motion.div>
-        </div>
-      </section>
+        <CollectionsTrack />
 
-      {/* ── Stats strip ─────────────────────────────────────── */}
-      <section className="border-b border-border bg-card/40">
-        <Reveal className="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-6 py-12 sm:grid-cols-4">
-          {STATS.map((s) => (
-            <motion.div key={s.label} variants={fadeUp} className="text-center sm:text-left">
-              <p className="font-display text-3xl font-semibold text-primary sm:text-4xl">{s.value}</p>
-              <p className="mt-1 text-xs leading-snug text-muted-foreground sm:text-sm">{s.label}</p>
-            </motion.div>
-          ))}
-        </Reveal>
-      </section>
+        {/* ── Solutions + numbers (night) ─────────────────────── */}
+        <NightSection id="solutions" className="scroll-mt-16">
+          <div className="mx-auto max-w-6xl px-5 py-20 sm:px-6 lg:py-28">
+            <div className="grid gap-6 lg:grid-cols-2 lg:items-end">
+              <div>
+                <Eyebrow className="text-sidebar-accent">Solutions</Eyebrow>
+                <MaskLines className="mt-4 font-display text-4xl font-semibold leading-[1.02] sm:text-6xl" lines={['Built for every', 'kind of practice.']} />
+              </div>
+              <Rise delay={0.15}>
+                <p className="max-w-md text-base text-sidebar-muted sm:text-lg lg:ml-auto">
+                  From a single-desk practice to a multi-partner chambers, the same system scales with you.
+                </p>
+              </Rise>
+            </div>
 
-      {/* ── Mission statement ───────────────────────────────── */}
-      <section className="mx-auto max-w-3xl px-6 py-20 text-center">
-        <Reveal>
-          <motion.p variants={fadeUp} className="font-display text-2xl font-medium leading-snug text-foreground sm:text-3xl">
-            Legal work is detail work. The Counsel exists so your team spends that care on cases,
-            not on spreadsheets, shared drives, and missed filing dates.
-          </motion.p>
-        </Reveal>
-      </section>
-
-      {/* ── Product preview ─────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 py-24">
-        <Reveal className="grid items-center gap-14 lg:grid-cols-2">
-          <motion.div variants={fadeUp}>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">See it in action</p>
-            <h2 className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
-              Everything your firm needs, at a glance
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Open your dashboard and see what matters the moment you log in: active matters,
-              this week's hearings, revenue, and every client's latest activity. No spreadsheets
-              to reconcile, no separate tools to check.
-            </p>
-            <ul className="mt-6 space-y-3">
-              {[
-                'Role-aware dashboards for partners, associates and finance',
-                'Live activity across every matter your team touches',
-                'One-click Excel exports for anything you see',
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> {item}
-                </li>
+            <Stagger className="mt-14 grid border-t border-sidebar-border sm:grid-cols-2 lg:grid-cols-4">
+              {SEGMENTS.map((s) => (
+                <StaggerItem key={s.title} className="border-b border-sidebar-border py-7 sm:pr-6 lg:border-b-0 lg:border-r lg:px-6 lg:first:pl-0 lg:last:border-r-0">
+                  <s.icon className="h-5 w-5 text-sidebar-accent" />
+                  <h3 className="mt-4 font-display text-xl font-semibold">{s.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-sidebar-muted">{s.text}</p>
+                </StaggerItem>
               ))}
-            </ul>
-          </motion.div>
-          <motion.div variants={fadeUp}>
-            <DashboardPreview />
-          </motion.div>
-        </Reveal>
-      </section>
+            </Stagger>
 
-      {/* ── Features ────────────────────────────────────────── */}
-      <section id="features" className="mx-auto max-w-6xl px-6 py-24">
-        <Reveal className="mx-auto max-w-2xl text-center">
-          <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Everything a firm runs on
-          </motion.p>
-          <motion.h2 variants={fadeUp} className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
-            One workspace. The whole practice.
-          </motion.h2>
-          <motion.p variants={fadeUp} className="mt-4 text-muted-foreground">
-            Purpose-built modules that talk to each other, so a logged hour becomes an invoice,
-            and an invoice becomes insight.
-          </motion.p>
-        </Reveal>
-
-        <Reveal className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f) => (
-            <motion.div
-              key={f.title}
-              variants={fadeUp}
-              whileHover={reduce ? undefined : { y: -6 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-              className="group rounded-xl border border-border bg-card p-6 shadow-card transition-shadow hover:shadow-elevated"
-            >
-              <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/12 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                <f.icon className="h-5 w-5" />
-              </span>
-              <h3 className="font-display text-lg font-semibold">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.text}</p>
-            </motion.div>
-          ))}
-        </Reveal>
-      </section>
-
-      {/* ── How it works ────────────────────────────────────── */}
-      <section id="how-it-works" className="border-y border-border bg-card/60">
-        <div className="mx-auto max-w-6xl px-6 py-24">
-          <Reveal className="mx-auto max-w-2xl text-center">
-            <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              How it works
-            </motion.p>
-            <motion.h2 variants={fadeUp} className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
-              From courtroom to collections
-            </motion.h2>
-          </Reveal>
-          <Reveal className="mt-14 grid gap-10 md:grid-cols-3">
-            {STEPS.map((s, i) => (
-              <motion.div key={s.title} variants={fadeUp} className="relative text-center md:text-left">
-                <div className="mb-4 flex items-center justify-center gap-3 md:justify-start">
-                  <span className="font-display text-5xl font-semibold text-primary/25">0{i + 1}</span>
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/12 text-primary">
-                    <s.icon className="h-5 w-5" />
-                  </span>
+            <div className="mt-16 grid grid-cols-2 gap-y-10 border-t border-sidebar-border pt-12 lg:grid-cols-4">
+              {[
+                { v: '6', unit: 'modules', label: 'Working as one workspace' },
+                { v: '30', unit: 'days', label: 'Free trial on any plan, no card required' },
+                { v: String(AFRICA_TOTAL), unit: 'countries', label: 'Firms across Africa can sign up today' },
+                { v: '1', unit: 'workspace', label: 'Row-level security isolating every firm' },
+              ].map((s) => (
+                <div key={s.unit} className="pr-4">
+                  <p className="font-display text-5xl font-semibold text-sidebar-foreground sm:text-6xl">
+                    <Odometer value={s.v} />
+                    <span className="ml-1 text-base font-medium text-sidebar-accent">{s.unit}</span>
+                  </p>
+                  <p className="mt-2 max-w-[220px] text-sm text-sidebar-muted">{s.label}</p>
                 </div>
-                <h3 className="font-display text-lg font-semibold">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.text}</p>
-              </motion.div>
-            ))}
-          </Reveal>
-        </div>
-      </section>
+              ))}
+            </div>
+          </div>
+        </NightSection>
 
-      {/* ── Solutions for every size ─────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 py-24">
-        <Reveal className="mx-auto max-w-2xl text-center">
-          <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Solutions
-          </motion.p>
-          <motion.h2 variants={fadeUp} className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
-            Built for every kind of practice
-          </motion.h2>
-          <motion.p variants={fadeUp} className="mt-4 text-muted-foreground">
-            From a single-desk practice to a multi-partner chambers, the same system scales with you.
-          </motion.p>
-        </Reveal>
+        <AfricaReach />
 
-        <Reveal className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {SEGMENTS.map((s) => (
+        {/* ── Trust ─────────────────────────────────────────────── */}
+        <section className="border-t border-border">
+          <div className="mx-auto grid max-w-6xl gap-14 px-5 py-20 sm:px-6 lg:grid-cols-[1fr_1.3fr] lg:py-28">
+            <div>
+              <Eyebrow>Trusted beyond the software</Eyebrow>
+              <MaskLines className="mt-4 font-display text-4xl font-semibold leading-[1.02] sm:text-5xl" lines={['We stay with you', 'after launch.']} />
+              <StruckList />
+            </div>
+            <Stagger className="grid gap-x-10 sm:grid-cols-2">
+              {TRUST.map((t) => (
+                <StaggerItem key={t.title} className="border-t border-border py-6">
+                  <t.icon className="h-5 w-5 text-primary" />
+                  <h3 className="mt-3 font-display text-lg font-semibold">{t.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t.text}</p>
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </div>
+          <div className="border-t border-border">
+            <Rise className="mx-auto flex max-w-6xl flex-col gap-5 px-5 py-8 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary lg:shrink-0">Built with compliance in mind</p>
+              <div className="flex flex-wrap gap-x-8 gap-y-3">
+                {COMPLIANCE.map((c) => (
+                  <span key={c.label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <c.icon className="h-4 w-4 shrink-0 text-primary" /> {c.label}
+                  </span>
+                ))}
+              </div>
+            </Rise>
+          </div>
+        </section>
+
+        {/* ── FAQ ─────────────────────────────────────────────── */}
+        <section id="faq" className="scroll-mt-16 border-t border-border bg-primary/[0.04]">
+          <div className="mx-auto grid max-w-6xl gap-10 px-5 py-20 sm:px-6 lg:grid-cols-[1fr_1.4fr] lg:py-28">
+            <div>
+              <Eyebrow>Resources</Eyebrow>
+              <MaskLines className="mt-4 font-display text-4xl font-semibold leading-[1.02] sm:text-5xl" lines={['Frequently asked', 'questions.']} />
+            </div>
+            <Stagger className="border-t border-border">
+              {FAQS.map((f) => (
+                <StaggerItem key={f.q}>
+                  <details className="group border-b border-border py-5">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-lg font-semibold marker:content-none">
+                      {f.q}
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border transition-colors group-open:border-primary group-open:bg-primary group-open:text-primary-foreground">
+                        <ChevronDown className="h-4 w-4 transition-transform duration-300 group-open:rotate-180" />
+                      </span>
+                    </summary>
+                    <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">{f.a}</p>
+                  </details>
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </div>
+        </section>
+
+        {/* ── Closing CTA / Contact ───────────────────────────── */}
+        <section id="contact" className="scroll-mt-16 border-t border-border">
+          <div className="mx-auto max-w-4xl px-5 py-24 text-center sm:px-6 lg:py-32">
             <motion.div
-              key={s.title}
-              variants={fadeUp}
-              whileHover={reduce ? undefined : { y: -6 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card transition-shadow hover:shadow-elevated"
+              initial={{ scale: 0.8, opacity: 0 }}
+              whileInView={{ scale: [0.8, 1.06, 1], opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.9, ease: EXPO }}
             >
-              <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/12 text-primary">
-                <s.icon className="h-5 w-5" />
-              </span>
-              <h3 className="font-display text-lg font-semibold">{s.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.text}</p>
+              <CounselMark className="mx-auto h-16 w-16 sm:h-20 sm:w-20" />
             </motion.div>
-          ))}
-        </Reveal>
-      </section>
-
-      {/* ── Across Africa ─────────────────────────────────────── */}
-      <AfricaReach />
-
-      {/* ── Trust ─────────────────────────────────────────────── */}
-      <section className="border-y border-border bg-card/60">
-        <div className="mx-auto max-w-6xl px-6 py-24">
-          <Reveal className="mx-auto max-w-2xl text-center">
-            <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              Trusted beyond the software
-            </motion.p>
-            <motion.h2 variants={fadeUp} className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
-              We stay with you after launch
-            </motion.h2>
-          </Reveal>
-
-          <Reveal className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {TRUST.map((t) => (
-              <motion.div key={t.title} variants={fadeUp} className="text-center sm:text-left">
-                <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg bg-primary/12 text-primary sm:mx-0">
-                  <t.icon className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 font-display text-lg font-semibold">{t.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t.text}</p>
-              </motion.div>
-            ))}
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ── Compliance strip ─────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 py-12">
-        <Reveal className="flex flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
-          <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary sm:shrink-0">
-            Built with compliance in mind
-          </motion.p>
-          <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 sm:justify-end">
-            {COMPLIANCE.map((c) => (
-              <span key={c.label} className="flex items-center gap-2 text-sm text-muted-foreground">
-                <c.icon className="h-4 w-4 shrink-0 text-primary" /> {c.label}
-              </span>
-            ))}
-          </motion.div>
-        </Reveal>
-      </section>
-
-      {/* ── Pricing ─────────────────────────────────────────── */}
-      {/* ── FAQ ─────────────────────────────────────────────── */}
-      <section id="faq" className="border-y border-border bg-card/60">
-        <div className="mx-auto max-w-3xl px-6 py-24">
-          <Reveal className="mx-auto max-w-2xl text-center">
-            <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              Resources
-            </motion.p>
-            <motion.h2 variants={fadeUp} className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
-              Frequently asked questions
-            </motion.h2>
-          </Reveal>
-
-          <Reveal className="mt-12 space-y-3">
-            {FAQS.map((f) => (
-              <motion.details
-                key={f.q}
-                variants={fadeUp}
-                className="group rounded-xl border border-border bg-card p-5 open:shadow-card"
-              >
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-base font-semibold marker:content-none">
-                  {f.q}
-                  <ChevronDown className="h-4 w-4 shrink-0 text-primary transition-transform group-open:rotate-180" />
-                </summary>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
-              </motion.details>
-            ))}
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ── CTA band / Contact ──────────────────────────────── */}
-      <section id="contact" className="relative overflow-hidden border-t border-border bg-background text-foreground">
-        <Reveal className="relative mx-auto max-w-3xl px-6 py-24 text-center">
-          <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Contact
-          </motion.p>
-          <motion.h2 variants={fadeUp} className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
-            Ready to run a modern practice?
-          </motion.h2>
-          <motion.p variants={fadeUp} className="mx-auto mt-4 max-w-xl text-muted-foreground">
-            Join the firms replacing scattered spreadsheets and shared drives with one elegant,
-            secure workspace.
-          </motion.p>
-          <motion.div variants={fadeUp} className="mt-8 flex flex-wrap justify-center gap-4">
-            <Button asChild size="lg" className="shadow-gold">
-              <Link to="/auth/register">
-                Start Free <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="border-border bg-transparent text-foreground hover:bg-accent hover:text-foreground">
-              <Link to="/auth/login">Sign in</Link>
-            </Button>
-            <Button asChild size="lg" variant="ghost" className="text-foreground hover:bg-accent hover:text-foreground">
-              <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Talk to our team</a>
-            </Button>
-          </motion.div>
-          <motion.div
-            variants={fadeUp}
-            className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-foreground/50"
-          >
-            <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors hover:text-primary">
-              {CONTACT_EMAIL}
-            </a>
-            <span className="hidden text-foreground/20 sm:inline">•</span>
-            <a href={`tel:${CONTACT_PHONE_TEL}`} className="transition-colors hover:text-primary">
-              {CONTACT_PHONE_DISPLAY}
-            </a>
-          </motion.div>
-        </Reveal>
-      </section>
+            <MaskLines
+              className="mt-8 font-display text-5xl font-semibold leading-[0.98] tracking-[-0.02em] sm:text-7xl lg:text-8xl"
+              lines={['Ready to run a', <span className="text-primary">modern practice?</span>]}
+            />
+            <Rise delay={0.25}>
+              <p className="mx-auto mt-6 max-w-xl text-base text-muted-foreground sm:text-lg">
+                Join the firms replacing scattered spreadsheets and shared drives with one elegant, secure workspace.
+              </p>
+              <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+                <Button asChild size="lg" className="rounded-full shadow-gold">
+                  <Link to="/auth/register">
+                    Start Free <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline" className="rounded-full border-border bg-transparent text-foreground hover:bg-accent hover:text-foreground" onClick={goToLogin}>
+                  Sign in
+                </Button>
+                <Button asChild size="lg" variant="ghost" className="rounded-full text-foreground hover:bg-accent hover:text-foreground">
+                  <a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`}>Talk to our team</a>
+                </Button>
+              </div>
+              <div className="mt-8 flex flex-col items-center justify-center gap-x-6 gap-y-2 text-sm text-foreground/50 sm:flex-row">
+                <a href={`mailto:${CONTACT_EMAIL}`} className="break-all transition-colors hover:text-primary">
+                  {CONTACT_EMAIL}
+                </a>
+                <span className="hidden text-foreground/20 sm:inline">•</span>
+                <a href={`tel:${CONTACT_PHONE_TEL}`} className="transition-colors hover:text-primary">
+                  {CONTACT_PHONE_DISPLAY}
+                </a>
+              </div>
+            </Rise>
+          </div>
+        </section>
+      </main>
 
       {/* ── Footer ──────────────────────────────────────────── */}
       <footer className="border-t border-border bg-background py-16 text-foreground">

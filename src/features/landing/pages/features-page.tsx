@@ -24,6 +24,7 @@ import { cn } from '@/shared/lib/utils'
 import { SiteHeader } from '@/features/landing/components/site-header'
 import { SiteFooter } from '@/features/landing/components/site-footer'
 import { SeoCtaBand } from '@/features/landing/components/seo-cta-band'
+import { MaskWords, Rise } from '@/features/landing/components/motion-kit'
 
 interface Tab {
   id: string
@@ -241,7 +242,7 @@ function Explorer() {
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/12 text-primary">
               <tab.icon className="h-6 w-6" />
             </span>
-            <h2 className="mt-5 font-display text-3xl font-semibold leading-tight">{tab.title}</h2>
+            <MaskWords as="h2" text={tab.title} className="mt-5 font-display text-3xl font-semibold leading-tight" />
             <p className="mt-4 text-base leading-relaxed text-muted-foreground">{tab.text}</p>
             <ul className="mt-6 space-y-3">
               {tab.points.map((p) => (
@@ -287,12 +288,10 @@ export function FeaturesPage() {
       <main>
         <section className="mx-auto max-w-4xl px-6 pb-12 pt-20 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Inside the product</p>
-          <h1 className="mt-3 font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
-            See how your firm would run on The Counsel
-          </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <MaskWords as="h1" play text="See how your firm would run on The Counsel" className="mt-3 font-display text-[2.1rem] font-semibold sm:text-5xl lg:text-6xl leading-[1.08]" />
+          <Rise as="p" delay={0.35} className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             Pick a part of your practice below and look at the real screen, not a mock-up.
-          </p>
+          </Rise>
         </section>
 
         <Explorer />
@@ -301,9 +300,7 @@ export function FeaturesPage() {
           <div className="mx-auto max-w-6xl px-6 py-20">
             <div className="mx-auto max-w-2xl text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Around the cases</p>
-              <h2 className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
-                The rest of the practice, in the same place
-              </h2>
+              <MaskWords as="h2" text="The rest of the practice, in the same place" className="mt-3 font-display text-3xl font-semibold sm:text-4xl" />
             </div>
             <div className="mt-12 grid gap-8 md:grid-cols-3">
               {MORE.map((m, i) => (
@@ -334,7 +331,7 @@ export function FeaturesPage() {
         </section>
 
         <section className="mx-auto max-w-5xl px-6 py-20 text-center">
-          <h2 className="font-display text-2xl font-semibold sm:text-3xl">Built for the whole firm, not just the partners</h2>
+          <MaskWords as="h2" text="Built for the whole firm, not just the partners" className="font-display text-2xl font-semibold sm:text-3xl" />
           <ul className="mt-8 flex flex-wrap justify-center gap-3">
             {INCLUDED.map((i) => (
               <li

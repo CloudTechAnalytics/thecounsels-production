@@ -18,6 +18,7 @@ import { useSeo } from '@/shared/hooks/use-seo'
 import { SiteHeader } from '@/features/landing/components/site-header'
 import { SiteFooter } from '@/features/landing/components/site-footer'
 import { SeoCtaBand } from '@/features/landing/components/seo-cta-band'
+import { MaskWords, Rise, StaggerGrid } from '@/features/landing/components/motion-kit'
 
 const CAPABILITIES = [
   {
@@ -98,19 +99,17 @@ export function LegalPracticeManagementSoftwareAfricaPage() {
       <main>
         <section className="mx-auto max-w-4xl px-6 pb-16 pt-20 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">For Law Firms Across Africa</p>
-          <h1 className="mt-3 font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
-            Legal Practice Management Software for African Law Firms
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <MaskWords as="h1" play text="Legal Practice Management Software for African Law Firms" className="mt-3 font-display text-[2.1rem] font-semibold sm:text-5xl lg:text-6xl leading-[1.08]" />
+          <Rise as="p" delay={0.35} className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             The Counsel is a practice management platform built around how law firms across Africa actually
             work — from a solo practitioner to a multi-partner chambers, in Lagos, Accra, Nairobi,
             Johannesburg and beyond. Clients, matters, documents, hearings, tasks and billing live in one
             secure workspace, instead of scattered across spreadsheets, WhatsApp threads and shared drives.
-          </p>
+          </Rise>
         </section>
 
         <section className="mx-auto max-w-4xl px-6 pb-16">
-          <h2 className="font-display text-2xl font-semibold sm:text-3xl">What The Counsel is</h2>
+          <MaskWords as="h2" text="What The Counsel is" className="font-display text-2xl font-semibold sm:text-3xl" />
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
             The Counsel is a legal case management software that unifies the day-to-day operations of a law
             firm — case tracking, client records, court dates, documents, billing and reporting — under one
@@ -119,7 +118,7 @@ export function LegalPracticeManagementSoftwareAfricaPage() {
             matters, the shared drive holding documents, the notebook of hearing dates, and the separate
             billing sheet.
           </p>
-          <h2 className="mt-10 font-display text-2xl font-semibold sm:text-3xl">Who it is designed for</h2>
+          <MaskWords as="h2" text="Who it is designed for" className="mt-10 font-display text-2xl font-semibold sm:text-3xl" />
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
             Solo practitioners who need one hub for everything, small chambers organising as they grow,
             established firms whose billing and reporting need to scale with headcount, and larger,
@@ -131,10 +130,8 @@ export function LegalPracticeManagementSoftwareAfricaPage() {
 
         <section className="border-y border-border bg-card/40">
           <div className="mx-auto max-w-5xl px-6 py-16">
-            <h2 className="text-center font-display text-2xl font-semibold sm:text-3xl">
-              Everything an African law firm needs to run day to day
-            </h2>
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <MaskWords as="h2" text="Everything an African law firm needs to run day to day" className="text-center font-display text-2xl font-semibold sm:text-3xl" />
+            <StaggerGrid className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {CAPABILITIES.map((c) => (
                 <div key={c.title} className="rounded-xl border border-border bg-card p-6 shadow-card">
                   <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/12 text-primary">
@@ -144,12 +141,12 @@ export function LegalPracticeManagementSoftwareAfricaPage() {
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{c.text}</p>
                 </div>
               ))}
-            </div>
+            </StaggerGrid>
           </div>
         </section>
 
         <section className="mx-auto max-w-4xl px-6 py-16">
-          <h2 className="font-display text-2xl font-semibold sm:text-3xl">How a firm gets started</h2>
+          <MaskWords as="h2" text="How a firm gets started" className="font-display text-2xl font-semibold sm:text-3xl" />
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
             A firm signs up, sets up its workspace, and starts a free 30-day trial — no card required. From
             there, the firm's own admin invites the rest of the team, assigns roles, and can migrate in

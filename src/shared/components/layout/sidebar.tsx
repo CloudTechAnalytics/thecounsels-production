@@ -7,7 +7,8 @@ import { initialsOf } from '@/shared/lib/format'
 import { CounselMark } from '@/shared/components/counsel-mark'
 import { cn } from '@/shared/lib/utils'
 
-function useVisible() {
+/** Whether a nav item is allowed for this user + plan. Shared with the mobile tab bar. */
+export function useNavItemVisible() {
   const { has, hasAny } = usePermissions()
   const { activeOrgId } = useAuth()
   const { has: hasFeature } = usePlanFeature(activeOrgId)
@@ -22,7 +23,7 @@ function useVisible() {
 }
 
 export function Sidebar({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
-  const isVisible = useVisible()
+  const isVisible = useNavItemVisible()
   const { activeMembership } = useAuth()
   const org = activeMembership?.organization
 

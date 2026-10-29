@@ -5,6 +5,7 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { Button } from '@/shared/components/ui/button'
 import { SiteHeader } from '@/features/landing/components/site-header'
 import { SiteFooter } from '@/features/landing/components/site-footer'
+import { MaskWords } from '@/features/landing/components/motion-kit'
 
 /**
  * Unknown URL. Signed-in users keep the old behaviour (back to the app);
@@ -25,7 +26,7 @@ export function NotFoundPage() {
       <SiteHeader />
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-6 py-24 text-center">
         <p className="font-display text-6xl font-semibold text-primary">404</p>
-        <h1 className="mt-4 font-display text-2xl font-semibold sm:text-3xl">This page isn&rsquo;t on the docket</h1>
+        <MaskWords as="h1" play text="This page isn&rsquo;t on the docket" className="mt-4 font-display text-[2.1rem] font-semibold sm:text-[2.1rem] leading-[1.08]" />
         <p className="mt-3 text-muted-foreground">
           The link may be old or mistyped. Here are a few places to go instead.
         </p>

@@ -4,6 +4,7 @@ import { useSeo } from '@/shared/hooks/use-seo'
 import { SiteHeader } from '@/features/landing/components/site-header'
 import { SiteFooter } from '@/features/landing/components/site-footer'
 import { SeoCtaBand } from '@/features/landing/components/seo-cta-band'
+import { MaskWords, Rise, StaggerGrid } from '@/features/landing/components/motion-kit'
 
 const LIFECYCLE = [
   {
@@ -64,25 +65,23 @@ export function LegalCaseManagementSoftwarePage() {
       <main>
         <section className="mx-auto max-w-4xl px-6 pb-16 pt-20 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Case Management</p>
-          <h1 className="mt-3 font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
-            Manage Legal Cases and Matters in One Place
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <MaskWords as="h1" play text="Manage Legal Cases and Matters in One Place" className="mt-3 font-display text-[2.1rem] font-semibold sm:text-5xl lg:text-6xl leading-[1.08]" />
+          <Rise as="p" delay={0.35} className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             A matter in The Counsel isn't just a folder name — it's a numbered record that carries its own
             status, team, documents, notes, tasks, hearings and complete history from the day it's opened to
             the day it's closed.
-          </p>
+          </Rise>
         </section>
 
         <section className="mx-auto max-w-4xl px-6 pb-16">
-          <h2 className="font-display text-2xl font-semibold sm:text-3xl">A case, from intake to close</h2>
+          <MaskWords as="h2" text="A case, from intake to close" className="font-display text-2xl font-semibold sm:text-3xl" />
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
             Here's what following a single matter through the system actually looks like:
           </p>
         </section>
 
         <section className="mx-auto max-w-5xl px-6 pb-16">
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <StaggerGrid className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {LIFECYCLE.map((step, i) => (
               <div key={step.title} className="rounded-xl border border-border bg-card p-6 shadow-card">
                 <div className="mb-4 flex items-center gap-3">
@@ -95,12 +94,12 @@ export function LegalCaseManagementSoftwarePage() {
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.text}</p>
               </div>
             ))}
-          </div>
+          </StaggerGrid>
         </section>
 
         <section className="border-y border-border bg-card/40">
           <div className="mx-auto max-w-4xl px-6 py-16">
-            <h2 className="font-display text-2xl font-semibold sm:text-3xl">Why case status matters</h2>
+            <MaskWords as="h2" text="Why case status matters" className="font-display text-2xl font-semibold sm:text-3xl" />
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
               Because status, assignment and activity are all tracked on the matter itself rather than in a
               separate tracker someone has to keep in sync, a partner can see the real state of the whole

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Check, LogOut, Menu, RefreshCw, Settings, Sparkles, UserCircle, Users2, ArrowLeft, MapPin } from 'lucide-react'
+import { Check, Download, LogOut, Menu, Moon, RefreshCw, Settings, Sparkles, Sun, UserCircle, Users2, ArrowLeft, MapPin } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { useBackToWorkspaceTarget } from '@/shared/hooks/use-back-to-workspace-target'
@@ -12,6 +12,8 @@ import { GlobalSearch } from '@/shared/components/layout/global-search'
 import { NotificationBell } from '@/features/notifications/components/notification-bell'
 import { SubscriptionStatusPill } from '@/features/subscription-billing/components/subscription-status-banner'
 import { ThemeToggle } from '@/shared/components/theme-toggle'
+import { useTheme } from '@/shared/context/theme-provider'
+import { useInstallAction } from '@/shared/components/install-app'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +30,8 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   const inHrWorkspace = location.pathname.startsWith('/hr')
   const backToWorkspaceTarget = useBackToWorkspaceTarget()
   const { has: hasFeature } = usePlanFeature(activeOrgId)
+  const { resolvedTheme, setTheme } = useTheme()
+  const installApp = useInstallAction()
 
   const roleKey = activeMembership?.role.key
   const roleLabel = roleKey ? ROLE_META[roleKey]?.label : activeMembership?.role.name
@@ -49,10 +53,10 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
           </Button>
         )}
         <SubscriptionStatusPill />
-        <Button variant="ghost" size="icon" onClick={() => window.location.reload()} aria-label="Refresh page" title="Refresh page">
+        <Button variant="ghost" size="icon" className="hidden sm:inline-flex" onClick={() => window.location.reload()} aria-label="Refresh page" title="Refresh page">
           <RefreshCw className="h-5 w-5" />
         </Button>
-        <ThemeToggle />
+        <ThemeToggle className="hidden sm:flex" />
         <NotificationBell />
 
         <DropdownMenu>
@@ -123,6 +127,17 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
             <DropdownMenuItem onClick={() => navigate('/settings')}>
               <UserCircle /> Profile & account
             </DropdownMenuItem>
+            {installApp.available && (
+              <DropdownMenuItem onClick={installApp.start}>
+                <Download /> Install app
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem className="sm:hidden" onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}>
+              {resolvedTheme === 'dark' ? <Sun /> : <Moon />} {resolvedTheme === 'dark' ? 'Light mode' : 'Dark mode'}
+            </DropdownMenuItem>
+            <DropdownMenuItem className="sm:hidden" onClick={() => window.location.reload()}>
+              <RefreshCw /> Refresh
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/settings')}>
               <Settings /> Settings
             </DropdownMenuItem>
@@ -139,6 +154,7 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      {installApp.dialog}
     </header>
   )
 }

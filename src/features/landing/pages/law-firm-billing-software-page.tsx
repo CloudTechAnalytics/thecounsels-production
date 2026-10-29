@@ -4,6 +4,7 @@ import { useSeo } from '@/shared/hooks/use-seo'
 import { SiteHeader } from '@/features/landing/components/site-header'
 import { SiteFooter } from '@/features/landing/components/site-footer'
 import { SeoCtaBand } from '@/features/landing/components/seo-cta-band'
+import { MaskWords, Rise, StaggerGrid } from '@/features/landing/components/motion-kit'
 
 const BILLING_AREAS = [
   { icon: Clock, title: 'Time entries', text: 'Lawyers log billable time against the matter they did the work for, as the day happens — not reconstructed from memory at month end.' },
@@ -32,22 +33,18 @@ export function LawFirmBillingSoftwarePage() {
       <main>
         <section className="mx-auto max-w-4xl px-6 pb-16 pt-20 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Billing &amp; Invoicing</p>
-          <h1 className="mt-3 font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
-            Billing and Invoicing for Law Firms
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <MaskWords as="h1" play text="Billing and Invoicing for Law Firms" className="mt-3 font-display text-[2.1rem] font-semibold sm:text-5xl lg:text-6xl leading-[1.08]" />
+          <Rise as="p" delay={0.35} className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             Billable work happens on the matter — logged hours, disbursements, expenses. The Counsel turns
             that directly into invoices and tracks what's been collected, without a separate billing
             spreadsheet reconciled against what lawyers actually did.
-          </p>
+          </Rise>
         </section>
 
         <section className="border-y border-border bg-card/40">
           <div className="mx-auto max-w-5xl px-6 py-16">
-            <h2 className="text-center font-display text-2xl font-semibold sm:text-3xl">
-              From billable work to collected revenue
-            </h2>
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <MaskWords as="h2" text="From billable work to collected revenue" className="text-center font-display text-2xl font-semibold sm:text-3xl" />
+            <StaggerGrid className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {BILLING_AREAS.map((a) => (
                 <div key={a.title} className="rounded-xl border border-border bg-card p-6 shadow-card">
                   <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/12 text-primary">
@@ -57,12 +54,12 @@ export function LawFirmBillingSoftwarePage() {
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{a.text}</p>
                 </div>
               ))}
-            </div>
+            </StaggerGrid>
           </div>
         </section>
 
         <section className="mx-auto max-w-4xl px-6 py-16">
-          <h2 className="font-display text-2xl font-semibold sm:text-3xl">Billing tied to the matter, not a separate system</h2>
+          <MaskWords as="h2" text="Billing tied to the matter, not a separate system" className="font-display text-2xl font-semibold sm:text-3xl" />
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
             Because time and expenses are logged against the same{' '}
             <Link to="/legal-case-management-software" className="text-primary hover:underline">

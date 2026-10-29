@@ -40,6 +40,7 @@ export function NotificationBell() {
     if (prefs?.browser_enabled) {
       fireBrowserNotification(row.title, {
         tag: row.id,
+        url: resolveNotificationHref(row),
         onClick: () => navigate(resolveNotificationHref(row)),
       })
     }

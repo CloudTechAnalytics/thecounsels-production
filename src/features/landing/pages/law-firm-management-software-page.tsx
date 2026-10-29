@@ -16,6 +16,7 @@ import { useSeo } from '@/shared/hooks/use-seo'
 import { SiteHeader } from '@/features/landing/components/site-header'
 import { SiteFooter } from '@/features/landing/components/site-footer'
 import { SeoCtaBand } from '@/features/landing/components/seo-cta-band'
+import { MaskWords, Rise, StaggerGrid } from '@/features/landing/components/motion-kit'
 
 const AREAS = [
   { icon: Users2, title: 'Clients', text: 'A single record per client — individual or corporate — with every matter, contact and piece of correspondence linked to it, instead of scattered across separate files.' },
@@ -46,14 +47,12 @@ export function LawFirmManagementSoftwarePage() {
       <main>
         <section className="mx-auto max-w-4xl px-6 pb-16 pt-20 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Law Firm Management</p>
-          <h1 className="mt-3 font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
-            Law Firm Management Software for Modern African Practices
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <MaskWords as="h1" play text="Law Firm Management Software for Modern African Practices" className="mt-3 font-display text-[2.1rem] font-semibold sm:text-5xl lg:text-6xl leading-[1.08]" />
+          <Rise as="p" delay={0.35} className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             Running a firm means managing more than any one case — it's the people, the workload across the
             whole team, the documents everyone needs access to, and the numbers leadership needs to see. The
             Counsel is built around all of that at once, not just the case file.
-          </p>
+          </Rise>
         </section>
 
         <section className="mx-auto max-w-4xl px-6 pb-16">
@@ -61,7 +60,7 @@ export function LawFirmManagementSoftwarePage() {
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
               <Layers className="h-5 w-5" />
             </span>
-            <h2 className="font-display text-2xl font-semibold sm:text-3xl">One system, the whole firm</h2>
+            <MaskWords as="h2" text="One system, the whole firm" className="font-display text-2xl font-semibold sm:text-3xl" />
           </div>
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
             Most firms don't lack tools — they have too many disconnected ones: a spreadsheet for matters,
@@ -74,10 +73,8 @@ export function LawFirmManagementSoftwarePage() {
 
         <section className="border-y border-border bg-card/40">
           <div className="mx-auto max-w-5xl px-6 py-16">
-            <h2 className="text-center font-display text-2xl font-semibold sm:text-3xl">
-              What you manage day to day
-            </h2>
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <MaskWords as="h2" text="What you manage day to day" className="text-center font-display text-2xl font-semibold sm:text-3xl" />
+            <StaggerGrid className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {AREAS.map((a) => (
                 <div key={a.title} className="rounded-xl border border-border bg-card p-6 shadow-card">
                   <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/12 text-primary">
@@ -87,12 +84,12 @@ export function LawFirmManagementSoftwarePage() {
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{a.text}</p>
                 </div>
               ))}
-            </div>
+            </StaggerGrid>
           </div>
         </section>
 
         <section className="mx-auto max-w-4xl px-6 py-16">
-          <h2 className="font-display text-2xl font-semibold sm:text-3xl">Built to grow with the firm</h2>
+          <MaskWords as="h2" text="Built to grow with the firm" className="font-display text-2xl font-semibold sm:text-3xl" />
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
             A solo practitioner and a twenty-partner chambers use the same system, scoped differently — more
             users, more branches, and finer-grained reporting as the firm grows, without switching tools

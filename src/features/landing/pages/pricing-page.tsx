@@ -18,6 +18,7 @@ import { SiteHeader } from '@/features/landing/components/site-header'
 import { SiteFooter } from '@/features/landing/components/site-footer'
 import { SeoCtaBand } from '@/features/landing/components/seo-cta-band'
 import { PUBLIC_PLANS, naira } from '@/features/landing/lib/pricing-data'
+import { MaskWords, Rise } from '@/features/landing/components/motion-kit'
 
 const CONTACT_EMAIL = 'cloudtechanalytics.consultant@gmail.com'
 const INTENDED_PLAN_KEY = 'counsel.intended_plan'
@@ -76,13 +77,11 @@ export function PricingPage() {
       <main>
         <section className="mx-auto max-w-3xl px-6 pb-10 pt-20 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Pricing</p>
-          <h1 className="mt-3 font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
-            One price for your whole firm
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <MaskWords as="h1" play text="One price for your whole firm" className="mt-3 font-display text-[2.1rem] font-semibold sm:text-5xl lg:text-6xl leading-[1.08]" />
+          <Rise as="p" delay={0.35} className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             No per-lawyer surprises. Pick the plan that fits your headcount, try it free for 30 days, and
             change it whenever your firm changes.
-          </p>
+          </Rise>
 
           <div
             role="radiogroup"
@@ -136,7 +135,7 @@ export function PricingPage() {
                       Recommended
                     </span>
                   )}
-                  <h2 className="font-display text-xl font-semibold">{p.name}</h2>
+                  <MaskWords as="h2" text={p.name} className="font-display text-xl font-semibold" />
                   <p className="mt-1 min-h-[2.75rem] text-sm text-muted-foreground">{p.tagline}</p>
 
                   <div className="mt-5 min-h-[7.5rem] border-b border-border pb-5">
@@ -216,7 +215,7 @@ export function PricingPage() {
 
         <section className="border-y border-border bg-card/50">
           <div className="mx-auto max-w-5xl px-6 py-16">
-            <h2 className="text-center font-display text-2xl font-semibold sm:text-3xl">Every plan includes</h2>
+            <MaskWords as="h2" text="Every plan includes" className="text-center font-display text-2xl font-semibold sm:text-3xl" />
             <ul className="mt-10 grid gap-x-8 gap-y-4 sm:grid-cols-2">
               {INCLUDED.map((i) => (
                 <li key={i} className="flex items-start gap-2.5 text-sm sm:text-base">
@@ -228,7 +227,7 @@ export function PricingPage() {
         </section>
 
         <section className="mx-auto max-w-3xl px-6 py-20">
-          <h2 className="text-center font-display text-2xl font-semibold sm:text-3xl">Billing questions</h2>
+          <MaskWords as="h2" text="Billing questions" className="text-center font-display text-2xl font-semibold sm:text-3xl" />
           <div className="mt-10 space-y-3">
             {FAQS.map((f) => (
               <details key={f.q} className="group rounded-xl border border-border bg-card p-5 open:shadow-card">

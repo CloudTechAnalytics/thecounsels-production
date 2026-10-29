@@ -6,6 +6,7 @@ import { SiteFooter } from '@/features/landing/components/site-footer'
 import { SeoCtaBand } from '@/features/landing/components/seo-cta-band'
 import { POSTS, type BlogPost } from '@/features/blog/posts'
 import { PostCard, PostRow } from '@/features/blog/components/post-card'
+import { MaskWords, Rise, StaggerGrid } from '@/features/landing/components/motion-kit'
 
 const CATEGORIES: Array<BlogPost['category'] | 'All'> = [
   'All',
@@ -36,13 +37,11 @@ export function BlogPage() {
       <main>
         <section className="mx-auto max-w-3xl px-6 pb-10 pt-20 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">The Journal</p>
-          <h1 className="mt-3 font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
-            Notes on running a modern law practice
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <MaskWords as="h1" play text="Notes on running a modern law practice" className="mt-3 font-display text-[2.1rem] font-semibold sm:text-5xl lg:text-6xl leading-[1.08]" />
+          <Rise as="p" delay={0.35} className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             Practical guides for firms across Africa on court dates, billing, matters and the everyday work
             that keeps a practice running well.
-          </p>
+          </Rise>
 
           <div role="tablist" aria-label="Filter articles" className="mt-8 flex flex-wrap justify-center gap-2">
             {CATEGORIES.map((c) => (
@@ -67,17 +66,17 @@ export function BlogPage() {
 
         <section className="mx-auto max-w-6xl px-6 pb-20">
           {top.length > 0 && (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <StaggerGrid className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {top.map((p) => (
                 <PostCard key={p.slug} post={p} />
               ))}
-            </div>
+            </StaggerGrid>
           )}
 
           {rest.length > 0 && (
             <>
               {top.length > 0 && (
-                <h2 className="mb-6 mt-14 font-display text-2xl font-semibold">More articles</h2>
+                <MaskWords as="h2" text="More articles" className="mb-6 mt-14 font-display text-2xl font-semibold" />
               )}
               <div className={cn('mx-auto flex max-w-4xl flex-col gap-5', top.length === 0 && 'mt-2')}>
                 {rest.map((p) => (

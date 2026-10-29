@@ -36,7 +36,7 @@ const FEATURED: { name: string; code: string }[] = [
 
 const NON_AFRICAN = new Set(['United Kingdom', 'United States', 'Canada', 'United Arab Emirates', 'India', 'Other'])
 /** African countries in the sign-up list, derived so the number never drifts. */
-const AFRICA_TOTAL = COUNTRIES.filter((c) => !NON_AFRICAN.has(c)).length
+export const AFRICA_TOTAL = COUNTRIES.filter((c) => !NON_AFRICAN.has(c)).length
 const MORE = AFRICA_TOTAL - FEATURED.length
 
 function FlagTile({ name, code, delay }: { name: string; code: string; delay: number }) {

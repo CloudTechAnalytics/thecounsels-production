@@ -171,3 +171,70 @@
     box-shadow: inset 0 0 0 1px hsl(var(--border) / 0.7);
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Phone / installed-app polish (PWA)
+ * ------------------------------------------------------------------------- */
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+  /* iOS zooms the whole page into any field under 16px and never zooms back.
+     On touch screens, keep form controls at 16px so tapping a field doesn't
+     jolt the layout. Desktop sizes are untouched. */
+  @media (pointer: coarse) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+/* Installed app (opened from the Home Screen): no rubber-band bounce on the
+   page itself, and no long-press callouts on UI chrome. Scrolling inside
+   panels still works normally. */
+@media (display-mode: standalone) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
+  nav,
+  header,
+  button {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Marketing site: children of <StaggerGrid> settle up one after another. */
+@layer components {
+  .stagger-grid > * {
+    opacity: 0;
+    transform: translateY(28px);
+    transition:
+      opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .stagger-grid.is-in > * {
+    opacity: 1;
+    transform: none;
+  }
+  .stagger-grid.is-in > :nth-child(2) { transition-delay: 80ms; }
+  .stagger-grid.is-in > :nth-child(3) { transition-delay: 160ms; }
+  .stagger-grid.is-in > :nth-child(4) { transition-delay: 240ms; }
+  .stagger-grid.is-in > :nth-child(5) { transition-delay: 320ms; }
+  .stagger-grid.is-in > :nth-child(6) { transition-delay: 400ms; }
+  .stagger-grid.is-in > :nth-child(7) { transition-delay: 480ms; }
+  .stagger-grid.is-in > :nth-child(8) { transition-delay: 560ms; }
+  .stagger-grid.is-in > :nth-child(n + 9) { transition-delay: 640ms; }
+  @media (prefers-reduced-motion: reduce) {
+    .stagger-grid > * {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+}

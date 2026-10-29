@@ -48,7 +48,7 @@ const dayFraction = (t: string) => {
   return Math.min(1, Math.max(0.04, (h * 60 + m - 480) / 720))
 }
 
-function BrowserFrame({ path, children, className }: { path: string; children: React.ReactNode; className?: string }) {
+export function BrowserFrame({ path, children, className }: { path: string; children: React.ReactNode; className?: string }) {
   return (
     <div className={cn('overflow-hidden rounded-2xl border border-border bg-card shadow-elevated', className)}>
       <div className="flex items-center gap-1.5 border-b border-border bg-muted/40 px-4 py-2.5">

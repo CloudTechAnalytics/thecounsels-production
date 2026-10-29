@@ -38,6 +38,10 @@ export function isIos(): boolean {
   return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 }
 
+export function isAndroid(): boolean {
+  return typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent)
+}
+
 /** Opens the native install sheet (Android/desktop Chrome). Resolves true if the user installed. */
 export async function promptInstall(): Promise<boolean> {
   if (!deferred) return false

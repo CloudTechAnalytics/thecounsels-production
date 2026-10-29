@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Download, Share, SquarePlus, X } from 'lucide-react'
+import { Download, MoreVertical, Share, SquarePlus, X } from 'lucide-react'
 import { usePwaInstall } from '@/shared/hooks/use-pwa-install'
 import { CounselMark } from '@/shared/components/counsel-mark'
 import { Button } from '@/shared/components/ui/button'
@@ -17,49 +17,70 @@ function recentlyDismissed(): boolean {
   }
 }
 
-/** Share → Add to Home Screen, spelled out — iOS has no install button. */
-export function IosInstallDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+const STEPS = {
+  ios: {
+    lead: 'It opens full-screen like any other app.',
+    steps: [
+      <>
+        Tap the <Share className="mx-0.5 inline h-4 w-4 -translate-y-px text-primary" /> <b>Share</b> button. In Safari it's in the bottom bar; in Chrome
+        it's next to the address bar.
+      </>,
+      <>
+        Scroll down and tap <SquarePlus className="mx-0.5 inline h-4 w-4 -translate-y-px text-primary" /> <b>Add to Home Screen</b>.
+      </>,
+      <>
+        Tap <b>Add</b>. The Counsel icon appears on your Home Screen.
+      </>,
+    ],
+  },
+  android: {
+    lead: 'It opens full-screen like any other app.',
+    steps: [
+      <>
+        Tap the <MoreVertical className="mx-0.5 inline h-4 w-4 -translate-y-px text-primary" /> <b>menu</b> at the top right of Chrome.
+      </>,
+      <>
+        Tap <b>Install app</b> (on some phones it says <b>Add to Home screen</b>).
+      </>,
+      <>
+        Tap <b>Install</b>. The Counsel icon appears on your Home screen.
+      </>,
+    ],
+  },
+}
+
+/** Step-by-step install instructions for when the browser won't show its own install button. */
+export function InstallStepsDialog({ platform, open, onOpenChange }: { platform: 'ios' | 'android'; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const { lead, steps } = STEPS[platform]
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Add The Counsel to your Home Screen</DialogTitle>
-          <DialogDescription>It opens full-screen like any other app. This works in Safari.</DialogDescription>
+          <DialogDescription>{lead}</DialogDescription>
         </DialogHeader>
         <ol className="space-y-4 text-sm">
-          <li className="flex items-start gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/12 text-xs font-semibold text-primary">1</span>
-            <span className="pt-1">
-              Tap the <Share className="mx-0.5 inline h-4 w-4 -translate-y-px text-primary" /> <b>Share</b> button in Safari's toolbar.
-            </span>
-          </li>
-          <li className="flex items-start gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/12 text-xs font-semibold text-primary">2</span>
-            <span className="pt-1">
-              Scroll down and tap <SquarePlus className="mx-0.5 inline h-4 w-4 -translate-y-px text-primary" /> <b>Add to Home Screen</b>.
-            </span>
-          </li>
-          <li className="flex items-start gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/12 text-xs font-semibold text-primary">3</span>
-            <span className="pt-1">
-              Tap <b>Add</b>. The Counsel icon appears on your Home Screen.
-            </span>
-          </li>
+          {steps.map((step, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/12 text-xs font-semibold text-primary">{i + 1}</span>
+              <span className="pt-1">{step}</span>
+            </li>
+          ))}
         </ol>
       </DialogContent>
     </Dialog>
   )
 }
 
-/** Starts the right install flow for this device. Returns null when the app is installed or can't be. */
+/** Starts the right install flow for this device. `available` is false when the app is installed or can't be. */
 export function useInstallAction() {
   const { mode, install } = usePwaInstall()
-  const [iosOpen, setIosOpen] = React.useState(false)
+  const [stepsOpen, setStepsOpen] = React.useState(false)
   const start = React.useCallback(() => {
-    if (mode === 'ios') setIosOpen(true)
-    else if (mode === 'prompt') void install()
+    if (mode === 'prompt') void install()
+    else if (mode) setStepsOpen(true)
   }, [mode, install])
-  const dialog = <IosInstallDialog open={iosOpen} onOpenChange={setIosOpen} />
+  const dialog = mode === 'ios' || mode === 'android' ? <InstallStepsDialog platform={mode} open={stepsOpen} onOpenChange={setStepsOpen} /> : null
   return { available: mode !== null, start, dialog }
 }
 

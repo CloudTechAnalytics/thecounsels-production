@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Menu, X } from 'lucide-react'
+import { ArrowRight, Menu, Smartphone, X } from 'lucide-react'
 import { CounselMark } from '@/shared/components/counsel-mark'
 import { ThemeToggle } from '@/shared/components/theme-toggle'
 import { Button } from '@/shared/components/ui/button'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { EXPO } from '@/features/landing/components/motion-kit'
 import { MarketingLoader } from '@/features/landing/components/home/arrival'
+import { useInstallAction } from '@/shared/components/install-app'
 import { cn } from '@/shared/lib/utils'
 import { APP } from '@/shared/config/env'
 
@@ -35,6 +36,7 @@ export function SiteHeader() {
   const navigate = useNavigate()
   const { status, signOut } = useAuth()
   const reduce = useReducedMotion()
+  const getApp = useInstallAction()
 
   useEffect(() => setOpen(false), [pathname])
 
@@ -84,6 +86,7 @@ export function SiteHeader() {
   return (
     <>
       <MarketingLoader />
+      {getApp.dialog}
       <header
         className={cn(
           'sticky top-0 z-50 transition-colors duration-300',
@@ -182,6 +185,11 @@ export function SiteHeader() {
               <Button size="lg" variant="outline" className="w-full rounded-full border-border bg-transparent" onClick={goToLogin}>
                 Log in
               </Button>
+              {getApp.available && (
+                <Button size="lg" variant="ghost" className="w-full rounded-full" onClick={getApp.start}>
+                  <Smartphone className="h-4 w-4 text-primary" /> Get the app
+                </Button>
+              )}
               <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
                 <span>No card required</span>
                 <ThemeToggle />

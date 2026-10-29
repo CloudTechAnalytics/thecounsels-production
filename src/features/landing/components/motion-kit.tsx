@@ -10,6 +10,7 @@ import {
   type Variants,
 } from 'framer-motion'
 import { cn } from '@/shared/lib/utils'
+import { useLoaderLifted } from '@/features/landing/components/loader-store'
 
 /*
  * Motion vocabulary for the marketing site: lines that rise out of a mask,
@@ -54,7 +55,8 @@ export function MaskLines({
   const reduce = useReducedMotion()
   const ref = React.useRef<HTMLElement>(null)
   const inView = useInView(ref, { once: true, margin: '-60px' })
-  const go = play ?? inView
+  const lifted = useLoaderLifted()
+  const go = lifted && (play ?? inView)
   const Comp = motion[as] as typeof motion.div
   return (
     <Comp ref={ref as React.Ref<HTMLDivElement>} className={className} initial={reduce ? 'show' : 'hidden'} animate={go || reduce ? 'show' : 'hidden'}>
@@ -75,7 +77,8 @@ export function MaskWords({ text, as = 'h2', className, delay = 0, play }: { tex
   const reduce = useReducedMotion()
   const ref = React.useRef<HTMLElement>(null)
   const inView = useInView(ref, { once: true, margin: '-60px' })
-  const go = play ?? inView
+  const lifted = useLoaderLifted()
+  const go = lifted && (play ?? inView)
   const Comp = motion[as] as typeof motion.div
   const words = text.split(' ')
   return (
@@ -111,7 +114,8 @@ export function Rise({
   const reduce = useReducedMotion()
   const ref = React.useRef<HTMLElement>(null)
   const inView = useInView(ref, { once: true, margin: '-60px' })
-  const go = play ?? inView
+  const lifted = useLoaderLifted()
+  const go = lifted && (play ?? inView)
   const Comp = motion[as] as typeof motion.div
   return (
     <Comp
@@ -160,7 +164,8 @@ export function Odometer({ value, className, play }: { value: string; className?
   const reduce = useReducedMotion()
   const ref = React.useRef<HTMLSpanElement>(null)
   const inView = useInView(ref, { once: true, margin: '-40px' })
-  const go = reduce || (play ?? inView)
+  const lifted = useLoaderLifted()
+  const go = reduce || (lifted && (play ?? inView))
   const chars = value.split('')
   let d = 0
   return (
@@ -262,9 +267,10 @@ export function Eyebrow({ children, className }: { children: React.ReactNode; cl
 export function StaggerGrid({ children, className, as = 'div' }: { children: React.ReactNode; className?: string; as?: 'div' | 'ul' | 'ol' }) {
   const ref = React.useRef<HTMLElement>(null)
   const inView = useInView(ref, { once: true, margin: '-60px' })
+  const lifted = useLoaderLifted()
   const Comp = as as 'div'
   return (
-    <Comp ref={ref as React.Ref<HTMLDivElement>} className={cn('stagger-grid', inView && 'is-in', className)}>
+    <Comp ref={ref as React.Ref<HTMLDivElement>} className={cn('stagger-grid', lifted && inView && 'is-in', className)}>
       {children}
     </Comp>
   )

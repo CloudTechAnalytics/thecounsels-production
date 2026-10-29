@@ -1,4 +1,3 @@
-import * as React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
@@ -27,7 +26,7 @@ import { CounselMark } from '@/shared/components/counsel-mark'
 import { AfricaReach, AFRICA_TOTAL } from '@/features/landing/components/africa-reach'
 import { SiteHeader } from '@/features/landing/components/site-header'
 import { EXPO, Eyebrow, MaskLines, NightSection, Odometer, Rise, Stagger, StaggerItem } from '@/features/landing/components/motion-kit'
-import { Arrival, useArrival } from '@/features/landing/components/home/arrival'
+import { useLoaderLifted } from '@/features/landing/components/loader-store'
 import { Hero } from '@/features/landing/components/home/hero'
 import { OldWay } from '@/features/landing/components/home/old-way'
 import { DayInChambers } from '@/features/landing/components/home/day-in-chambers'
@@ -175,9 +174,7 @@ export function LandingPage() {
   const year = new Date().getFullYear()
   const navigate = useNavigate()
   const { status, signOut } = useAuth()
-  const arrival = useArrival()
-  const [play, setPlay] = React.useState(arrival.arrived)
-  const lift = React.useCallback(() => setPlay(true), [])
+  const play = useLoaderLifted()
 
   const goToLogin = async () => {
     // A stale session must never bounce this click straight to the dashboard —
@@ -188,7 +185,6 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
-      {arrival.show && <Arrival onLift={lift} onDone={arrival.done} />}
       <SiteHeader />
 
       <main>

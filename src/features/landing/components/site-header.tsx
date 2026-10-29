@@ -7,6 +7,7 @@ import { ThemeToggle } from '@/shared/components/theme-toggle'
 import { Button } from '@/shared/components/ui/button'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { EXPO } from '@/features/landing/components/motion-kit'
+import { MarketingLoader } from '@/features/landing/components/home/arrival'
 import { cn } from '@/shared/lib/utils'
 import { APP } from '@/shared/config/env'
 
@@ -82,6 +83,7 @@ export function SiteHeader() {
 
   return (
     <>
+      <MarketingLoader />
       <header
         className={cn(
           'sticky top-0 z-50 transition-colors duration-300',

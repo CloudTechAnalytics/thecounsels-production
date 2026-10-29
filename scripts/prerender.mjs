@@ -10,6 +10,8 @@
  *   dist/index.html            the homepage, prerendered
  *   dist/<path>.html           every other public page, prerendered
  *   dist/app.html              the untouched SPA shell, for every app route
+ *                            (vercel.json rewrites to "/app": with cleanUrls the
+ *                            ".html" form is not matched and 404s)
  */
 import fs from 'node:fs'
 import path from 'node:path'

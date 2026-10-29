@@ -6,7 +6,7 @@
  * is never touched, so nothing confidential is stored on the device and every
  * screen still reads live data. Bump VERSION to force-drop old caches.
  */
-const VERSION = 'counsel-shell-v1'
+const VERSION = 'counsel-shell-v2'
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/brand/counsel-symbol-gold.svg']
 
 self.addEventListener('install', (event) => {
@@ -27,15 +27,16 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url)
   if (url.origin !== self.location.origin) return          // Supabase, fonts, Sentry: straight to network
 
-  // Pages: always try the network first so a new deploy shows up immediately;
-  // fall back to the cached shell only when offline.
+  // Pages: always try the network first so a new deploy shows up immediately.
+  // Each page is cached under its own URL (public pages are prerendered, so
+  // they differ); offline, fall back to that page, else the homepage shell.
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          if (res.ok && !url.pathname.includes('.')) {
+          if (res.ok && !res.redirected) {
             const copy = res.clone()
-            caches.open(VERSION).then((c) => c.put('/', copy))
+            caches.open(VERSION).then((c) => c.put(req, copy))
           }
           return res
         })

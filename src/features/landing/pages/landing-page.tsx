@@ -186,6 +186,17 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
       <SiteHeader />
+      {/* FAQ rich results: the same questions and answers shown in the FAQ section */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: FAQS.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+          }),
+        }}
+      />
 
       <main>
         <Hero play={play} contactEmail={CONTACT_EMAIL} />

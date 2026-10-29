@@ -15,9 +15,9 @@ import { useEffect } from 'react'
  * real SEO tooling flags. Mutating in place means:
  *   - Google (renders JS): sees the correct per-page values.
  *   - Non-JS crawlers on a deep page: fall back to index.html's sitewide
- *     defaults (the homepage's own values) — not wrong, just generic;
- *     true per-page social-preview fidelity would need prerendering,
- *     which is a bigger, separate change (see the implementation notes).
+ *     defaults — except on the public marketing pages, which are now
+ *     prerendered at build time with their own tags (src/ssr/entry.tsx +
+ *     scripts/prerender.mjs, fed by the SSR branch below).
  * Previous values are restored on unmount so navigating within the SPA
  * back to a page that doesn't call this hook doesn't leave stale values
  * behind.
@@ -49,7 +49,16 @@ function setAttr(selector: string, attr: string, value: string): (() => void) | 
   }
 }
 
+/** Set during build-time prerender (src/ssr/entry.tsx), where effects never run. */
+let ssrSeo: SeoMeta | null = null
+export function takeSsrSeo(): SeoMeta | null {
+  const m = ssrSeo
+  ssrSeo = null
+  return m
+}
+
 export function useSeo({ title, description, canonicalPath }: SeoMeta) {
+  if (import.meta.env.SSR) ssrSeo = { title, description, canonicalPath }
   useEffect(() => {
     const canonicalUrl = `${ORIGIN}${canonicalPath}`
     const prevTitle = document.title

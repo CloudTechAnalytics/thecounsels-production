@@ -25,6 +25,11 @@ function useScrollOnNavigate() {
 
 export function App() {
   useScrollOnNavigate()
+  // The live app has now replaced any prerendered markup; reveal the root (see index.html).
+  useEffect(() => {
+    document.getElementById('root')?.removeAttribute('data-prerendered')
+    document.documentElement.classList.remove('ssr-hide')
+  }, [])
   return (
     <AppProviders>
       <RouterProvider router={router} />

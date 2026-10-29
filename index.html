@@ -141,6 +141,15 @@
         if (dark) document.documentElement.classList.add('dark')
       } catch (e) {}
     </script>
+    <!-- Public pages ship prerendered HTML (scripts/prerender.mjs) for crawlers
+         and no-JS visitors. When JavaScript runs, the live app replaces it;
+         keep that markup hidden until then so it never flashes (app.tsx
+         removes the class; the timeout is a failsafe). -->
+    <style>html.ssr-hide #root[data-prerendered]{visibility:hidden}</style>
+    <script>
+      document.documentElement.classList.add('ssr-hide')
+      setTimeout(function () { document.documentElement.classList.remove('ssr-hide') }, 4000)
+    </script>
   </head>
   <body class="h-full">
     <div id="root" class="h-full"></div>

@@ -23,7 +23,8 @@ function pageReady(): Promise<void> {
  * images); it eases toward 90% and only finishes once the page is ready.
  */
 export function MarketingLoader() {
-  const [show] = React.useState(() => !isLoaderLifted())
+  // never in the prerendered HTML: a page without JavaScript must not sit behind a loader
+  const [show] = React.useState(() => !import.meta.env.SSR && !isLoaderLifted())
   const [pct, setPct] = React.useState(0)
   const [phase, setPhase] = React.useState<'load' | 'press' | 'lift' | 'gone'>('load')
 

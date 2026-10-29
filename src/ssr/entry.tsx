@@ -26,8 +26,12 @@ import { LawFirmManagementSoftwarePage } from '@/features/landing/pages/law-firm
 import { LegalCaseManagementSoftwarePage } from '@/features/landing/pages/legal-case-management-software-page'
 import { LawFirmBillingSoftwarePage } from '@/features/landing/pages/law-firm-billing-software-page'
 import { POSTS } from '@/features/blog/posts'
+import { TemplatePage, TemplatesPage } from '@/features/landing/pages/template-pages'
+import { CountryPage } from '@/features/landing/pages/country-page'
+import { TEMPLATES } from '@/features/landing/lib/templates'
+import { COUNTRIES } from '@/features/landing/lib/countries'
 
-/** Every public, indexable URL. Keep in sync with public/sitemap.xml. */
+/** Every public, indexable URL. The sitemap is generated from this list (scripts/prerender.mjs). */
 export const ROUTES: string[] = [
   '/',
   '/features',
@@ -38,6 +42,9 @@ export const ROUTES: string[] = [
   '/law-firm-management-software',
   '/legal-case-management-software',
   '/law-firm-billing-software',
+  ...COUNTRIES.map((c) => `/law-firm-software-${c.slug}`),
+  '/templates',
+  ...TEMPLATES.map((t) => `/templates/${t.slug}`),
   '/terms',
   '/privacy',
 ]
@@ -60,6 +67,11 @@ export function render(url: string): { html: string; seo: SeoMeta | null } {
                 <Route path="/law-firm-management-software" element={<LawFirmManagementSoftwarePage />} />
                 <Route path="/legal-case-management-software" element={<LegalCaseManagementSoftwarePage />} />
                 <Route path="/law-firm-billing-software" element={<LawFirmBillingSoftwarePage />} />
+                <Route path="/templates" element={<TemplatesPage />} />
+                <Route path="/templates/:slug" element={<TemplatePage />} />
+                {COUNTRIES.map((c) => (
+                  <Route key={c.slug} path={`/law-firm-software-${c.slug}`} element={<CountryPage slug={c.slug} />} />
+                ))}
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
               </Routes>

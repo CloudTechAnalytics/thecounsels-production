@@ -19,6 +19,7 @@ import { SiteHeader } from '@/features/landing/components/site-header'
 import { SiteFooter } from '@/features/landing/components/site-footer'
 import { SeoCtaBand } from '@/features/landing/components/seo-cta-band'
 import { MaskWords, Rise, StaggerGrid } from '@/features/landing/components/motion-kit'
+import { COUNTRIES } from '@/features/landing/lib/countries'
 
 const CAPABILITIES = [
   {
@@ -176,6 +177,17 @@ export function LegalPracticeManagementSoftwareAfricaPage() {
               <span className="text-muted-foreground">— time entries, invoices, payments and financial reporting.</span>
             </li>
           </ul>
+          <p className="mt-6 text-sm text-muted-foreground">
+            By country:{' '}
+            {COUNTRIES.map((c, i) => (
+              <span key={c.slug}>
+                <Link to={`/law-firm-software-${c.slug}`} className="text-primary hover:underline">
+                  law firm software in {c.country}
+                </Link>
+                {i < COUNTRIES.length - 1 ? ' · ' : ''}
+              </span>
+            ))}
+          </p>
         </section>
 
         <SeoCtaBand heading="Bring your firm's operations into one system" />

@@ -16,6 +16,7 @@ const NAV = [
   { to: '/features', label: 'Features' },
   { to: '/#how-it-works', label: 'How it works', hash: true },
   { to: '/pricing', label: 'Pricing' },
+  { to: '/templates', label: 'Templates' },
   { to: '/blog', label: 'Blog' },
   { to: '/#contact', label: 'Contact', hash: true },
 ]

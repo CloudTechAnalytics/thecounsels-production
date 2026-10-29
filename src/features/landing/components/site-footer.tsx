@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import { CounselMark } from '@/shared/components/counsel-mark'
 import { APP } from '@/shared/config/env'
+import { COUNTRIES } from '@/features/landing/lib/countries'
+import { TEMPLATES } from '@/features/landing/lib/templates'
 
 const CONTACT_EMAIL = 'cloudtechanalytics.consultant@gmail.com'
 
@@ -37,6 +39,9 @@ export function SiteFooter() {
               <li><Link to="/law-firm-management-software" className="transition-colors hover:text-primary">Law Firm Management</Link></li>
               <li><Link to="/legal-case-management-software" className="transition-colors hover:text-primary">Case Management</Link></li>
               <li><Link to="/law-firm-billing-software" className="transition-colors hover:text-primary">Billing &amp; Invoicing</Link></li>
+              {COUNTRIES.map((c) => (
+                <li key={c.slug}><Link to={`/law-firm-software-${c.slug}`} className="transition-colors hover:text-primary">Law firm software {c.country}</Link></li>
+              ))}
             </ul>
           </div>
 
@@ -46,6 +51,10 @@ export function SiteFooter() {
               <li><Link to="/features" className="transition-colors hover:text-primary">Features</Link></li>
               <li><Link to="/pricing" className="transition-colors hover:text-primary">Pricing</Link></li>
               <li><a href="/#faq" className="transition-colors hover:text-primary">FAQ</a></li>
+              <li><Link to="/templates" className="transition-colors hover:text-primary">Free templates</Link></li>
+              {TEMPLATES.map((t) => (
+                <li key={t.slug}><Link to={`/templates/${t.slug}`} className="transition-colors hover:text-primary">{t.name} template</Link></li>
+              ))}
               <li><a href={`mailto:${CONTACT_EMAIL}?subject=The Counsel — demo request`} className="transition-colors hover:text-primary">Request a demo</a></li>
             </ul>
           </div>

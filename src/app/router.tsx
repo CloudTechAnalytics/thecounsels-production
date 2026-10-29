@@ -27,6 +27,9 @@ import { BlogPostPage } from '@/features/blog/pages/blog-post-page'
 import { LawFirmManagementSoftwarePage } from '@/features/landing/pages/law-firm-management-software-page'
 import { LegalCaseManagementSoftwarePage } from '@/features/landing/pages/legal-case-management-software-page'
 import { LawFirmBillingSoftwarePage } from '@/features/landing/pages/law-firm-billing-software-page'
+import { TemplatePage, TemplatesPage } from '@/features/landing/pages/template-pages'
+import { CountryPage } from '@/features/landing/pages/country-page'
+import { COUNTRIES } from '@/features/landing/lib/countries'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { RegisterPage } from '@/features/auth/pages/register-page'
 import { AuthCallbackPage } from '@/features/auth/pages/auth-callback-page'
@@ -143,6 +146,9 @@ export const router = createBrowserRouter([
   { path: '/law-firm-management-software', element: <LawFirmManagementSoftwarePage /> },
   { path: '/legal-case-management-software', element: <LegalCaseManagementSoftwarePage /> },
   { path: '/law-firm-billing-software', element: <LawFirmBillingSoftwarePage /> },
+  { path: '/templates', element: <TemplatesPage /> },
+  { path: '/templates/:slug', element: <TemplatePage /> },
+  ...COUNTRIES.map((c) => ({ path: `/law-firm-software-${c.slug}`, element: <CountryPage slug={c.slug} /> })),
   // Workspace-branded login — temporary stand-in for {slug}.thecounsels.org
   // until wildcard subdomains are configured (see LoginPage's own comment).
   // Purely cosmetic: real auth + membership scoping is unchanged either way.

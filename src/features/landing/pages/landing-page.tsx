@@ -32,6 +32,7 @@ import { OldWay } from '@/features/landing/components/home/old-way'
 import { DayInChambers } from '@/features/landing/components/home/day-in-chambers'
 import { FeaturesFan } from '@/features/landing/components/home/features-fan'
 import { CollectionsTrack } from '@/features/landing/components/home/collections-track'
+import { useTrackedPage } from '@/shared/lib/analytics'
 
 const CONTACT_EMAIL = 'cloudtechanalytics.consultant@gmail.com'
 const CONTACT_PHONE_DISPLAY = '+234 813 386 0143'
@@ -175,6 +176,7 @@ export function LandingPage() {
   const navigate = useNavigate()
   const { status, signOut } = useAuth()
   const play = useLoaderLifted()
+  useTrackedPage('/')
 
   const goToLogin = async () => {
     // A stale session must never bounce this click straight to the dashboard —

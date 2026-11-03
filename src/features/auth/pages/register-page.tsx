@@ -16,6 +16,7 @@ import { toast } from '@/shared/components/ui/sonner'
 import { env } from '@/shared/config/env'
 import { errorMessage, friendlyErrorMessage } from '@/shared/lib/errors'
 import { logClientError } from '@/shared/lib/error-log'
+import { trackEvent, useTrackedPage } from '@/shared/lib/analytics'
 import { supabase } from '@/shared/lib/supabase'
 
 // Must match Supabase Auth's mailer_otp_length (Dashboard → Authentication →
@@ -41,6 +42,8 @@ const RESEND_COOLDOWN_SECONDS = 30
  * same optional/no-op-until-configured pattern as login-page.tsx.
  */
 export function RegisterPage() {
+  // The sign-up funnel is tracked (with consent) so ads can count real sign-ups; nothing past it is.
+  useTrackedPage('/auth/register')
   const [sentTo, setSentTo] = React.useState<string | null>(null)
   const [showPassword, setShowPassword] = React.useState(false)
   const [otpValue, setOtpValue] = React.useState('')
@@ -108,6 +111,7 @@ export function RegisterPage() {
       setOtpError(null)
       try {
         await authService.verifySignUpOtp(sentTo, code)
+        trackEvent('sign_up', { method: 'email' })
         toast.success('Email verified', { description: "You're in — let's set up your firm." })
         // No manual navigation: verifyOtp() establishes a real session,
         // AuthProvider's onAuthStateChange picks up the resulting SIGNED_IN

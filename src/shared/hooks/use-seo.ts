@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTrackedPage } from '@/shared/lib/analytics'
 
 /**
  * Per-page SEO metadata, applied by mutating the SAME tags already seeded
@@ -59,6 +60,8 @@ export function takeSsrSeo(): SeoMeta | null {
 
 export function useSeo({ title, description, canonicalPath }: SeoMeta) {
   if (import.meta.env.SSR) ssrSeo = { title, description, canonicalPath }
+  // Every page with SEO metadata is a public marketing page — those are the only analytics pages.
+  useTrackedPage(canonicalPath)
   useEffect(() => {
     const canonicalUrl = `${ORIGIN}${canonicalPath}`
     const prevTitle = document.title

@@ -160,6 +160,13 @@ export function PrivacyPage() {
             Supabase Auth — to manage your session. We do not use third-party advertising or cross-site
             tracking cookies within the authenticated application.
           </p>
+          <p>
+            On our public website only (the marketing pages and the sign-up page), and only if you click
+            "Accept" on the cookie banner, we use Google Analytics to measure visits: which pages are viewed,
+            how visitors arrived, approximate location and device type. It never runs inside the
+            application and never sees Client Data. If you click "Decline", it is not loaded. You can
+            change your choice at any time by clearing this site's data in your browser.
+          </p>
         </Section>
 
         <Section n={6} title="AI Features">
@@ -182,6 +189,7 @@ export function PrivacyPage() {
             <li><strong className="text-foreground">Vercel</strong> — hosting for the web application itself.</li>
             <li><strong className="text-foreground">Paystack</strong> — payment processing for subscriptions.</li>
             <li><strong className="text-foreground">Resend</strong> — delivery of transactional emails (notifications, reminders, receipts).</li>
+            <li><strong className="text-foreground">Google Analytics</strong> — website visit statistics on the public marketing pages, only with your consent (see Section 5).</li>
             <li><strong className="text-foreground">Groq</strong> — AI features, as described in Section 6, where your Organization's plan includes them.</li>
             <li><strong className="text-foreground">WhatsApp messaging providers</strong> (Twilio or Meta, whichever is configured) — only if you personally enable WhatsApp reminders and provide a number.</li>
           </ul>

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { RouterProvider } from 'react-router-dom'
 import { AppProviders } from '@/app/providers'
 import { router } from '@/app/router'
+import { CookieConsent } from '@/shared/components/cookie-consent'
 
 /** Scroll to the #hash target on in-page links, otherwise to the top on every new page. */
 function useScrollOnNavigate() {
@@ -33,6 +34,7 @@ export function App() {
   return (
     <AppProviders>
       <RouterProvider router={router} />
+      <CookieConsent />
     </AppProviders>
   )
 }

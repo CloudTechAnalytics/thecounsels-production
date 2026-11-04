@@ -62,6 +62,9 @@ import { EmployeesPage } from '@/features/hr/pages/employees-page'
 import { OnboardingPage as HrOnboardingPage } from '@/features/hr/pages/onboarding-page'
 import { LeavePage } from '@/features/hr/pages/leave-page'
 import { HrRequestsPage } from '@/features/hr/pages/hr-requests-page'
+import { FundsPage } from '@/features/funds/pages/funds-page'
+import { PayrollPage } from '@/features/payroll/pages/payroll-page'
+import { MyPayslipsPage } from '@/features/payroll/pages/my-payslips-page'
 import { HrDocumentsPage } from '@/features/hr/pages/hr-documents-page'
 import { AnnouncementsPage } from '@/features/hr/pages/announcements-page'
 import { HrReportsPage } from '@/features/hr/pages/hr-reports-page'
@@ -272,6 +275,9 @@ export const router = createBrowserRouter([
                       { path: 'onboarding', element: withPermission(<HrOnboardingPage />, 'onboarding.view_own') },
                       { path: 'leave', element: withPermission(<LeavePage />, 'leave.request') },
                       { path: 'requests', element: withPermission(<HrRequestsPage />, 'hr_requests.submit') },
+                      { path: 'funds', element: withPermission(<FundsPage />, 'funds.request') },
+                      { path: 'payslips', element: withPermission(<MyPayslipsPage />, 'payroll.view_own') },
+                      { path: 'payroll', element: withPermission(<PayrollPage />, 'payroll.manage') },
                       { path: 'documents', element: withPermission(<HrDocumentsPage />, 'hr_documents.view_own') },
                       { path: 'announcements', element: withPermission(<AnnouncementsPage />, 'hr_announcements.view') },
                       { path: 'reports', element: withPermission(<HrReportsPage />, 'hr.view_reports') },

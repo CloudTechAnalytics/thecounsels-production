@@ -1201,6 +1201,278 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['leave_requests']['Insert']>
         Relationships: []
       }
+      fund_settings: {
+        Row: {
+          organization_id: string
+          require_line_manager: boolean
+          leadership_threshold: number | null
+          retirement_due_days: number
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          require_line_manager?: boolean
+          leadership_threshold?: number | null
+          retirement_due_days?: number
+          updated_by?: string | null
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['fund_settings']['Insert']>
+        Relationships: []
+      }
+      fund_requests: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          request_number: string
+          title: string
+          category: string
+          purpose: string | null
+          amount: number
+          needed_by: string | null
+          matter_id: string | null
+          status: string
+          current_step: number
+          disbursed_amount: number | null
+          disbursed_at: string | null
+          disbursed_by: string | null
+          disbursement_method: string | null
+          disbursement_reference: string | null
+          spent_amount: number | null
+          retirement_note: string | null
+          retirement_submitted_at: string | null
+          retirement_reviewed_by: string | null
+          retirement_reviewed_at: string | null
+          retirement_comment: string | null
+          retired_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: { [_ in never]: never }
+        Update: { [_ in never]: never }
+        Relationships: []
+      }
+      fund_request_approvals: {
+        Row: {
+          id: string
+          organization_id: string
+          request_id: string
+          step: number
+          stage: string
+          approver_id: string | null
+          status: string
+          acted_by: string | null
+          acted_at: string | null
+          comment: string | null
+        }
+        Insert: { [_ in never]: never }
+        Update: { [_ in never]: never }
+        Relationships: []
+      }
+      fund_retirement_items: {
+        Row: {
+          id: string
+          organization_id: string
+          request_id: string
+          description: string
+          amount: number
+          spent_on: string | null
+          receipt_path: string | null
+          receipt_name: string | null
+          receipt_mime: string | null
+          receipt_size: number | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          request_id: string
+          description: string
+          amount: number
+          spent_on?: string | null
+          receipt_path?: string | null
+          receipt_name?: string | null
+          receipt_mime?: string | null
+          receipt_size?: number | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['fund_retirement_items']['Insert']>
+        Relationships: []
+      }
+      payroll_settings: {
+        Row: {
+          organization_id: string
+          pension_employee_rate: number
+          pension_employer_rate: number
+          nhf_rate: number
+          rent_relief_rate: number
+          rent_relief_cap: number
+          minimum_wage_monthly: number
+          tax_bands: Json
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          pension_employee_rate?: number
+          pension_employer_rate?: number
+          nhf_rate?: number
+          rent_relief_rate?: number
+          rent_relief_cap?: number
+          minimum_wage_monthly?: number
+          tax_bands?: Json
+          updated_by?: string | null
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['payroll_settings']['Insert']>
+        Relationships: []
+      }
+      employee_salaries: {
+        Row: {
+          organization_id: string
+          user_id: string
+          on_payroll: boolean
+          basic: number
+          housing: number
+          transport: number
+          other_allowances: number
+          annual_rent: number
+          pension_enabled: boolean
+          nhf_enabled: boolean
+          other_deductions: number
+          other_deductions_note: string | null
+          bank_name: string | null
+          account_number: string | null
+          account_name: string | null
+          tax_id: string | null
+          pension_pin: string | null
+          pension_administrator: string | null
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          user_id: string
+          on_payroll?: boolean
+          basic?: number
+          housing?: number
+          transport?: number
+          other_allowances?: number
+          annual_rent?: number
+          pension_enabled?: boolean
+          nhf_enabled?: boolean
+          other_deductions?: number
+          other_deductions_note?: string | null
+          bank_name?: string | null
+          account_number?: string | null
+          account_name?: string | null
+          tax_id?: string | null
+          pension_pin?: string | null
+          pension_administrator?: string | null
+          updated_by?: string | null
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['employee_salaries']['Insert']>
+        Relationships: []
+      }
+      payroll_runs: {
+        Row: {
+          id: string
+          organization_id: string
+          period: string
+          status: string
+          employee_count: number
+          total_gross: number
+          total_paye: number
+          total_pension_employee: number
+          total_pension_employer: number
+          total_nhf: number
+          total_other_deductions: number
+          total_net: number
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          approved_by: string | null
+          approved_at: string | null
+          paid_by: string | null
+          paid_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          period: string
+          status?: string
+          notes?: string | null
+          created_by?: string | null
+        }
+        Update: {
+          notes?: string | null
+        }
+        Relationships: []
+      }
+      payslips: {
+        Row: {
+          id: string
+          organization_id: string
+          run_id: string
+          user_id: string
+          employee_name: string
+          job_title: string | null
+          department: string | null
+          bank_name: string | null
+          account_number: string | null
+          account_name: string | null
+          tax_id: string | null
+          pension_pin: string | null
+          basic: number
+          housing: number
+          transport: number
+          other_allowances: number
+          gross: number
+          pension_employee: number
+          pension_employer: number
+          nhf: number
+          paye: number
+          other_deductions: number
+          other_deductions_note: string | null
+          net: number
+          tax_detail: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          run_id: string
+          user_id: string
+          employee_name: string
+          job_title?: string | null
+          department?: string | null
+          bank_name?: string | null
+          account_number?: string | null
+          account_name?: string | null
+          tax_id?: string | null
+          pension_pin?: string | null
+          basic?: number
+          housing?: number
+          transport?: number
+          other_allowances?: number
+          gross?: number
+          pension_employee?: number
+          pension_employer?: number
+          nhf?: number
+          paye?: number
+          other_deductions?: number
+          other_deductions_note?: string | null
+          net?: number
+          tax_detail?: Json
+        }
+        Update: Partial<Database['public']['Tables']['payslips']['Insert']>
+        Relationships: []
+      }
       hr_requests: {
         Row: {
           id: string
@@ -2436,6 +2708,50 @@ export interface Database {
       cancel_leave_request: {
         Args: { p_request: string }
         Returns: undefined
+      }
+      submit_fund_request: {
+        Args: {
+          p_org: string
+          p_title: string
+          p_category: string
+          p_amount: number
+          p_needed_by?: string | null
+          p_matter?: string | null
+          p_purpose?: string | null
+        }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      act_on_fund_request: {
+        Args: { p_request: string; p_approve: boolean; p_comment?: string | null }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      cancel_fund_request: {
+        Args: { p_request: string }
+        Returns: undefined
+      }
+      disburse_fund_request: {
+        Args: { p_request: string; p_amount: number; p_method?: string | null; p_reference?: string | null }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      submit_fund_retirement: {
+        Args: { p_request: string; p_note?: string | null }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      review_fund_retirement: {
+        Args: { p_request: string; p_accept: boolean; p_comment?: string | null }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      approve_payroll_run: {
+        Args: { p_run: string }
+        Returns: Database['public']['Tables']['payroll_runs']['Row']
+      }
+      mark_payroll_paid: {
+        Args: { p_run: string }
+        Returns: Database['public']['Tables']['payroll_runs']['Row']
+      }
+      reopen_payroll_run: {
+        Args: { p_run: string }
+        Returns: Database['public']['Tables']['payroll_runs']['Row']
       }
       update_hr_request_status: {
         Args: { p_request: string; p_status: string; p_note?: string | null }

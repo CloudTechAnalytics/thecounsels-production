@@ -82,6 +82,11 @@ export const PERMISSION_KEYS = [
   'hr_announcements.manage',
   'hr_announcements.view',
   'hr.view_reports',
+  'funds.request',
+  'funds.approve',
+  'funds.manage',
+  'payroll.manage',
+  'payroll.view_own',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]

@@ -157,7 +157,8 @@ function hrStage(s: string): Stage | null {
 }
 function fundStage(s: string): Stage | null {
   if (s === 'pending') return 'pending'
-  if (s === 'approved' || s === 'disbursed' || s === 'retirement_submitted') return 'in_review'
+  if (s === 'returned') return 'pending'
+  if (s === 'approved' || s === 'payment_processing' || s === 'disbursed' || s === 'retirement_submitted') return 'in_review'
   if (s === 'retired') return 'approved'
   return s === 'rejected' ? 'rejected' : null
 }
@@ -195,11 +196,12 @@ function useHrActivity() {
       })
     }
     for (const r of funds ?? []) {
+      if (r.status === 'draft') continue
       out.push({
-        id: r.id, ref: r.request_number, kind: 'funds', who: r.requester_name ?? 'Someone',
-        detail: r.title, amount: formatNaira(Number(r.amount)),
-        stage: fundStage(r.status), createdAt: r.created_at, href: `/hr/funds?request=${r.id}`,
-        needsMe: canActOn(r) || (canFundsManage && (r.status === 'approved' || r.status === 'retirement_submitted')),
+        id: r.id, ref: r.request_number ?? 'Funds', kind: 'funds', who: r.requester_name ?? 'Someone',
+        detail: r.title, amount: formatNaira(Number(r.approved_amount ?? r.amount)),
+        stage: fundStage(r.status), createdAt: r.submitted_at ?? r.created_at, href: `/hr/funds?request=${r.id}`,
+        needsMe: canActOn(r) || (canFundsManage && ['approved', 'payment_processing', 'retirement_submitted'].includes(r.status)),
       })
     }
     return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt))

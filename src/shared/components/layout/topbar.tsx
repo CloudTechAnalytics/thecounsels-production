@@ -118,7 +118,7 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
                   </DropdownMenuItem>
                 ) : (
                   <DropdownMenuItem onClick={() => navigate('/hr')}>
-                    <Users2 /> HR Workspace
+                    <Users2 /> HR &amp; Finance
                   </DropdownMenuItem>
                 )}
               </>

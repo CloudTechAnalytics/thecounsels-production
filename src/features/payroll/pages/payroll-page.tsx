@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
@@ -141,9 +142,9 @@ function SalariesTab() {
                   const s = p.salary
                   const allowances = s ? Number(s.housing) + Number(s.transport) + Number(s.other_allowances) : 0
                   return (
-                    <tr key={p.employee.userId} className="border-b border-border/60 last:border-0">
+                    <tr key={p.employee.id} className="border-b border-border/60 last:border-0">
                       <td className="px-4 py-2">
-                        <p className="font-medium">{p.employee.fullName ?? p.employee.email}</p>
+                        <p className="font-medium">{p.employee.fullName} <span className="text-xs font-normal text-muted-foreground">{p.employee.employee_number}</span></p>
                         <p className="text-xs text-muted-foreground">
                           {p.employee.jobTitleName ?? p.employee.roleName ?? '—'}
                           {s && !s.on_payroll ? ' · not on payroll' : ''}
@@ -279,7 +280,8 @@ function SettingsTab() {
 }
 
 export function PayrollPage() {
-  const [tab, setTab] = React.useState<Tab>('runs')
+  const [params] = useSearchParams()
+  const [tab, setTab] = React.useState<Tab>(() => (params.get('tab') === 'settings' ? 'settings' : params.get('tab') === 'salaries' ? 'salaries' : 'runs'))
   return (
     <div>
       <PageHeader title="Payroll" description="Salaries, monthly payroll, PAYE, pension and NHF — with payslips for every employee." />

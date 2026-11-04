@@ -65,6 +65,8 @@ import { HrRequestsPage } from '@/features/hr/pages/hr-requests-page'
 import { FundsPage } from '@/features/funds/pages/funds-page'
 import { PayrollPage } from '@/features/payroll/pages/payroll-page'
 import { MyPayslipsPage } from '@/features/payroll/pages/my-payslips-page'
+import { ApprovalCentrePage } from '@/features/funds/pages/approval-centre-page'
+import { HrFinanceSettingsPage } from '@/features/hr/pages/hr-finance-settings-page'
 import { HrDocumentsPage } from '@/features/hr/pages/hr-documents-page'
 import { AnnouncementsPage } from '@/features/hr/pages/announcements-page'
 import { HrReportsPage } from '@/features/hr/pages/hr-reports-page'
@@ -278,6 +280,8 @@ export const router = createBrowserRouter([
                       { path: 'funds', element: withPermission(<FundsPage />, 'funds.request') },
                       { path: 'payslips', element: withPermission(<MyPayslipsPage />, 'payroll.view_own') },
                       { path: 'payroll', element: withPermission(<PayrollPage />, 'payroll.manage') },
+                      { path: 'approvals', element: withPermission(<ApprovalCentrePage />, 'funds.request') },
+                      { path: 'settings', element: withPermission(<HrFinanceSettingsPage />, 'funds.request') },
                       { path: 'documents', element: withPermission(<HrDocumentsPage />, 'hr_documents.view_own') },
                       { path: 'announcements', element: withPermission(<AnnouncementsPage />, 'hr_announcements.view') },
                       { path: 'reports', element: withPermission(<HrReportsPage />, 'hr.view_reports') },

@@ -30,7 +30,7 @@ export function HrSidebar({ onNavigate, collapsed = false }: { onNavigate?: () =
         </span>
         {!collapsed && (
           <div className="min-w-0 leading-tight">
-            <p className="truncate font-display text-[15px] font-semibold">HR Workspace</p>
+            <p className="truncate font-display text-[15px] font-semibold">HR &amp; Finance</p>
             <p className="truncate text-[11px] text-sidebar-muted">{org?.name ?? 'The Counsel'}</p>
           </div>
         )}
@@ -105,7 +105,7 @@ export function HrSidebar({ onNavigate, collapsed = false }: { onNavigate?: () =
 
       {!collapsed && (
         <div className="border-t border-sidebar-border px-5 py-4 text-[11px] text-sidebar-muted">
-          HR Workspace · v1.0
+          HR &amp; Finance · v1.0
         </div>
       )}
     </aside>

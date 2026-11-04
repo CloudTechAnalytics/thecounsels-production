@@ -1,5 +1,5 @@
 import { supabase } from '@/shared/lib/supabase'
-import { hrService } from '@/features/hr/services/hr.service'
+import { employeesService } from '@/features/hr/services/employees.service'
 import {
   computePayslip, parseTaxBands, DEFAULT_PAYROLL_RATES, type PayrollRates,
 } from '@/features/payroll/lib/payroll-calc'
@@ -37,20 +37,20 @@ export const payrollService = {
   /** Every active employee alongside their salary record (null if HR hasn't set one yet). */
   async listPayrollEmployees(organizationId: string): Promise<PayrollEmployee[]> {
     const [employees, { data: salaries, error }] = await Promise.all([
-      hrService.listEmployees(organizationId),
+      employeesService.listRegister(organizationId),
       supabase.from('employee_salaries').select('*').eq('organization_id', organizationId),
     ])
     if (error) throw error
-    const byUser = new Map((salaries ?? []).map((s) => [s.user_id, s as EmployeeSalary]))
+    const byEmployee = new Map((salaries ?? []).map((s) => [s.employee_id, s as EmployeeSalary]))
     return employees
-      .filter((e) => e.membershipStatus === 'active')
-      .map((employee) => ({ employee, salary: byUser.get(employee.userId) ?? null }))
-      .sort((a, b) => (a.employee.fullName ?? a.employee.email).localeCompare(b.employee.fullName ?? b.employee.email))
+      .filter((e) => !['resigned', 'terminated', 'former_employee', 'applicant'].includes(e.employment_status))
+      .map((employee) => ({ employee, salary: byEmployee.get(employee.id) ?? null }))
+      .sort((a, b) => a.employee.fullName.localeCompare(b.employee.fullName))
   },
-  async saveSalary(organizationId: string, userId: string, patch: SalaryPatch, updatedBy: string | null): Promise<void> {
+  async saveSalary(organizationId: string, employeeId: string, patch: SalaryPatch, updatedBy: string | null): Promise<void> {
     const { error } = await supabase.from('employee_salaries').upsert({
       organization_id: organizationId,
-      user_id: userId,
+      employee_id: employeeId,
       ...patch,
       updated_by: updatedBy,
       updated_at: new Date().toISOString(),
@@ -93,8 +93,10 @@ export const payrollService = {
         return {
           organization_id: organizationId,
           run_id: runId,
-          user_id: employee.userId,
-          employee_name: employee.fullName ?? employee.email,
+          user_id: employee.user_id,
+          employee_id: employee.id,
+          employee_number: employee.employee_number,
+          employee_name: employee.fullName,
           job_title: employee.jobTitleName,
           department: employee.departmentName,
           bank_name: s.bank_name,
@@ -155,6 +157,19 @@ export const payrollService = {
   async reopenRun(runId: string): Promise<void> {
     const { error } = await supabase.rpc('reopen_payroll_run', { p_run: runId })
     if (error) throw error
+  },
+
+  /** One employee's payslip history — payroll managers only (RLS). */
+  async listEmployeePayslips(employeeId: string): Promise<MyPayslip[]> {
+    const { data, error } = await supabase
+      .from('payslips')
+      .select('*, run:payroll_runs(period, status, paid_at)')
+      .eq('employee_id', employeeId)
+    if (error) throw error
+    return ((data ?? []) as unknown as Array<Payslip & { run: { period: string; status: string; paid_at: string | null } | null }>)
+      .filter((p) => p.run)
+      .map(({ run, ...p }) => ({ ...p, period: run!.period, run_status: run!.status, paid_at: run!.paid_at }))
+      .sort((a, b) => b.period.localeCompare(a.period))
   },
 
   /** The caller's own released payslips (RLS hides drafts). */

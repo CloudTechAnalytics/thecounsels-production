@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { LayoutGrid, UserSquare2, CalendarClock, FolderLock, Inbox, Megaphone, FileBarChart, ClipboardCheck, Wallet, Banknote, ReceiptText, type LucideIcon } from 'lucide-react'
+import { LayoutGrid, UserSquare2, CalendarClock, FolderLock, Inbox, Megaphone, FileBarChart, ClipboardCheck, Wallet, Banknote, ReceiptText, ListChecks, Settings2, type LucideIcon } from 'lucide-react'
 import type { PermissionKey } from '@/shared/lib/permissions'
 import { LeaveNavBadge } from '@/features/hr/components/leave-nav-badge'
 import { AnnouncementsNavBadge } from '@/features/hr/components/announcements-nav-badge'
@@ -19,24 +19,41 @@ export interface HrNavSection {
   items: HrNavItem[]
 }
 
-/** The HR workspace's own navigation — deliberately separate from the
- * firm's practice-area NAVIGATION (matters, clients, billing, etc. never
- * appear here). Reached via "HR Workspace" in the profile menu, not from
- * the main sidebar. */
+/** The HR & Finance workspace's own navigation — deliberately separate
+ * from the firm's practice-area NAVIGATION (matters, clients, billing,
+ * etc. never appear here). Reached via "HR & Finance" in the profile menu,
+ * not from the main sidebar. */
 export const HR_NAVIGATION: HrNavSection[] = [
   {
     items: [
-      { label: 'Dashboard', to: '/hr', icon: LayoutGrid, permission: 'hr.view_reports', end: true },
+      { label: 'HR Dashboard', to: '/hr', icon: LayoutGrid, permission: 'hr.view_reports', end: true },
+      { label: 'Approval Centre', to: '/hr/approvals', icon: ListChecks, permission: 'funds.request' },
+    ],
+  },
+  {
+    heading: 'People',
+    items: [
       { label: 'Employees', to: '/hr/employees', icon: UserSquare2, permission: 'staff.manage' },
       { label: 'Onboarding', to: '/hr/onboarding', icon: ClipboardCheck, permission: 'onboarding.view_own' },
-      { label: 'Leave', to: '/hr/leave', icon: CalendarClock, permission: 'leave.request', badge: LeaveNavBadge },
+      { label: 'Leave Management', to: '/hr/leave', icon: CalendarClock, permission: 'leave.request', badge: LeaveNavBadge },
       { label: 'Documents', to: '/hr/documents', icon: FolderLock, permission: 'hr_documents.view_own' },
       { label: 'HR Requests', to: '/hr/requests', icon: Inbox, permission: 'hr_requests.submit' },
-      { label: 'Fund Requests', to: '/hr/funds', icon: Wallet, permission: 'funds.request' },
-      { label: 'My Payslips', to: '/hr/payslips', icon: ReceiptText, permission: 'payroll.view_own' },
-      { label: 'Payroll', to: '/hr/payroll', icon: Banknote, permission: 'payroll.manage' },
       { label: 'Announcements', to: '/hr/announcements', icon: Megaphone, permission: 'hr_announcements.view', badge: AnnouncementsNavBadge },
-      { label: 'HR Reports', to: '/hr/reports', icon: FileBarChart, permission: 'hr.view_reports' },
+    ],
+  },
+  {
+    heading: 'Finance',
+    items: [
+      { label: 'Fund Requests', to: '/hr/funds', icon: Wallet, permission: 'funds.request' },
+      { label: 'Payroll', to: '/hr/payroll', icon: Banknote, permission: 'payroll.manage' },
+      { label: 'Payslips', to: '/hr/payslips', icon: ReceiptText, permission: 'payroll.view_own' },
+    ],
+  },
+  {
+    heading: 'Reports & setup',
+    items: [
+      { label: 'HR & Finance Reports', to: '/hr/reports', icon: FileBarChart, permission: 'hr.view_reports' },
+      { label: 'Settings', to: '/hr/settings', icon: Settings2, permission: 'funds.request' },
     ],
   },
 ]

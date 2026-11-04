@@ -1110,8 +1110,8 @@ export interface Database {
         Relationships: []
       }
       departments: {
-        Row: { id: string; organization_id: string; name: string; created_at: string }
-        Insert: { id?: string; organization_id: string; name: string; created_at?: string }
+        Row: { id: string; organization_id: string; name: string; created_at: string; head_employee_id: string | null }
+        Insert: { id?: string; organization_id: string; name: string; created_at?: string; head_employee_id?: string | null }
         Update: Partial<Database['public']['Tables']['departments']['Insert']>
         Relationships: []
       }
@@ -1201,17 +1201,188 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['leave_requests']['Insert']>
         Relationships: []
       }
+      employees: {
+        Row: {
+          id: string
+          organization_id: string
+          employee_number: string
+          user_id: string | null
+          first_name: string
+          last_name: string
+          email: string | null
+          phone: string | null
+          photo_url: string | null
+          department_id: string | null
+          job_title_id: string | null
+          branch_id: string | null
+          manager_employee_id: string | null
+          employment_type: string
+          employment_status: string
+          start_date: string | null
+          end_date: string | null
+          date_of_birth: string | null
+          address: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relationship: string | null
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          employee_number?: string
+          user_id?: string | null
+          first_name: string
+          last_name?: string
+          email?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          department_id?: string | null
+          job_title_id?: string | null
+          branch_id?: string | null
+          manager_employee_id?: string | null
+          employment_type?: string
+          employment_status?: string
+          start_date?: string | null
+          end_date?: string | null
+          date_of_birth?: string | null
+          address?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
+          notes?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['employees']['Insert']>
+        Relationships: []
+      }
+      approval_workflows: {
+        Row: {
+          id: string
+          organization_id: string
+          module: string
+          name: string
+          priority: number
+          is_active: boolean
+          min_amount: number | null
+          max_amount: number | null
+          categories: string[]
+          department_ids: string[]
+          branch_ids: string[]
+          allow_self_approval: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          module?: string
+          name: string
+          priority?: number
+          is_active?: boolean
+          min_amount?: number | null
+          max_amount?: number | null
+          categories?: string[]
+          department_ids?: string[]
+          branch_ids?: string[]
+          allow_self_approval?: boolean
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['approval_workflows']['Insert']>
+        Relationships: []
+      }
+      approval_workflow_steps: {
+        Row: {
+          id: string
+          organization_id: string
+          workflow_id: string
+          step_order: number
+          name: string
+          approver_type: string
+          approver_value: string | null
+          approver_user_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          workflow_id: string
+          step_order: number
+          name: string
+          approver_type: string
+          approver_value?: string | null
+          approver_user_id?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['approval_workflow_steps']['Insert']>
+        Relationships: []
+      }
+      approval_delegations: {
+        Row: {
+          id: string
+          organization_id: string
+          delegator_user_id: string
+          delegate_user_id: string
+          starts_on: string
+          ends_on: string
+          reason: string | null
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          delegator_user_id: string
+          delegate_user_id: string
+          starts_on?: string
+          ends_on: string
+          reason?: string | null
+          is_active?: boolean
+        }
+        Update: Partial<Database['public']['Tables']['approval_delegations']['Insert']>
+        Relationships: []
+      }
+      fund_request_attachments: {
+        Row: {
+          id: string
+          organization_id: string
+          request_id: string
+          kind: string
+          file_name: string
+          storage_path: string
+          mime_type: string | null
+          size_bytes: number | null
+          uploaded_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          request_id: string
+          kind?: string
+          file_name: string
+          storage_path: string
+          mime_type?: string | null
+          size_bytes?: number | null
+        }
+        Update: Partial<Database['public']['Tables']['fund_request_attachments']['Insert']>
+        Relationships: []
+      }
       fund_settings: {
         Row: {
           organization_id: string
           require_line_manager: boolean
           leadership_threshold: number | null
           retirement_due_days: number
+          allow_self_approval: boolean
           updated_by: string | null
           updated_at: string
         }
         Insert: {
           organization_id: string
+          allow_self_approval?: boolean
           require_line_manager?: boolean
           leadership_threshold?: number | null
           retirement_due_days?: number
@@ -1226,9 +1397,19 @@ export interface Database {
           id: string
           organization_id: string
           user_id: string
-          request_number: string
+          request_number: string | null
           title: string
           category: string
+          employee_id: string | null
+          department_id: string | null
+          branch_id: string | null
+          client_id: string | null
+          approved_amount: number | null
+          workflow_id: string | null
+          current_round: number
+          submitted_at: string | null
+          payment_date: string | null
+          disbursement_notes: string | null
           purpose: string | null
           amount: number
           needed_by: string | null
@@ -1266,6 +1447,12 @@ export interface Database {
           acted_by: string | null
           acted_at: string | null
           comment: string | null
+          round: number
+          approver_type: string | null
+          approver_value: string | null
+          step_name: string | null
+          acted_as_delegate_for: string | null
+          approved_amount: number | null
         }
         Insert: { [_ in never]: never }
         Update: { [_ in never]: never }
@@ -1334,7 +1521,7 @@ export interface Database {
       employee_salaries: {
         Row: {
           organization_id: string
-          user_id: string
+          employee_id: string
           on_payroll: boolean
           basic: number
           housing: number
@@ -1356,7 +1543,7 @@ export interface Database {
         }
         Insert: {
           organization_id: string
-          user_id: string
+          employee_id: string
           on_payroll?: boolean
           basic?: number
           housing?: number
@@ -1419,7 +1606,9 @@ export interface Database {
           id: string
           organization_id: string
           run_id: string
-          user_id: string
+          user_id: string | null
+          employee_id: string
+          employee_number: string | null
           employee_name: string
           job_title: string | null
           department: string | null
@@ -1447,7 +1636,9 @@ export interface Database {
           id?: string
           organization_id: string
           run_id: string
-          user_id: string
+          user_id?: string | null
+          employee_id: string
+          employee_number?: string | null
           employee_name: string
           job_title?: string | null
           department?: string | null
@@ -2709,6 +2900,37 @@ export interface Database {
         Args: { p_request: string }
         Returns: undefined
       }
+      save_fund_request: {
+        Args: {
+          p_org: string
+          p_title: string
+          p_category: string
+          p_amount: number
+          p_request?: string | null
+          p_needed_by?: string | null
+          p_matter?: string | null
+          p_client?: string | null
+          p_purpose?: string | null
+          p_submit?: boolean
+        }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      delete_fund_draft: {
+        Args: { p_request: string }
+        Returns: undefined
+      }
+      decide_fund_request: {
+        Args: { p_request: string; p_decision: string; p_comment?: string | null; p_amount?: number | null }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      mark_fund_payment_processing: {
+        Args: { p_request: string }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      my_fund_approvals: {
+        Args: { p_org: string }
+        Returns: string[]
+      }
       submit_fund_request: {
         Args: {
           p_org: string
@@ -2730,7 +2952,7 @@ export interface Database {
         Returns: undefined
       }
       disburse_fund_request: {
-        Args: { p_request: string; p_amount: number; p_method?: string | null; p_reference?: string | null }
+        Args: { p_request: string; p_amount: number; p_method?: string | null; p_reference?: string | null; p_paid_on?: string | null; p_notes?: string | null }
         Returns: Database['public']['Tables']['fund_requests']['Row']
       }
       submit_fund_retirement: {

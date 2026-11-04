@@ -1,16 +1,16 @@
 import type { BadgeProps } from '@/shared/components/ui/badge'
 import type { Database } from '@/shared/types/database.types'
-import type { Employee } from '@/features/hr/types'
+import type { EmployeeRecord } from '@/features/hr/services/employees.service'
 
 export type PayrollSettingsRow = Database['public']['Tables']['payroll_settings']['Row']
 export type EmployeeSalary = Database['public']['Tables']['employee_salaries']['Row']
 export type PayrollRun = Database['public']['Tables']['payroll_runs']['Row']
 export type Payslip = Database['public']['Tables']['payslips']['Row']
 
-export type SalaryPatch = Omit<EmployeeSalary, 'organization_id' | 'user_id' | 'updated_by' | 'updated_at'>
+export type SalaryPatch = Omit<EmployeeSalary, 'organization_id' | 'employee_id' | 'updated_by' | 'updated_at'>
 
 export interface PayrollEmployee {
-  employee: Employee
+  employee: EmployeeRecord
   salary: EmployeeSalary | null
 }
 

@@ -1,32 +1,28 @@
 import * as React from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
-import { Search, UserCheck } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useFundRequests, useFundApprovalRights, useFundSettings, useSaveFundSettings } from '@/features/funds/hooks/use-funds'
+import { useFundRequests, useFundApprovalRights, useFundSettings } from '@/features/funds/hooks/use-funds'
 import { FundRequestFormDialog } from '@/features/funds/components/fund-request-form-dialog'
 import { FundRequestDetailDialog } from '@/features/funds/components/fund-request-detail-dialog'
 import { FundReports } from '@/features/funds/components/fund-reports'
-import { FUND_STATUS_META, fundCategoryLabel, daysOutstanding, type FundRequest } from '@/features/funds/types'
+import { FUND_STATUS_META, fundCategoryLabel, fundStatusLabel, daysOutstanding, type FundRequest } from '@/features/funds/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
-import { Label } from '@/shared/components/ui/label'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
-import { ToggleSwitch } from '@/shared/components/toggle-switch'
 import { ExportButton } from '@/shared/components/export-button'
-import { toast } from '@/shared/components/ui/sonner'
-import { errorMessage } from '@/shared/lib/errors'
 import { formatNaira } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
 
-type Tab = 'mine' | 'approve' | 'all' | 'reports' | 'settings'
+type Tab = 'mine' | 'approve' | 'all' | 'reports'
 
-function RequestList({ requests, loading, empty, showRequester, onOpen, highlight }: {
+export function RequestList({ requests, loading, empty, showRequester, onOpen, highlight }: {
   requests: FundRequest[]
   loading: boolean
   empty: string
@@ -60,13 +56,13 @@ function RequestList({ requests, loading, empty, showRequester, onOpen, highligh
                   {showRequester && <span>{r.requester_name ?? 'Someone'} — </span>}{r.title}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {r.request_number} · {fundCategoryLabel(r.category)} · {format(new Date(r.created_at), 'MMM d, yyyy')}
+                  {r.request_number ?? 'Draft'} · {fundCategoryLabel(r.category)} · {format(new Date(r.submitted_at ?? r.created_at), 'MMM d, yyyy')}
                   {overdue && <span className="font-medium text-destructive"> · retirement overdue ({days} days)</span>}
                 </p>
               </div>
               <div className="shrink-0 text-right">
-                <p className="text-sm font-semibold tabular-nums">{formatNaira(Number(r.amount))}</p>
-                <Badge variant={meta.variant} className="mt-1">{meta.label}</Badge>
+                <p className="text-sm font-semibold tabular-nums">{formatNaira(Number(r.approved_amount ?? r.amount))}</p>
+                <Badge variant={meta.variant} className="mt-1">{fundStatusLabel(r)}</Badge>
               </div>
             </button>
           </li>
@@ -76,80 +72,26 @@ function RequestList({ requests, loading, empty, showRequester, onOpen, highligh
   )
 }
 
-function SettingsTab() {
-  const { activeOrgId } = useAuth()
-  const { data: settings, isLoading } = useFundSettings(activeOrgId)
-  const save = useSaveFundSettings(activeOrgId)
-  const [requireManager, setRequireManager] = React.useState(true)
-  const [threshold, setThreshold] = React.useState('')
-  const [dueDays, setDueDays] = React.useState('14')
-
-  React.useEffect(() => {
-    if (!settings) return
-    setRequireManager(settings.require_line_manager)
-    setThreshold(settings.leadership_threshold != null ? String(settings.leadership_threshold) : '')
-    setDueDays(String(settings.retirement_due_days))
-  }, [settings])
-
-  const onSave = async () => {
-    const days = Number(dueDays)
-    const limit = threshold.trim() === '' ? null : Number(threshold)
-    if (!Number.isInteger(days) || days < 1 || days > 365) { toast.error('Retirement deadline must be 1–365 days'); return }
-    if (limit != null && !(limit > 0)) { toast.error('Partner approval amount must be greater than zero, or left blank'); return }
-    try {
-      await save.mutateAsync({ require_line_manager: requireManager, leadership_threshold: limit, retirement_due_days: days })
-      toast.success('Fund settings saved')
-    } catch (err) {
-      toast.error('Could not save settings', { description: errorMessage(err) })
-    }
-  }
-
-  if (isLoading) return <Skeleton className="h-64 w-full max-w-2xl" />
-
-  return (
-    <Card className="max-w-2xl space-y-6 p-6">
-      <ToggleSwitch
-        checked={requireManager}
-        onChange={setRequireManager}
-        icon={UserCheck}
-        label="Line manager approves first"
-        hint="Requests go to the requester's manager (set on their employee record) before finance."
-      />
-      <div className="space-y-1.5">
-        <Label>Partner approval for amounts of (₦)</Label>
-        <Input type="number" min={0} placeholder="Leave blank to never require it" value={threshold} onChange={(e) => setThreshold(e.target.value)} />
-        <p className="text-xs text-muted-foreground">Requests at or above this amount need a Managing Partner or Partner to sign off after finance.</p>
-      </div>
-      <div className="space-y-1.5">
-        <Label>Retire within (days of payout)</Label>
-        <Input type="number" min={1} max={365} value={dueDays} onChange={(e) => setDueDays(e.target.value)} />
-        <p className="text-xs text-muted-foreground">After this, unretired money shows as overdue in reports.</p>
-      </div>
-      <div className="flex justify-end">
-        <Button onClick={onSave} loading={save.isPending}>Save settings</Button>
-      </div>
-    </Card>
-  )
-}
-
 export function FundsPage() {
   const { activeOrgId, userId } = useAuth()
   const { has } = usePermissions()
   const { data: requests = [], isLoading } = useFundRequests(activeOrgId)
   const { canActOn } = useFundApprovalRights()
   const [params, setParams] = useSearchParams()
+  const [creating, setCreating] = React.useState(false)
   const canSeeAll = has('funds.approve') || has('funds.manage')
   const canManage = has('funds.manage')
 
   const mine = requests.filter((r) => r.user_id === userId)
   const toApprove = requests.filter(canActOn)
-  const toDisburse = canManage ? requests.filter((r) => r.status === 'approved') : []
+  const toDisburse = canManage ? requests.filter((r) => r.status === 'approved' || r.status === 'payment_processing') : []
   const toReview = canManage ? requests.filter((r) => r.status === 'retirement_submitted') : []
-  const actionCount = toApprove.length + toDisburse.length + toReview.length
+  const myFollowUps = mine.filter((r) => r.status === 'returned' || r.status === 'disbursed')
+  const actionCount = toApprove.length + toDisburse.length + toReview.length + myFollowUps.length
 
   const [tab, setTab] = React.useState<Tab>('mine')
   React.useEffect(() => {
-    if (!isLoading && actionCount > 0) setTab((t) => (t === 'mine' ? 'approve' : t))
+    if (!isLoading && toApprove.length + toDisburse.length + toReview.length > 0) setTab((t) => (t === 'mine' ? 'approve' : t))
     // Only on first load — afterwards the user's own tab choice wins.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading])
@@ -157,8 +99,9 @@ export function FundsPage() {
   const [search, setSearch] = React.useState('')
   const [status, setStatus] = React.useState('all')
   const all = requests.filter((r) =>
-    (status === 'all' || r.status === status)
-    && (!search.trim() || [r.title, r.request_number, r.requester_name ?? ''].some((s) => s.toLowerCase().includes(search.trim().toLowerCase()))),
+    r.status !== 'draft'
+    && (status === 'all' || r.status === status)
+    && (!search.trim() || [r.title, r.request_number ?? '', r.requester_name ?? ''].some((s) => s.toLowerCase().includes(search.trim().toLowerCase()))),
   )
 
   const openId = params.get('request')
@@ -175,7 +118,6 @@ export function FundsPage() {
     { key: 'approve', label: 'Needs my action', show: true, count: actionCount },
     { key: 'all', label: 'All requests', show: canSeeAll },
     { key: 'reports', label: 'Reports', show: canManage },
-    { key: 'settings', label: 'Settings', show: canManage },
   ]
 
   return (
@@ -183,7 +125,7 @@ export function FundsPage() {
       <PageHeader
         title="Fund Requests"
         description="Request money for work, get it approved and paid, then retire it with receipts."
-        actions={<FundRequestFormDialog />}
+        actions={<Button onClick={() => setCreating(true)}>Request funds</Button>}
       />
 
       <div className="mb-4 flex w-fit max-w-full flex-wrap rounded-lg border border-border p-0.5">
@@ -204,21 +146,25 @@ export function FundsPage() {
 
       {tab === 'mine' && (
         <Card className="overflow-hidden">
-          <RequestList requests={mine} loading={isLoading} empty="You haven't requested any funds yet." onOpen={setOpen} highlight={(r) => r.status === 'disbursed'} />
+          <RequestList
+            requests={mine} loading={isLoading} empty="You haven't requested any funds yet." onOpen={setOpen}
+            highlight={(r) => r.status === 'disbursed' || r.status === 'returned' || r.status === 'draft'}
+          />
         </Card>
       )}
 
       {tab === 'approve' && (
         <div className="space-y-6">
           {[
-            { title: 'Waiting for your approval', rows: toApprove, show: true },
-            { title: 'Approved — ready to pay out', rows: toDisburse, show: canManage },
-            { title: 'Retirements to review', rows: toReview, show: canManage },
+            { title: 'Waiting for your approval', rows: toApprove, show: true, requester: true },
+            { title: 'Yours to follow up — clarify or retire', rows: myFollowUps, show: myFollowUps.length > 0, requester: false },
+            { title: 'Approved — ready to pay out', rows: toDisburse, show: canManage, requester: true },
+            { title: 'Retirements to review', rows: toReview, show: canManage, requester: true },
           ].filter((s) => s.show).map((s) => (
             <section key={s.title}>
               <p className="mb-2 font-display text-sm font-semibold">{s.title} <span className="text-muted-foreground">({s.rows.length})</span></p>
               <Card className="overflow-hidden">
-                <RequestList requests={s.rows} loading={isLoading} empty="Nothing here right now." showRequester onOpen={setOpen} />
+                <RequestList requests={s.rows} loading={isLoading} empty="Nothing here right now." showRequester={s.requester} onOpen={setOpen} />
               </Card>
             </section>
           ))}
@@ -233,10 +179,10 @@ export function FundsPage() {
               <Input className="pl-8" placeholder="Search title, number or staff" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="w-[210px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[230px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
-                {Object.entries(FUND_STATUS_META).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                {Object.entries(FUND_STATUS_META).filter(([k]) => k !== 'draft').map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
               </SelectContent>
             </Select>
             <ExportButton
@@ -244,14 +190,18 @@ export function FundsPage() {
               sheets={() => [{
                 name: 'Fund requests',
                 rows: all.map((r) => ({
-                  Number: r.request_number,
-                  Date: format(new Date(r.created_at), 'yyyy-MM-dd'),
+                  Number: r.request_number ?? '',
+                  Submitted: r.submitted_at ? format(new Date(r.submitted_at), 'yyyy-MM-dd') : '',
                   Requester: r.requester_name ?? '',
                   Title: r.title,
                   Category: fundCategoryLabel(r.category),
-                  Status: FUND_STATUS_META[r.status]?.label ?? r.status,
+                  Client: r.client_label ?? '',
+                  Matter: r.matter_label ?? '',
+                  Status: fundStatusLabel(r),
                   Requested: Number(r.amount),
+                  Approved: r.approved_amount != null ? Number(r.approved_amount) : '',
                   'Paid out': r.disbursed_amount != null ? Number(r.disbursed_amount) : '',
+                  'Payment date': r.payment_date ?? '',
                   Spent: r.spent_amount != null ? Number(r.spent_amount) : '',
                 })),
               }]}
@@ -261,9 +211,9 @@ export function FundsPage() {
         </Card>
       )}
 
-      {tab === 'reports' && canManage && <FundReports requests={requests} />}
-      {tab === 'settings' && canManage && <SettingsTab />}
+      {tab === 'reports' && canManage && <FundReports requests={requests.filter((r) => r.status !== 'draft')} />}
 
+      <FundRequestFormDialog open={creating} onOpenChange={setCreating} />
       <FundRequestDetailDialog request={open} onOpenChange={(o) => { if (!o) setOpen(null) }} />
     </div>
   )

@@ -86,6 +86,14 @@ export function usePayrollRunAction(organizationId: string | null) {
   })
 }
 
+export function useEmployeePayslips(employeeId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ['payroll', 'employee-payslips', employeeId],
+    enabled: Boolean(employeeId) && enabled,
+    queryFn: () => payrollService.listEmployeePayslips(employeeId!),
+  })
+}
+
 export function useMyPayslips(organizationId: string | null, userId: string | null) {
   return useQuery({
     queryKey: ['payroll', 'my-payslips', organizationId, userId],

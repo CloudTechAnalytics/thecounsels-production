@@ -30,7 +30,7 @@ export function SalaryDialog({ person, onOpenChange }: { person: PayrollEmployee
 
   React.useEffect(() => {
     if (!person) return
-    const { organization_id: _o, user_id: _u, updated_by: _b, updated_at: _a, ...rest } = person.salary ?? { ...EMPTY_SALARY, organization_id: '', user_id: '', updated_by: null, updated_at: '' }
+    const { organization_id: _o, employee_id: _u, updated_by: _b, updated_at: _a, ...rest } = person.salary ?? { ...EMPTY_SALARY, organization_id: '', employee_id: '', updated_by: null, updated_at: '' }
     setForm(toForm(rest))
   }, [person])
 
@@ -57,7 +57,7 @@ export function SalaryDialog({ person, onOpenChange }: { person: PayrollEmployee
       tax_id: blank(form.tax_id), pension_pin: blank(form.pension_pin), pension_administrator: blank(form.pension_administrator),
     }
     try {
-      await save.mutateAsync({ employeeId: person.employee.userId, patch })
+      await save.mutateAsync({ employeeId: person.employee.id, patch })
       toast.success('Salary saved')
       onOpenChange(false)
     } catch (err) {
@@ -89,7 +89,7 @@ export function SalaryDialog({ person, onOpenChange }: { person: PayrollEmployee
     <Dialog open={Boolean(person)} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Salary — {person?.employee.fullName ?? person?.employee.email}</DialogTitle>
+          <DialogTitle>Salary — {person?.employee.fullName}</DialogTitle>
           <DialogDescription>Monthly amounts. Deductions are worked out automatically from your payroll settings.</DialogDescription>
         </DialogHeader>
         <div className="space-y-5">

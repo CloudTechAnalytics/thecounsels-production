@@ -44,6 +44,12 @@
     --warning: 32 78% 46%;
     --warning-foreground: 0 0% 99%;
 
+    /* Categorical chart series — fixed order, validated palette (dataviz skill). */
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-4: #eda100;
+
     --border: 38 24% 85%;
     --input: 38 24% 85%;
     --ring: 39 49% 47%;
@@ -90,6 +96,11 @@
 
     --warning: 32 74% 54%;
     --warning-foreground: 220 20% 12%;
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
 
     --border: 220 12% 22%;
     --input: 220 12% 22%;

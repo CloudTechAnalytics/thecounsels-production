@@ -10,12 +10,12 @@ import { EmptyState } from '@/shared/components/empty-state'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 
 /** Firm-wide chronological activity feed — who did what, when, click through to it. */
-export function RecentActivityFeed() {
+export function RecentActivityFeed({ className = 'mt-6', limit }: { className?: string; limit?: number } = {}) {
   const { activeOrgId } = useAuth()
   const { data, isLoading } = useRecentActivity(activeOrgId)
 
   return (
-    <Card className="mt-6">
+    <Card className={className}>
       <CardHeader className="flex-row items-center justify-between space-y-0">
         <div>
           <CardTitle className="text-lg">Recent Activity</CardTitle>
@@ -32,7 +32,7 @@ export function RecentActivityFeed() {
           </div>
         ) : data && data.length > 0 ? (
           <ul className="divide-y divide-border/70">
-            {data.map((item) => (
+            {(limit ? data.slice(0, limit) : data).map((item) => (
               <li key={item.id}>
                 <Link to={item.href} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:opacity-80">
                   <Avatar className="h-8 w-8 shrink-0">

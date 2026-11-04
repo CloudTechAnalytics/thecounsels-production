@@ -26,6 +26,28 @@ function ActivityTooltip({ day }: { day: ActivityDay }) {
   )
 }
 
+/** The chart alone — one total-per-day line, category breakdown in the tooltip. */
+export function FirmActivityChart({ range }: { range: DateRange }) {
+  const { activeOrgId } = useAuth()
+  const { data, isLoading } = useFirmActivityTrend(activeOrgId, range)
+  if (isLoading) return <Skeleton className="h-56 w-full" />
+  if (!data || data.totalInRange === 0) {
+    return (
+      <div className="flex h-56 flex-col items-center justify-center text-center">
+        <p className="text-sm font-medium">No firm activity has been recorded in the selected period.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Activity from matters, clients, hearings, billing and documents will appear here.</p>
+      </div>
+    )
+  }
+  return (
+    <TimeSeriesChart
+      data={data.days.map((d) => ({ date: d.date, label: d.label, value: d.total, day: d }))}
+      renderTooltip={(p) => <ActivityTooltip day={p.day} />}
+      formatValue={(n) => `${n}`}
+    />
+  )
+}
+
 /** Managing Partner's "Firm Activity" chart — one total-per-day line, category breakdown in the hover tooltip. */
 export function FirmActivityCard({ range }: { range: DateRange }) {
   const { activeOrgId } = useAuth()

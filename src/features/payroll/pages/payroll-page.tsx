@@ -282,9 +282,16 @@ function SettingsTab() {
 export function PayrollPage() {
   const [params] = useSearchParams()
   const [tab, setTab] = React.useState<Tab>(() => (params.get('tab') === 'settings' ? 'settings' : params.get('tab') === 'salaries' ? 'salaries' : 'runs'))
+  const { activeMembership } = useAuth()
+  const firmWide = !activeMembership || activeMembership.access_scope === 'organization'
   return (
     <div>
       <PageHeader title="Payroll" description="Salaries, monthly payroll, PAYE, pension and NHF — with payslips for every employee." />
+      {!firmWide && (
+        <p className="mb-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+          Payroll covers every branch, so only someone with whole-firm access can run it or change salaries. You can view your branch’s records here.
+        </p>
+      )}
       <div className="mb-4 flex w-fit rounded-lg border border-border p-0.5">
         {([['runs', 'Payroll runs'], ['salaries', 'Salaries'], ['settings', 'Settings']] as const).map(([k, label]) => (
           <button

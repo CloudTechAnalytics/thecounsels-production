@@ -37,7 +37,11 @@ function json(body: unknown, status = 200) {
 // See summarize-matter/index.ts's own comment — confirmed live against the
 // real key, cheapest full-capability Groq model.
 const GROQ_MODEL = 'openai/gpt-oss-120b'
-const MAX_TOKENS = 1536
+// gpt-oss reasons before answering and that counts against max_tokens; at
+// 1536 with default effort it could use the whole budget thinking and
+// return an empty answer. More room, and low effort, fixes that.
+const MAX_TOKENS = 3072
+const REASONING_EFFORT = 'low'
 const HISTORY_LIMIT = 20
 // See summarize-matter/index.ts's own comment — Groq's LPU inference is
 // dramatically faster than Gemini's ever was (measured 300ms-1s for
@@ -196,6 +200,7 @@ Deno.serve(async (req: Request) => {
     model: GROQ_MODEL,
     messages,
     max_tokens: MAX_TOKENS,
+    reasoning_effort: REASONING_EFFORT,
   })
 
   if (!result.ok) {

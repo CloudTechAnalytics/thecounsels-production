@@ -40,7 +40,11 @@ function json(body: unknown, status = 200) {
 // GET https://api.groq.com/openai/v1/models (Bearer auth) lists what's
 // current — same "measure, don't guess" lesson as the Gemini model saga.
 const GROQ_MODEL = 'openai/gpt-oss-120b'
-const MAX_TOKENS = 1536
+// gpt-oss reasons before answering and that counts against max_tokens; at
+// 1536 with default effort it could use the whole budget thinking and
+// return an empty answer. More room, and low effort, fixes that.
+const MAX_TOKENS = 3072
+const REASONING_EFFORT = 'low'
 // Groq's LPU inference is dramatically faster than Gemini's ever was
 // (measured 300ms-1s for trivial prompts, vs Gemini's routine 2-20s) — this
 // timeout is still sized with real headroom for a genuine multi-paragraph
@@ -179,6 +183,7 @@ Deno.serve(async (req: Request) => {
       { role: 'user', content: lines.join('\n') },
     ],
     max_tokens: MAX_TOKENS,
+    reasoning_effort: REASONING_EFFORT,
   })
 
   if (!result.ok) {

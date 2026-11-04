@@ -45,7 +45,17 @@ function json(body: unknown, status = 200) {
 // real key, cheapest full-capability Groq model, tool-calling confirmed
 // separately for this exact shape.
 const GROQ_MODEL = 'openai/gpt-oss-120b'
-const MAX_TOKENS = 2048
+const MAX_TOKENS = 4096
+// gpt-oss "thinks" before answering and that thinking counts against
+// MAX_TOKENS — at the default effort a schedule question could spend the
+// whole budget reasoning and come back with an empty answer. Low is plenty
+// for lookups and everyday legal questions.
+const REASONING_EFFORT = 'low'
+// A question can need more than one lookup round (e.g. tasks, then the
+// hearings on the same matters). Before, only one round was allowed and a
+// second tool request came back as an empty reply ("The assistant did not
+// return a reply") — the bug staff hit asking "what's pending today?".
+const MAX_TOOL_ROUNDS = 4
 const HISTORY_LIMIT = 20
 // This can call Groq TWICE in one request (tool-selection, then the final
 // answer once tool results are in). Groq's LPU inference is dramatically
@@ -214,6 +224,8 @@ Deno.serve(async (req: Request) => {
     'Plain text only — this is displayed as-is with no markdown rendering. No **bold**, no # headings, no * or - bullet symbols, no | tables; use plain sentences or simple "Name — detail" lines instead.',
     `Today's date is ${todayIso}.`,
     "For questions about this firm's own hearings, tasks or appointments, use the lookup_hearings, lookup_tasks and lookup_appointments tools to find real data before answering anything about dates, names, or counts — never guess or invent them. Only report what the tools return; they already only return what this user is permitted to see, so if something is missing from the results, say you found nothing rather than assuming access was the issue.",
+    "Never mention, estimate or speculate about matters, clients, staff, hearings or activity in any branch, office or team whose records the tools did not return to you — the person asking may only have access to their own branch.",
+    "When the user asks what is pending, due or coming up, call the tools you need in one go (e.g. tasks and hearings and appointments together) and then answer.",
     "For this firm's own clients, billing, matter documents/content, or firm settings, you have no tool to look that up here — say so plainly and point to the relevant page, rather than guessing at firm-specific data you cannot actually see.",
     'Decline only questions with no legal or firm-schedule relevance at all (general trivia, coding help, and the like) — say that is outside what you can help with here.',
   ].join('\n')
@@ -229,14 +241,17 @@ Deno.serve(async (req: Request) => {
 
   let groqFailureReason: string | null = null
 
-  async function callGroq() {
+  async function callGroq(toolChoice: 'auto' | 'none' = 'auto') {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS)
     try {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { Authorization: `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: GROQ_MODEL, messages, tools: TOOLS, tool_choice: 'auto', max_tokens: MAX_TOKENS }),
+        body: JSON.stringify({
+          model: GROQ_MODEL, messages, tools: TOOLS, tool_choice: toolChoice,
+          max_tokens: MAX_TOKENS, reasoning_effort: REASONING_EFFORT,
+        }),
         signal: controller.signal,
       })
       clearTimeout(timeoutId)
@@ -354,15 +369,19 @@ Deno.serve(async (req: Request) => {
     return { error: `Unknown tool: ${name}` }
   }
 
-  const first = await callGroq()
-  if (!first) return json({ error: groqFailureReason ?? 'Could not get a reply right now. Please try again.' }, 502)
-
-  const firstMessage: ChatMessage = first.choices?.[0]?.message ?? { role: 'assistant', content: '' }
-  const calls: ToolCall[] = firstMessage.tool_calls ?? []
-
-  let finalData = first
-  if (calls.length > 0) {
-    messages.push(firstMessage)
+  // Let the model look things up for as many rounds as it needs (bounded),
+  // then insist on a written answer.
+  let finalData: any = null
+  for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
+    const data = await callGroq(round === MAX_TOOL_ROUNDS ? 'none' : 'auto')
+    if (!data) return json({ error: groqFailureReason ?? 'Could not get a reply right now. Please try again.' }, 502)
+    const msg: ChatMessage = data.choices?.[0]?.message ?? { role: 'assistant', content: '' }
+    const calls: ToolCall[] = msg.tool_calls ?? []
+    if (calls.length === 0) {
+      finalData = data
+      break
+    }
+    messages.push({ role: 'assistant', content: msg.content ?? '', tool_calls: calls })
     for (const c of calls) {
       let args: Record<string, unknown> = {}
       try {
@@ -373,12 +392,17 @@ Deno.serve(async (req: Request) => {
       const result = await runTool(c.function.name, args)
       messages.push({ role: 'tool', tool_call_id: c.id, name: c.function.name, content: JSON.stringify(result) })
     }
-    const second = await callGroq()
-    if (!second) return json({ error: groqFailureReason ?? 'Could not get a reply right now. Please try again.' }, 502)
-    finalData = second
   }
 
-  const reply: string = (finalData.choices?.[0]?.message?.content ?? '').trim()
+  // Still nothing written (e.g. it spent the budget thinking): one last try
+  // that forbids further lookups.
+  if (!(finalData?.choices?.[0]?.message?.content ?? '').trim()) {
+    console.error('Empty assistant answer, finish_reason:', finalData?.choices?.[0]?.finish_reason)
+    const retry = await callGroq('none')
+    if (retry) finalData = retry
+  }
+
+  const reply: string = (finalData?.choices?.[0]?.message?.content ?? '').trim()
   if (!reply) return json({ error: 'The assistant did not return a reply. Please try again.' }, 502)
 
   const { error: insertErr } = await admin.from('assistant_messages').insert([

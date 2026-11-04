@@ -2994,6 +2994,10 @@ export interface Database {
         }
         Returns: Database['public']['Tables']['fund_requests']['Row']
       }
+      recall_fund_request: {
+        Args: { p_request: string }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
       delete_fund_draft: {
         Args: { p_request: string }
         Returns: undefined

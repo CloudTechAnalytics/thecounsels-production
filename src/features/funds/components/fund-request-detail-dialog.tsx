@@ -1,12 +1,15 @@
 import * as React from 'react'
 import { format } from 'date-fns'
-import { Check, X, Circle, Clock, Paperclip, Trash2, CornerUpLeft, MinusCircle } from 'lucide-react'
+import { Check, X, Circle, Clock, Paperclip, Trash2, CornerUpLeft, MinusCircle, ChevronDown, Pencil } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
   useDecideFundRequest, useCancelFundRequest, useDisburseFundRequest, useFundApprovalRights, useMarkPaymentProcessing,
-  useDeleteFundDraft, useUploadFundAttachment, useDeleteFundAttachment,
+  useDeleteFundDraft, useUploadFundAttachment, useDeleteFundAttachment, useRecallFundRequest,
 } from '@/features/funds/hooks/use-funds'
+import { nextStep, requesterOptions } from '@/features/funds/lib/next-step'
+import { FundProgress } from '@/features/funds/components/fund-progress'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { fundsService } from '@/features/funds/services/funds.service'
 import { RetirementPanel } from '@/features/funds/components/retirement-panel'
 import { FundRequestFormDialog, ATTACHMENT_MIME_TYPES, MAX_ATTACHMENT_BYTES } from '@/features/funds/components/fund-request-form-dialog'
@@ -248,14 +251,44 @@ function Attachments({ request, editable }: { request: FundRequest; editable: bo
   )
 }
 
-export function FundRequestDetailDialog({ request, onOpenChange }: { request: FundRequest | null; onOpenChange: (open: boolean) => void }) {
+function Fold({ title, defaultOpen, children }: { title: string; defaultOpen: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = React.useState(defaultOpen)
+  return (
+    <section className="rounded-lg border border-border">
+      <button className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        {title}
+        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && <div className="space-y-5 border-t border-border p-4">{children}</div>}
+    </section>
+  )
+}
+
+const STEP_TONE: Record<string, string> = {
+  you: 'border-primary/40 bg-primary/5',
+  late: 'border-destructive/40 bg-destructive/10',
+  waiting: 'border-border bg-muted/40',
+  done: 'border-success/40 bg-success/10',
+  stopped: 'border-border bg-muted/40',
+}
+
+export function FundRequestDetailDialog({ request, onOpenChange, focus }: { request: FundRequest | null; onOpenChange: (open: boolean) => void; focus?: string }) {
   const { activeOrgId, userId } = useAuth()
   const { has } = usePermissions()
   const { canActOn } = useFundApprovalRights()
   const cancel = useCancelFundRequest(activeOrgId)
   const deleteDraft = useDeleteFundDraft(activeOrgId)
+  const recall = useRecallFundRequest(activeOrgId)
   const [editing, setEditing] = React.useState(false)
   const [showHistory, setShowHistory] = React.useState(false)
+  const [confirm, setConfirm] = React.useState<'withdraw' | 'delete' | null>(null)
+
+  // Jump to the part of the request the user came here to act on.
+  React.useEffect(() => {
+    if (!request || !focus) return
+    const t = setTimeout(() => document.getElementById(`fund-${focus}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
+    return () => clearTimeout(t)
+  }, [request?.id, focus]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!request) return <Dialog open={false} onOpenChange={onOpenChange} />
 
@@ -266,6 +299,44 @@ export function FundRequestDetailDialog({ request, onOpenChange }: { request: Fu
   const showRetirement = PAID_STATUSES.includes(r.status)
   const earlier = r.approvals.filter((a) => a.round < r.current_round)
   const partial = r.approved_amount != null && Number(r.approved_amount) < Number(r.amount)
+  const step = nextStep(r, { userId, canActOn, canManage })
+  const opts = isMine ? requesterOptions(r) : null
+  const showDecision = canActOn(r)
+  const showPayout = canManage && !isMine && (r.status === 'approved' || r.status === 'payment_processing')
+  const returnNote = r.status === 'returned' ? r.chain.find((a) => a.status === 'returned')?.comment : null
+
+  const goTo = (section: string) => document.getElementById(`fund-${section}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const startEdit = async () => {
+    if (opts?.needsRecall) {
+      try { await recall.mutateAsync(r.id); toast.success('Pulled back from approval', { description: 'Make your changes, then submit it again.' }) }
+      catch (err) { toast.error('Could not edit this request', { description: errorMessage(err) }); return }
+    }
+    setEditing(true)
+  }
+
+  const approvals = r.chain.length > 0 && (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-semibold">Approvals{r.current_round > 1 ? ` · round ${r.current_round}` : ''}</p>
+        {earlier.length > 0 && (
+          <button className="text-xs text-primary hover:underline" onClick={() => setShowHistory((s) => !s)}>
+            {showHistory ? 'Hide' : 'Show'} earlier rounds
+          </button>
+        )}
+      </div>
+      <ApprovalChain approvals={r.chain} requested={Number(r.amount)} />
+      {showHistory && (
+        <div className="mt-4 space-y-4 border-t border-border pt-4">
+          {[...new Set(earlier.map((a) => a.round))].map((round) => (
+            <div key={round}>
+              <p className="mb-2 text-xs font-medium text-muted-foreground">Round {round}</p>
+              <ApprovalChain approvals={earlier.filter((a) => a.round === round)} requested={Number(r.amount)} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <>
@@ -277,85 +348,47 @@ export function FundRequestDetailDialog({ request, onOpenChange }: { request: Fu
               <Badge variant={meta.variant}>{fundStatusLabel(r)}</Badge>
             </div>
             <DialogDescription>
-              {r.request_number ?? 'Draft'} · {isMine ? 'your request' : `requested by ${r.requester_name ?? 'a colleague'}`}
+              {r.request_number ?? 'Draft'} · {formatNaira(Number(r.approved_amount ?? r.amount))} · {isMine ? 'your request' : `requested by ${r.requester_name ?? 'a colleague'}`}
               {r.submitted_at ? ` · submitted ${format(new Date(r.submitted_at), 'MMM d, yyyy')}` : ''}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <Field label="Requested"><span className="font-display text-lg font-semibold">{formatNaira(Number(r.amount))}</span></Field>
-              <Field label="Approved">{r.approved_amount != null ? <span className={cn(partial && 'text-warning')}>{formatNaira(Number(r.approved_amount))}</span> : '—'}</Field>
-              <Field label="Category">{fundCategoryLabel(r.category)}</Field>
-              <Field label="Needed by">{r.needed_by ? format(new Date(r.needed_by), 'MMM d, yyyy') : '—'}</Field>
-              {r.client_label && <Field label="Client">{r.client_label}</Field>}
-              {r.matter_label && <Field label="Matter">{r.matter_label}</Field>}
+          <div className="space-y-5">
+            <FundProgress r={r} />
+
+            <div className={cn('rounded-lg border p-4', STEP_TONE[step.tone])}>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">What happens next</p>
+              <p className="mt-1 text-sm font-medium">{step.text}</p>
+              {returnNote && isMine && <p className="mt-1 text-sm">Approver's note: “{returnNote}”</p>}
+              {(step.action || opts?.canEdit || opts?.canWithdraw || opts?.canDelete) && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {step.action === 'edit' && <Button size="sm" onClick={startEdit} loading={recall.isPending}>{step.actionLabel}</Button>}
+                  {step.action && step.action !== 'edit' && (
+                    <Button size="sm" onClick={() => goTo(step.action === 'approve' ? 'decision' : step.action === 'pay' ? 'payout' : 'retirement')}>{step.actionLabel}</Button>
+                  )}
+                  {opts?.canEdit && step.action !== 'edit' && (
+                    <Button size="sm" variant="outline" onClick={startEdit} loading={recall.isPending}><Pencil className="h-3.5 w-3.5" /> Edit request</Button>
+                  )}
+                  {opts?.canWithdraw && <Button size="sm" variant="ghost" onClick={() => setConfirm('withdraw')}>Withdraw</Button>}
+                  {opts?.canDelete && <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setConfirm('delete')}>Delete draft</Button>}
+                </div>
+              )}
+              {opts?.needsRecall && <p className="mt-2 text-xs text-muted-foreground">You can edit until an approver acts on it — editing pulls it back and you resubmit.</p>}
             </div>
-            {r.purpose && <p className="whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-sm">{r.purpose}</p>}
 
-            {(isMine && (r.status === 'draft' || r.status === 'returned')) && (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
-                <span>{r.status === 'draft' ? 'This is a draft — nobody has seen it yet.' : 'An approver asked for clarification. Update the request and resubmit.'}</span>
-                <div className="flex gap-2">
-                  {r.status === 'draft' && !r.request_number && (
-                    <Button
-                      size="sm" variant="ghost" loading={deleteDraft.isPending}
-                      onClick={async () => {
-                        try { await deleteDraft.mutateAsync(r.id); toast.success('Draft deleted'); onOpenChange(false) }
-                        catch (err) { toast.error('Could not delete draft', { description: errorMessage(err) }) }
-                      }}
-                    >
-                      Delete draft
-                    </Button>
-                  )}
-                  <Button size="sm" onClick={() => setEditing(true)}>{r.status === 'draft' ? 'Edit & submit' : 'Update & resubmit'}</Button>
-                </div>
-              </div>
-            )}
-
-            {r.chain.length > 0 && (
-              <section>
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="font-display text-sm font-semibold">Approvals{r.current_round > 1 ? ` · round ${r.current_round}` : ''}</p>
-                  {earlier.length > 0 && (
-                    <button className="text-xs text-primary hover:underline" onClick={() => setShowHistory((s) => !s)}>
-                      {showHistory ? 'Hide' : 'Show'} earlier rounds
-                    </button>
-                  )}
-                </div>
-                <ApprovalChain approvals={r.chain} requested={Number(r.amount)} />
-                {showHistory && (
-                  <div className="mt-4 space-y-4 border-t border-border pt-4">
-                    {[...new Set(earlier.map((a) => a.round))].map((round) => (
-                      <div key={round}>
-                        <p className="mb-2 text-xs font-medium text-muted-foreground">Round {round}</p>
-                        <ApprovalChain approvals={earlier.filter((a) => a.round === round)} requested={Number(r.amount)} />
-                      </div>
-                    ))}
-                  </div>
-                )}
+            {showDecision && (
+              <section id="fund-decision" className="scroll-mt-4 space-y-4">
+                {approvals}
+                <DecisionBox key={r.id + r.current_step} request={r} />
               </section>
             )}
-
-            {canActOn(r) && <DecisionBox key={r.id + r.current_step} request={r} />}
-            {canManage && (r.status === 'approved' || r.status === 'payment_processing') && <PayoutBox key={r.id} request={r} />}
-
-            <Attachments request={r} editable={isMine && ['draft', 'returned', 'pending'].includes(r.status)} />
-
-            {r.disbursed_at && (
-              <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <Field label="Paid out">{formatNaira(Number(r.disbursed_amount ?? 0))}</Field>
-                <Field label="Payment date">{format(new Date(r.payment_date ?? r.disbursed_at), 'MMM d, yyyy')}</Field>
-                <Field label="By">{r.disbursed_by_name ?? '—'}</Field>
-                <Field label="Method / ref">
-                  {[DISBURSEMENT_METHODS.find((m) => m.value === r.disbursement_method)?.label ?? r.disbursement_method, r.disbursement_reference].filter(Boolean).join(' · ') || '—'}
-                </Field>
-                {r.disbursement_notes && <div className="col-span-full"><Field label="Payment notes">{r.disbursement_notes}</Field></div>}
+            {showPayout && (
+              <section id="fund-payout" className="scroll-mt-4">
+                <PayoutBox key={r.id} request={r} />
               </section>
             )}
-
             {showRetirement && (
-              <section className="border-t border-border pt-5">
+              <section id="fund-retirement" className="scroll-mt-4">
                 {r.retirement_note && r.status === 'retirement_submitted' && (
                   <p className="mb-3 text-sm text-muted-foreground">Employee's note: {r.retirement_note}</p>
                 )}
@@ -363,23 +396,54 @@ export function FundRequestDetailDialog({ request, onOpenChange }: { request: Fu
               </section>
             )}
 
-            {isMine && ['pending', 'approved', 'returned'].includes(r.status) && (
-              <div className="flex justify-end">
-                <Button
-                  variant="ghost" size="sm" loading={cancel.isPending}
-                  onClick={async () => {
-                    try { await cancel.mutateAsync(r.id); toast.success('Request withdrawn') }
-                    catch (err) { toast.error('Could not withdraw', { description: errorMessage(err) }) }
-                  }}
-                >
-                  Withdraw this request
-                </Button>
+            <Fold title="Request details" defaultOpen={!showDecision && !showPayout && !showRetirement}>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <Field label="Requested"><span className="font-display text-lg font-semibold">{formatNaira(Number(r.amount))}</span></Field>
+                <Field label="Approved">{r.approved_amount != null ? <span className={cn(partial && 'text-warning')}>{formatNaira(Number(r.approved_amount))}</span> : '—'}</Field>
+                <Field label="Category">{fundCategoryLabel(r.category)}</Field>
+                <Field label="Needed by">{r.needed_by ? format(new Date(r.needed_by), 'MMM d, yyyy') : '—'}</Field>
+                {r.client_label && <Field label="Client">{r.client_label}</Field>}
+                {r.matter_label && <Field label="Matter">{r.matter_label}</Field>}
               </div>
-            )}
+              {r.purpose && <p className="whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-sm">{r.purpose}</p>}
+              {!showDecision && approvals}
+              <Attachments request={r} editable={isMine && ['draft', 'returned', 'pending'].includes(r.status)} />
+              {r.disbursed_at && (
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  <Field label="Paid out">{formatNaira(Number(r.disbursed_amount ?? 0))}</Field>
+                  <Field label="Payment date">{format(new Date(r.payment_date ?? r.disbursed_at), 'MMM d, yyyy')}</Field>
+                  <Field label="By">{r.disbursed_by_name ?? '—'}</Field>
+                  <Field label="Method / ref">
+                    {[DISBURSEMENT_METHODS.find((m) => m.value === r.disbursement_method)?.label ?? r.disbursement_method, r.disbursement_reference].filter(Boolean).join(' · ') || '—'}
+                  </Field>
+                  {r.disbursement_notes && <div className="col-span-full"><Field label="Payment notes">{r.disbursement_notes}</Field></div>}
+                </div>
+              )}
+            </Fold>
           </div>
         </DialogContent>
       </Dialog>
       <FundRequestFormDialog open={editing} onOpenChange={setEditing} request={r} />
+      <ConfirmDialog
+        open={Boolean(confirm)}
+        onOpenChange={(o) => !o && setConfirm(null)}
+        title={confirm === 'delete' ? 'Delete this draft?' : 'Withdraw this request?'}
+        description={confirm === 'delete'
+          ? 'It was never sent, so it is removed completely.'
+          : 'Approvers stop seeing it and it can’t be paid. It stays in your list as Withdrawn for the record.'}
+        confirmLabel={confirm === 'delete' ? 'Delete draft' : 'Withdraw'}
+        destructive
+        loading={cancel.isPending || deleteDraft.isPending}
+        onConfirm={async () => {
+          try {
+            if (confirm === 'delete') { await deleteDraft.mutateAsync(r.id); toast.success('Draft deleted'); onOpenChange(false) }
+            else { await cancel.mutateAsync(r.id); toast.success('Request withdrawn') }
+            setConfirm(null)
+          } catch (err) {
+            toast.error('Could not do that', { description: errorMessage(err) })
+          }
+        }}
+      />
     </>
   )
 }

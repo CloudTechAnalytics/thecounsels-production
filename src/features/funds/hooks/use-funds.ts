@@ -51,6 +51,11 @@ export function useSaveFundRequest(organizationId: string | null) {
   })
 }
 
+export function useRecallFundRequest(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  return useMutation({ mutationFn: (id: string) => fundsService.recall(id), onSuccess: invalidate })
+}
+
 export function useDeleteFundDraft(organizationId: string | null) {
   const invalidate = useInvalidateFunds(organizationId)
   return useMutation({ mutationFn: (id: string) => fundsService.deleteDraft(id), onSuccess: invalidate })

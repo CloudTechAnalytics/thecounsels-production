@@ -83,8 +83,8 @@ export function RetirementsPage() {
   const selected = openId ? requests.find((r) => r.id === openId) ?? null : null
   const setSelected = (r: FundRequest | null) => {
     const next = new URLSearchParams(params)
-    if (r) next.set('request', r.id)
-    else next.delete('request')
+    if (r) { next.set('request', r.id); next.set('focus', 'retirement') }
+    else { next.delete('request'); next.delete('focus') }
     setParams(next, { replace: true })
   }
 
@@ -246,7 +246,7 @@ export function RetirementsPage() {
         )}
       </Card>
 
-      <FundRequestDetailDialog request={selected} onOpenChange={(o) => { if (!o) setSelected(null) }} />
+      <FundRequestDetailDialog request={selected} focus={params.get('focus') ?? undefined} onOpenChange={(o) => { if (!o) setSelected(null) }} />
     </div>
   )
 }

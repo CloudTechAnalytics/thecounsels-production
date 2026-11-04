@@ -139,6 +139,11 @@ export const fundsService = {
     if (subErr) throw subErr
     return submitted
   },
+  /** Pulls a pending request back to draft so it can be edited (only before any approver acts). */
+  async recall(requestId: string): Promise<void> {
+    const { error } = await supabase.rpc('recall_fund_request', { p_request: requestId })
+    if (error) throw error
+  },
   async deleteDraft(requestId: string): Promise<void> {
     const { error } = await supabase.rpc('delete_fund_draft', { p_request: requestId })
     if (error) throw error

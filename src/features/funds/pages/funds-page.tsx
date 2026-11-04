@@ -1,74 +1,64 @@
 import * as React from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
-import { Search } from 'lucide-react'
+import { Search, X, FilePlus2, BadgeCheck, Banknote, ReceiptText } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useFundRequests, useFundApprovalRights, useFundSettings } from '@/features/funds/hooks/use-funds'
+import { useFundRequests, useFundApprovalRights } from '@/features/funds/hooks/use-funds'
+import { RequestList } from '@/features/funds/components/request-list'
 import { FundRequestFormDialog } from '@/features/funds/components/fund-request-form-dialog'
 import { FundRequestDetailDialog } from '@/features/funds/components/fund-request-detail-dialog'
 import { FundReports } from '@/features/funds/components/fund-reports'
-import { FUND_STATUS_META, fundCategoryLabel, fundStatusLabel, daysOutstanding, type FundRequest } from '@/features/funds/types'
+import { FUND_STATUS_META, fundCategoryLabel, fundStatusLabel, type FundRequest } from '@/features/funds/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
-import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
-import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { ExportButton } from '@/shared/components/export-button'
-import { formatNaira } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
 
 type Tab = 'mine' | 'approve' | 'all' | 'reports'
 
-export function RequestList({ requests, loading, empty, showRequester, onOpen, highlight }: {
-  requests: FundRequest[]
-  loading: boolean
-  empty: string
-  showRequester?: boolean
-  onOpen: (r: FundRequest) => void
-  highlight?: (r: FundRequest) => boolean
-}) {
-  const { activeOrgId } = useAuth()
-  const { data: settings } = useFundSettings(activeOrgId)
-  const dueDays = settings?.retirement_due_days ?? 14
+const HOW_KEY = 'counsel.funds.how-it-works.hidden'
 
-  if (loading) {
-    return <div className="space-y-2 p-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
+/** Four-step explainer for first-time users; dismissible, remembered per browser. */
+function HowItWorks() {
+  const [hidden, setHidden] = React.useState(() => { try { return localStorage.getItem(HOW_KEY) === '1' } catch { return false } })
+  if (hidden) {
+    return (
+      <button className="mb-4 text-xs text-primary hover:underline" onClick={() => { setHidden(false); try { localStorage.removeItem(HOW_KEY) } catch { /* ignore */ } }}>
+        How fund requests work
+      </button>
+    )
   }
-  if (requests.length === 0) return <p className="py-10 text-center text-sm text-muted-foreground">{empty}</p>
-
+  const steps = [
+    { icon: FilePlus2, title: 'Request', text: 'Say what the money is for and how much. Save a draft or submit.' },
+    { icon: BadgeCheck, title: 'Approval', text: 'Your firm’s approvers sign off. You can edit until someone acts on it.' },
+    { icon: Banknote, title: 'Payment', text: 'Finance pays you and records the transfer.' },
+    { icon: ReceiptText, title: 'Retire', text: 'Upload receipts for what you spent and return any money left over.' },
+  ]
   return (
-    <ul className="divide-y divide-border">
-      {requests.map((r) => {
-        const meta = FUND_STATUS_META[r.status] ?? { label: r.status, variant: 'muted' as const }
-        const days = r.status === 'disbursed' || r.status === 'partially_retired' ? daysOutstanding(r) : null
-        const overdue = days != null && days > dueDays
-        return (
-          <li key={r.id}>
-            <button
-              onClick={() => onOpen(r)}
-              className={cn('flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-muted/40', highlight?.(r) && 'bg-primary/5')}
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">
-                  {showRequester && <span>{r.requester_name ?? 'Someone'} — </span>}{r.title}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {r.request_number ?? 'Draft'} · {fundCategoryLabel(r.category)} · {format(new Date(r.submitted_at ?? r.created_at), 'MMM d, yyyy')}
-                  {overdue && <span className="font-medium text-destructive"> · retirement overdue ({days} days)</span>}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-sm font-semibold tabular-nums">{formatNaira(Number(r.approved_amount ?? r.amount))}</p>
-                <Badge variant={meta.variant} className="mt-1">{fundStatusLabel(r)}</Badge>
-              </div>
-            </button>
+    <Card className="mb-5 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-semibold">How fund requests work</p>
+        <button className="text-muted-foreground hover:text-foreground" aria-label="Hide" onClick={() => { setHidden(true); try { localStorage.setItem(HOW_KEY, '1') } catch { /* ignore */ } }}>
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <ol className="grid gap-3 sm:grid-cols-4">
+        {steps.map((st, i) => (
+          <li key={st.title} className="flex gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><st.icon className="h-4 w-4" /></span>
+            <div>
+              <p className="text-sm font-medium">{i + 1}. {st.title}</p>
+              <p className="text-xs text-muted-foreground">{st.text}</p>
+            </div>
           </li>
-        )
-      })}
-    </ul>
+        ))}
+      </ol>
+      <p className="mt-3 text-xs text-muted-foreground">Every request in your list tells you its next step — look for the button on the right.</p>
+    </Card>
   )
 }
 
@@ -79,6 +69,7 @@ export function FundsPage() {
   const { canActOn } = useFundApprovalRights()
   const [params, setParams] = useSearchParams()
   const [creating, setCreating] = React.useState(false)
+  const [editing, setEditing] = React.useState<FundRequest | null>(null)
   const canSeeAll = has('funds.approve') || has('funds.manage')
   const canManage = has('funds.manage')
   const canApprove = has('funds.approve')
@@ -107,12 +98,17 @@ export function FundsPage() {
 
   const openId = params.get('request')
   const open = openId ? requests.find((r) => r.id === openId) ?? null : null
-  const setOpen = (r: FundRequest | null) => {
+  const focus = params.get('focus') ?? undefined
+  const setOpen = (r: FundRequest | null, section?: string) => {
     const next = new URLSearchParams(params)
     if (r) next.set('request', r.id)
     else next.delete('request')
+    if (r && section) next.set('focus', section)
+    else next.delete('focus')
     setParams(next, { replace: true })
   }
+  // The row passes the request it was showing; edit the live copy (it may have just been recalled to draft).
+  const editingLive = editing ? requests.find((x) => x.id === editing.id) ?? editing : null
 
   const tabs: { key: Tab; label: string; show: boolean; count?: number }[] = [
     { key: 'mine', label: 'My requests', show: true },
@@ -128,6 +124,7 @@ export function FundsPage() {
         description="Request money for work, get it approved and paid, then retire it with receipts."
         actions={<Button onClick={() => setCreating(true)}>Request funds</Button>}
       />
+      <HowItWorks />
 
       <div className="mb-4 flex w-fit max-w-full flex-wrap rounded-lg border border-border p-0.5">
         {tabs.filter((t) => t.show).map((t) => (
@@ -148,8 +145,7 @@ export function FundsPage() {
       {tab === 'mine' && (
         <Card className="overflow-hidden">
           <RequestList
-            requests={mine} loading={isLoading} empty="You haven't requested any funds yet." onOpen={setOpen}
-            highlight={(r) => ['disbursed', 'partially_retired', 'returned', 'draft'].includes(r.status)}
+            requests={mine} loading={isLoading} empty="You haven't requested any funds yet — use Request funds at the top right." onOpen={setOpen} onEdit={setEditing}
           />
         </Card>
       )}
@@ -165,7 +161,7 @@ export function FundsPage() {
             <section key={s.title}>
               <p className="mb-2 font-display text-sm font-semibold">{s.title} <span className="text-muted-foreground">({s.rows.length})</span></p>
               <Card className="overflow-hidden">
-                <RequestList requests={s.rows} loading={isLoading} empty="Nothing here right now." showRequester={s.requester} onOpen={setOpen} />
+                <RequestList requests={s.rows} loading={isLoading} empty="Nothing here right now." showRequester={s.requester} onOpen={setOpen} onEdit={setEditing} />
               </Card>
             </section>
           ))}
@@ -208,14 +204,15 @@ export function FundsPage() {
               }]}
             />
           </div>
-          <RequestList requests={all} loading={isLoading} empty="No requests match." showRequester onOpen={setOpen} />
+          <RequestList requests={all} loading={isLoading} empty="No requests match." showRequester onOpen={setOpen} onEdit={setEditing} />
         </Card>
       )}
 
       {tab === 'reports' && canManage && <FundReports requests={requests.filter((r) => r.status !== 'draft')} />}
 
       <FundRequestFormDialog open={creating} onOpenChange={setCreating} />
-      <FundRequestDetailDialog request={open} onOpenChange={(o) => { if (!o) setOpen(null) }} />
+      <FundRequestFormDialog open={Boolean(editing)} onOpenChange={(o) => { if (!o) setEditing(null) }} request={editingLive} />
+      <FundRequestDetailDialog request={open} focus={focus} onOpenChange={(o) => { if (!o) setOpen(null) }} />
     </div>
   )
 }

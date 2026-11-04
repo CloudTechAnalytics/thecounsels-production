@@ -1,0 +1,119 @@
+import { formatNaira } from '@/shared/lib/format'
+import { outstandingBalance, isRetirementOverdue, type FundRequest } from '@/features/funds/types'
+
+/** The single action a viewer can take on a request right now. */
+export type FundAction = 'edit' | 'approve' | 'pay' | 'retire' | 'verify' | 'close' | null
+
+export interface NextStep {
+  /** One plain sentence: what happens next, and who it's waiting on. */
+  text: string
+  action: FundAction
+  /** Button label for `action`. */
+  actionLabel?: string
+  tone: 'you' | 'waiting' | 'done' | 'stopped' | 'late'
+}
+
+export interface ViewerContext {
+  userId: string | null
+  canActOn: (r: FundRequest) => boolean
+  canManage: boolean
+}
+
+/** Who the open approval step is waiting on, in words. */
+export function waitingOn(r: FundRequest): string {
+  const open = r.chain.filter((a) => a.status === 'pending')
+  if (open.length === 0) return 'an approver'
+  return open.map((a) => (a.approver_name ? `${a.approver_name} (${a.step_name ?? 'approver'})` : (a.step_name ?? 'an approver'))).join(' and ')
+}
+
+export function nextStep(r: FundRequest, ctx: ViewerContext): NextStep {
+  const mine = r.user_id === ctx.userId
+  const who = mine ? 'you' : (r.requester_name ?? 'the employee')
+  const money = formatNaira(Number(r.approved_amount ?? r.amount))
+  const owed = outstandingBalance(r)
+
+  switch (r.status) {
+    case 'draft':
+      return mine
+        ? { text: 'Not sent yet — finish it and submit it for approval.', action: 'edit', actionLabel: 'Edit & submit', tone: 'you' }
+        : { text: 'Draft — not sent yet.', action: null, tone: 'waiting' }
+    case 'pending':
+      if (ctx.canActOn(r)) return { text: 'Your approval is needed.', action: 'approve', actionLabel: 'Review & approve', tone: 'you' }
+      return { text: `Waiting for ${waitingOn(r)} to approve.`, action: null, tone: 'waiting' }
+    case 'returned':
+      return mine
+        ? { text: 'An approver asked for changes — update it and resubmit.', action: 'edit', actionLabel: 'Update & resubmit', tone: 'you' }
+        : { text: `Sent back to ${who} for clarification.`, action: null, tone: 'waiting' }
+    case 'approved':
+    case 'payment_processing':
+      if (ctx.canManage && !mine) return { text: `Approved — pay out ${money}.`, action: 'pay', actionLabel: 'Pay out', tone: 'you' }
+      return { text: mine ? `Approved — waiting for finance to pay you ${money}.` : `Approved — waiting for finance to pay out ${money}.`, action: null, tone: 'waiting' }
+    case 'disbursed':
+    case 'partially_retired': {
+      const late = isRetirementOverdue(r) && owed > 0
+      if (owed < 0) {
+        return ctx.canManage && !mine
+          ? { text: `${formatNaira(-owed)} spent above the advance — reimburse or settle.`, action: 'verify', actionLabel: 'Settle', tone: 'you' }
+          : { text: `You spent ${formatNaira(-owed)} more than you were given — finance will settle it.`, action: null, tone: 'waiting' }
+      }
+      if (mine) {
+        return { text: `You have ${formatNaira(owed)} to account for — add receipts and/or return unused money${late ? '. Overdue.' : '.'}`, action: 'retire', actionLabel: 'Add receipts / refund', tone: late ? 'late' : 'you' }
+      }
+      return { text: `Waiting for ${who} to account for ${formatNaira(owed)}${late ? ' — overdue' : ''}.`, action: null, tone: late ? 'late' : 'waiting' }
+    }
+    case 'retirement_submitted':
+      if (ctx.canManage && !mine) return { text: 'Receipts or a refund are waiting for your verification.', action: 'verify', actionLabel: 'Verify', tone: 'you' }
+      return { text: mine ? 'Finance is checking your receipts / refund.' : 'Waiting for finance to verify receipts / refund.', action: null, tone: 'waiting' }
+    case 'retired':
+      if (ctx.canManage && !mine) return { text: 'Fully accounted for — close it to finish.', action: 'close', actionLabel: 'Close', tone: 'you' }
+      return { text: 'Fully accounted for. Finance will close it.', action: null, tone: 'done' }
+    case 'closed':
+      return { text: 'Closed — fully reconciled.', action: null, tone: 'done' }
+    case 'rejected':
+      return { text: 'Rejected.', action: null, tone: 'stopped' }
+    case 'cancelled':
+      return { text: 'Withdrawn.', action: null, tone: 'stopped' }
+    default:
+      return { text: r.status, action: null, tone: 'waiting' }
+  }
+}
+
+export const FUND_STAGES = ['Request', 'Approval', 'Payment', 'Retirement', 'Closed'] as const
+
+/** Which stage a request is at (index into FUND_STAGES), and whether it stopped there. */
+export function fundStage(r: Pick<FundRequest, 'status'>): { index: number; stopped: boolean } {
+  switch (r.status) {
+    case 'draft':
+    case 'returned':
+      return { index: 0, stopped: false }
+    case 'pending':
+      return { index: 1, stopped: false }
+    case 'rejected':
+      return { index: 1, stopped: true }
+    case 'cancelled':
+      return { index: 1, stopped: true }
+    case 'approved':
+    case 'payment_processing':
+      return { index: 2, stopped: false }
+    case 'disbursed':
+    case 'partially_retired':
+    case 'retirement_submitted':
+    case 'retired':
+      return { index: 3, stopped: false }
+    case 'closed':
+      return { index: 4, stopped: false }
+    default:
+      return { index: 0, stopped: false }
+  }
+}
+
+/** What the requester can still do to their own request, besides the next step. */
+export function requesterOptions(r: FundRequest) {
+  const decided = r.chain.some((a) => ['approved', 'rejected', 'returned'].includes(a.status))
+  return {
+    canEdit: r.status === 'draft' || r.status === 'returned' || (r.status === 'pending' && !decided),
+    needsRecall: r.status === 'pending' && !decided,
+    canDelete: r.status === 'draft' && !r.request_number,
+    canWithdraw: ['draft', 'pending', 'returned', 'approved'].includes(r.status) && !(r.status === 'draft' && !r.request_number),
+  }
+}

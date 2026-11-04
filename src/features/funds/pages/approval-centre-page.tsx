@@ -8,7 +8,8 @@ import { useFundRequests, useFundApprovalRights } from '@/features/funds/hooks/u
 import { useAllLeaveRequests, useAllHrRequests, useLeaveTypes, useReviewLeaveRequest } from '@/features/hr/hooks/use-hr'
 import { FundRequestDetailDialog } from '@/features/funds/components/fund-request-detail-dialog'
 import { DelegationsCard } from '@/features/funds/components/fund-settings'
-import { RequestList } from '@/features/funds/pages/funds-page'
+import { RequestList } from '@/features/funds/components/request-list'
+import { FundRequestFormDialog } from '@/features/funds/components/fund-request-form-dialog'
 import { HR_REQUEST_TYPES, HR_REQUEST_STATUS_META } from '@/features/hr/types'
 import type { FundRequest } from '@/features/funds/types'
 import { PageHeader } from '@/shared/components/page-header'
@@ -112,10 +113,14 @@ export function ApprovalCentrePage() {
 
   const openId = params.get('request')
   const open = openId ? requests.find((r) => r.id === openId) ?? null : null
-  const setOpen = (r: FundRequest | null) => {
+  const [editing, setEditing] = React.useState<FundRequest | null>(null)
+  const focus = params.get('focus') ?? undefined
+  const setOpen = (r: FundRequest | null, section?: string) => {
     const next = new URLSearchParams(params)
     if (r) next.set('request', r.id)
     else next.delete('request')
+    if (r && section) next.set('focus', section)
+    else next.delete('focus')
     setParams(next, { replace: true })
   }
 
@@ -124,16 +129,16 @@ export function ApprovalCentrePage() {
       <PageHeader title="Approval Centre" description="Everything waiting for your decision, in one place." />
       <div className="grid gap-6 xl:grid-cols-2">
         <Section title="Fund requests to approve" count={toApprove.length} icon={Wallet}>
-          <RequestList requests={toApprove} loading={isLoading} empty="Nothing waiting for your approval." showRequester onOpen={setOpen} />
+          <RequestList requests={toApprove} loading={isLoading} empty="Nothing waiting for your approval." showRequester onOpen={setOpen} onEdit={setEditing} />
         </Section>
         {canManageFunds && (
           <Section title="Approved — ready to pay out" count={toPay.length} icon={Banknote}>
-            <RequestList requests={toPay} loading={isLoading} empty="Nothing to pay out." showRequester onOpen={setOpen} />
+            <RequestList requests={toPay} loading={isLoading} empty="Nothing to pay out." showRequester onOpen={setOpen} onEdit={setEditing} />
           </Section>
         )}
         {canManageFunds && (
           <Section title="Expenses and refunds to verify" count={toReview.length} icon={ReceiptText}>
-            <RequestList requests={toReview} loading={isLoading} empty="No retirements waiting." showRequester onOpen={setOpen} />
+            <RequestList requests={toReview} loading={isLoading} empty="No retirements waiting." showRequester onOpen={setOpen} onEdit={setEditing} />
           </Section>
         )}
         {has('leave.manage') && <LeaveQueue />}
@@ -142,7 +147,8 @@ export function ApprovalCentrePage() {
       <div className="mt-8">
         <DelegationsCard />
       </div>
-      <FundRequestDetailDialog request={open} onOpenChange={(o) => { if (!o) setOpen(null) }} />
+      <FundRequestDetailDialog request={open} focus={focus} onOpenChange={(o) => { if (!o) setOpen(null) }} />
+      <FundRequestFormDialog open={Boolean(editing)} onOpenChange={(o) => { if (!o) setEditing(null) }} request={editing ? requests.find((x) => x.id === editing.id) ?? editing : null} />
     </div>
   )
 }

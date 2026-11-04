@@ -1,63 +1,78 @@
 import type { InvoiceDetail } from '@/features/billing/types'
 import { formatNaira } from '@/shared/lib/format'
+import { amountInWords, esc, facts, letterhead, openPrintDocument, printDate, type BadgeTone, type PrintFirm } from '@/shared/lib/print-document'
 
-function esc(s: string | null | undefined): string {
-  return (s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string)
+const STATUS: Record<string, { label: string; tone: BadgeTone }> = {
+  draft: { label: 'Draft', tone: 'grey' },
+  sent: { label: 'Awaiting payment', tone: 'gold' },
+  partial: { label: 'Part paid', tone: 'gold' },
+  paid: { label: 'Paid', tone: 'green' },
+  void: { label: 'Void', tone: 'grey' },
 }
 
 /** Open a print-ready invoice in a new window and trigger the browser's Save-as-PDF. */
-export function printInvoice(inv: InvoiceDetail, orgName: string): void {
+export function printInvoice(inv: InvoiceDetail, firm: PrintFirm): void {
+  const balance = Number(inv.total) - Number(inv.amount_paid)
+  const overdue = balance > 0 && inv.status !== 'void' && inv.status !== 'draft' && !!inv.due_date && new Date(inv.due_date + 'T23:59:59') < new Date()
+  const badge = overdue ? { label: 'Overdue', tone: 'red' as const } : STATUS[inv.status] ?? null
+
   const rows = inv.items
     .map(
-      (i) => `<tr>
+      (i, n) => `<tr>
+        <td class="muted">${n + 1}</td>
         <td>${esc(i.description)}</td>
         <td class="r">${Number(i.quantity)}${i.unit ? ' ' + esc(i.unit) : ''}</td>
         <td class="r">${formatNaira(Number(i.rate))}</td>
-        <td class="r">${formatNaira(Number(i.amount))}</td>
+        <td class="r"><strong>${formatNaira(Number(i.amount))}</strong></td>
       </tr>`,
     )
     .join('')
 
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(inv.invoice_number ?? 'Invoice')}</title>
-  <style>
-    *{box-sizing:border-box} body{font-family:Inter,Arial,sans-serif;color:#1c1917;margin:40px;font-size:13px}
-    h1{font-family:'Playfair Display',Georgia,serif;font-size:28px;margin:0}
-    .brand{color:#B38A3E;font-weight:600}
-    .head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}
-    .muted{color:#78716c} table{width:100%;border-collapse:collapse;margin-top:24px}
-    th,td{padding:10px 8px;border-bottom:1px solid #e7e5e4;text-align:left} th{font-size:11px;text-transform:uppercase;color:#78716c}
-    .r{text-align:right} .totals{margin-top:16px;margin-left:auto;width:280px}
-    .totals div{display:flex;justify-content:space-between;padding:6px 8px}
-    .totals .grand{border-top:2px solid #1c1917;font-weight:700;font-size:15px}
-    .badge{display:inline-block;padding:3px 10px;border-radius:999px;background:#f5f5f4;font-size:11px;text-transform:uppercase}
-  </style></head><body>
-    <div class="head">
-      <div><div class="brand">${esc(orgName)}</div><div class="muted">Powered by The Counsel</div></div>
-      <div style="text-align:right"><h1>Invoice</h1><div class="muted">${esc(inv.invoice_number ?? '')}</div>
-        <div class="badge">${esc(inv.status)}</div></div>
-    </div>
-    <div class="head">
-      <div><div class="muted">Billed to</div><strong>${esc(inv.client?.display_name ?? '—')}</strong></div>
-      <div style="text-align:right">
-        <div><span class="muted">Issued</span> ${esc(inv.issue_date)}</div>
-        ${inv.due_date ? `<div><span class="muted">Due</span> ${esc(inv.due_date)}</div>` : ''}
+  const body = `
+    <section class="parties">
+      <div class="party">
+        <h2 class="sec">Billed to</h2>
+        <div class="who">${esc(inv.client?.display_name ?? '—')}</div>
+        ${inv.matter ? `<div class="sub">Matter ${esc(inv.matter.matter_number)}</div>` : ''}
       </div>
-    </div>
-    <table><thead><tr><th>Description</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="4" class="muted">No line items</td></tr>'}</tbody></table>
-    <div class="totals">
+      ${facts([
+        ['Invoice no.', esc(inv.invoice_number)],
+        ['Issue date', esc(printDate(inv.issue_date))],
+        ['Due date', inv.due_date ? esc(printDate(inv.due_date)) : 'On receipt'],
+        ['Amount due', esc(formatNaira(balance))],
+      ])}
+    </section>
+    <table class="lines">
+      <thead><tr><th style="width:28px">#</th><th>Description</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="5" class="muted">No line items</td></tr>'}</tbody>
+    </table>
+    <div class="sum-row">
+    <div>${inv.status === 'paid' ? '<div class="stamp">PAID</div>' : ''}</div>
+    <div class="sum">
       <div><span class="muted">Subtotal</span><span>${formatNaira(Number(inv.subtotal))}</span></div>
-      <div><span class="muted">Tax</span><span>${formatNaira(Number(inv.tax))}</span></div>
-      <div class="grand"><span>Total</span><span>${formatNaira(Number(inv.total))}</span></div>
-      <div><span class="muted">Paid</span><span>${formatNaira(Number(inv.amount_paid))}</span></div>
-      <div><span class="muted">Balance</span><span>${formatNaira(Number(inv.total) - Number(inv.amount_paid))}</span></div>
+      ${Number(inv.discount) > 0 ? `<div><span class="muted">Discount</span><span>−${formatNaira(Number(inv.discount))}</span></div>` : ''}
+      ${Number(inv.tax) > 0 ? `<div><span class="muted">Tax${Number(inv.tax_rate) ? ` (${Number(inv.tax_rate)}%)` : ''}</span><span>${formatNaira(Number(inv.tax))}</span></div>` : ''}
+      <div class="strong"><span>Invoice total</span><span>${formatNaira(Number(inv.total))}</span></div>
+      ${Number(inv.amount_paid) > 0 ? `<div><span class="muted">Paid to date</span><span>−${formatNaira(Number(inv.amount_paid))}</span></div>` : ''}
     </div>
-    ${inv.notes ? `<p class="muted" style="margin-top:24px">${esc(inv.notes)}</p>` : ''}
-    <script>window.onload=function(){window.print()}</script>
-  </body></html>`
+    </div>
+    ${balance > 0 && inv.status !== 'void' ? `<div class="hero">
+      <div><div class="k">Balance due${inv.due_date ? ` by ${esc(printDate(inv.due_date))}` : ''}</div><div class="words">${esc(amountInWords(balance))}</div></div>
+      <div class="v">${formatNaira(balance)}</div>
+    </div>` : ''}
+    ${inv.payments.length ? `<div style="margin-top:6mm"><h2 class="sec">Payments received</h2>
+      <table class="lines"><thead><tr><th>Date</th><th>Receipt</th><th>Method</th><th class="r">Amount</th></tr></thead><tbody>
+      ${inv.payments.map((p) => `<tr><td>${esc(printDate(p.paid_at, 'd MMM yyyy'))}</td><td>${esc(p.receipt_number ?? '—')}</td><td>${esc(p.method ?? '—')}</td><td class="r">${formatNaira(Number(p.amount))}</td></tr>`).join('')}
+      </tbody></table></div>` : ''}
+    ${inv.notes ? `<div class="note"><div class="t">Notes &amp; payment instructions</div>${esc(inv.notes)}</div>` : ''}
+    <p class="muted" style="margin-top:7mm;text-align:center;font-family:'Playfair Display',Georgia,serif;font-size:14px">Thank you for your instruction.</p>
+  `
 
-  const w = window.open('', '_blank', 'width=800,height=900')
-  if (!w) return
-  w.document.write(html)
-  w.document.close()
+  openPrintDocument({
+    title: `${inv.invoice_number ?? 'Invoice'} — ${inv.client?.display_name ?? ''}`,
+    firm,
+    head: letterhead(firm, { title: 'Invoice', number: inv.invoice_number, badge }),
+    body,
+    footNote: `Invoice ${inv.invoice_number ?? ''}`,
+  })
 }

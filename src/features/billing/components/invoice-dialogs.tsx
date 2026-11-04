@@ -534,7 +534,7 @@ export function InvoiceDetailDialog({
 
   const downloadPdf = () => {
     if (!inv || !activeOrgId) return
-    printInvoice(inv, activeMembership?.organization.name ?? 'Your firm')
+    printInvoice(inv, activeMembership?.organization ?? { name: 'Your firm' })
     void supabase.rpc('log_audit', {
       p_org: activeOrgId,
       p_action: 'invoice.pdf_downloaded',

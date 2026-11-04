@@ -1,8 +1,11 @@
 import * as React from 'react'
 import {
   Banknote, CircleDollarSign, AlertTriangle, Percent, Briefcase, Users,
-  UserPlus, Clock, Gavel, ListChecks,
+  Clock, FileDown, RotateCcw, CalendarRange, ListChecks,
 } from 'lucide-react'
+import { format, startOfMonth, startOfYear, subMonths } from 'date-fns'
+import { printFirmReport } from '@/features/reports/lib/print-report'
+import { Button } from '@/shared/components/ui/button'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useReportData, useReportKpis } from '@/features/reports/hooks/use-reports'
@@ -144,53 +147,112 @@ const TABS = ['Financial', 'Productivity', 'Matters', 'Clients'] as const
 type Tab = (typeof TABS)[number]
 const ALL = 'all'
 
-function FiltersBar({ filters, set }: { filters: ReportFilters; set: <K extends keyof ReportFilters>(key: K, value: ReportFilters[K]) => void }) {
+const PERIODS = [
+  { key: 'month', label: 'This month', range: () => ({ from: startOfMonth(new Date()) }) },
+  { key: 'quarter', label: 'Last 3 months', range: () => ({ from: startOfMonth(subMonths(new Date(), 2)) }) },
+  { key: 'year', label: 'This year', range: () => ({ from: startOfYear(new Date()) }) },
+  { key: 'all', label: 'All time', range: () => ({ from: null as Date | null }) },
+] as const
+const iso = (d: Date) => format(d, 'yyyy-MM-dd')
+
+/** Human description of the period, for the screen and the PDF cover. */
+function periodLabel(f: ReportFilters): string {
+  const fmt = (v: string) => format(new Date(v + 'T00:00:00'), 'd MMM yyyy')
+  if (f.dateFrom && f.dateTo) return `${fmt(f.dateFrom)} – ${fmt(f.dateTo)}`
+  if (f.dateFrom) return `${fmt(f.dateFrom)} – ${format(new Date(), 'd MMM yyyy')}`
+  if (f.dateTo) return `Up to ${fmt(f.dateTo)}`
+  return `All time to ${format(new Date(), 'd MMM yyyy')}`
+}
+
+function FiltersBar({ filters, set, reset }: { filters: ReportFilters; set: <K extends keyof ReportFilters>(key: K, value: ReportFilters[K]) => void; reset: () => void }) {
   const { activeOrgId } = useAuth()
   const { data: members } = useFirmMembers(activeOrgId)
   const { data: clients } = useClients(activeOrgId, {})
+  const today = iso(new Date())
+  const activePreset = PERIODS.find((p) => {
+    const r = p.range()
+    return (r.from ? iso(r.from) : undefined) === filters.dateFrom && !filters.dateTo
+  })?.key
+  const dirty = Boolean(filters.dateFrom || filters.dateTo || (filters.lawyerId && filters.lawyerId !== ALL) || (filters.clientId && filters.clientId !== ALL) || (filters.practiceArea && filters.practiceArea !== ALL))
 
   return (
-    <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-      <div className="flex items-center gap-1.5">
-        <span className="shrink-0 text-xs text-muted-foreground">From</span>
-        <Input type="date" value={filters.dateFrom ?? ''} onChange={(e) => set('dateFrom', e.target.value || undefined)} className="w-full min-w-0" aria-label="From date" />
+    <Card className="mb-6 p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <CalendarRange className="mr-1 h-4 w-4 text-muted-foreground" />
+          {PERIODS.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => { const r = p.range(); set('dateFrom', r.from ? iso(r.from) : undefined); set('dateTo', undefined) }}
+              className={cn('rounded-full border px-3 py-1 text-xs font-medium transition-colors', activePreset === p.key ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:text-foreground')}
+            >
+              {p.label}
+            </button>
+          ))}
+          <span className="ml-1 text-xs text-muted-foreground">· {periodLabel(filters)}</span>
+        </div>
+        {dirty && <Button variant="ghost" size="sm" onClick={reset}><RotateCcw className="h-3.5 w-3.5" /> Reset</Button>}
       </div>
-      <div className="flex items-center gap-1.5">
-        <span className="shrink-0 text-xs text-muted-foreground">To</span>
-        <Input type="date" value={filters.dateTo ?? ''} onChange={(e) => set('dateTo', e.target.value || undefined)} className="w-full min-w-0" aria-label="To date" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="flex items-center gap-1.5">
+          <span className="shrink-0 text-xs text-muted-foreground">From</span>
+          <Input type="date" max={today} value={filters.dateFrom ?? ''} onChange={(e) => set('dateFrom', e.target.value || undefined)} className="w-full min-w-0" aria-label="From date" />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="shrink-0 text-xs text-muted-foreground">To</span>
+          <Input type="date" value={filters.dateTo ?? ''} onChange={(e) => set('dateTo', e.target.value || undefined)} className="w-full min-w-0" aria-label="To date" />
+        </div>
+        <Select value={filters.lawyerId ?? ALL} onValueChange={(v) => set('lawyerId', v)}>
+          <SelectTrigger><SelectValue placeholder="All lawyers" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All lawyers</SelectItem>
+            {members?.map((m) => <SelectItem key={m.user_id} value={m.user_id}>{m.profile?.full_name ?? m.profile?.email}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filters.clientId ?? ALL} onValueChange={(v) => set('clientId', v)}>
+          <SelectTrigger><SelectValue placeholder="All clients" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All clients</SelectItem>
+            {clients?.map((c) => <SelectItem key={c.id} value={c.id}>{c.display_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filters.practiceArea ?? ALL} onValueChange={(v) => set('practiceArea', v)}>
+          <SelectTrigger><SelectValue placeholder="All practice areas" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All practice areas</SelectItem>
+            {PRACTICE_AREAS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
-      <Select value={filters.lawyerId ?? ALL} onValueChange={(v) => set('lawyerId', v)}>
-        <SelectTrigger><SelectValue placeholder="All lawyers" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL}>All lawyers</SelectItem>
-          {members?.map((m) => <SelectItem key={m.user_id} value={m.user_id}>{m.profile?.full_name ?? m.profile?.email}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={filters.clientId ?? ALL} onValueChange={(v) => set('clientId', v)}>
-        <SelectTrigger><SelectValue placeholder="All clients" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL}>All clients</SelectItem>
-          {clients?.map((c) => <SelectItem key={c.id} value={c.id}>{c.display_name}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={filters.practiceArea ?? ALL} onValueChange={(v) => set('practiceArea', v)}>
-        <SelectTrigger><SelectValue placeholder="All practice areas" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL}>All practice areas</SelectItem>
-          {PRACTICE_AREAS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-        </SelectContent>
-      </Select>
-    </div>
+    </Card>
+  )
+}
+
+/** Lower-priority figures in one compact strip under the headline tiles. */
+function Strip({ items, loading }: { items: { label: string; value: string }[]; loading: boolean }) {
+  return (
+    <Card className="mb-6">
+      <dl className="grid grid-cols-2 divide-border sm:grid-cols-3 lg:grid-cols-5 lg:divide-x">
+        {items.map((i) => (
+          <div key={i.label} className="px-4 py-3">
+            <dt className="text-xs text-muted-foreground">{i.label}</dt>
+            <dd className="mt-0.5 font-display text-lg font-semibold tabular-nums">{loading ? <Skeleton className="h-6 w-12" /> : i.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </Card>
   )
 }
 
 export function ReportsPage() {
-  const { activeOrgId, activeMembership } = useAuth()
+  const { activeOrgId, activeMembership, profile } = useAuth()
   const { has } = usePermissions()
+  const { data: filterMembers } = useFirmMembers(activeOrgId)
+  const { data: filterClients } = useClients(activeOrgId, {})
   const canFinancials = has('reports.financial')
   const visibleTabs = canFinancials ? TABS : TABS.filter((t) => t !== 'Financial')
 
-  const [filters, setFilters] = React.useState<ReportFilters>({})
+  const [filters, setFilters] = React.useState<ReportFilters>(() => ({ dateFrom: iso(startOfYear(new Date())) }))
   const setFilter = <K extends keyof ReportFilters>(key: K, value: ReportFilters[K]) =>
     setFilters((prev) => ({ ...prev, [key]: value }))
 
@@ -203,15 +265,45 @@ export function ReportsPage() {
     ? c?.productivity ?? []
     : (c?.productivity ?? []).filter((p) => p.id === activeMembership?.id)
 
+  const downloadPdf = () => {
+    if (!c || !activeMembership) return
+    const org = activeMembership.organization
+    const labels: string[] = []
+    if (filters.lawyerId && filters.lawyerId !== ALL) labels.push(`Lawyer: ${filterMembers?.find((m) => m.user_id === filters.lawyerId)?.profile?.full_name ?? 'selected'}`)
+    if (filters.clientId && filters.clientId !== ALL) labels.push(`Client: ${filterClients?.find((x) => x.id === filters.clientId)?.display_name ?? 'selected'}`)
+    if (filters.practiceArea && filters.practiceArea !== ALL) labels.push(`Practice area: ${filters.practiceArea}`)
+    printFirmReport({
+      firm: { name: org.name, legalName: org.legal_name, logoUrl: org.logo_url },
+      preparedBy: `${profile?.full_name ?? 'The Counsel'}${activeMembership.role?.name ? `, ${activeMembership.role.name}` : ''}`,
+      period: periodLabel(filters),
+      filtersLabel: labels,
+      includeFinancial: canFinancials,
+      kpis: {
+        activeMatters: kpis?.activeMatters ?? 0, closedMatters: kpis?.closedMatters ?? 0, activeClients: kpis?.activeClients ?? 0,
+        newClients: kpis?.newClients ?? 0, billableHours: kpis?.billableHours ?? 0, revenue: kpis?.revenue ?? 0,
+        outstandingInvoices: kpis?.outstandingInvoices ?? 0, hearingsThisWeek: kpis?.hearingsThisWeek ?? 0, tasksDue: kpis?.tasksDue ?? 0,
+      },
+      financial: c.financial,
+      productivity: productivityRows,
+      matters: {
+        total: c.matters.total, open: c.matters.open, byStatus: c.matters.byStatus, byArea: c.matters.byArea,
+        wipTop: c.matters.wipTop.map((w) => ({ label: w.matter ? `${w.matter.matter_number ?? ''} ${w.matter.title}`.trim() : '—', value: w.value })),
+      },
+      clients: c.clients,
+    })
+  }
+
   return (
     <div>
       <PageHeader
         title="Reports"
         description="Financial, productivity, matter and client analytics for your firm."
         actions={
+          <>
+          <Button onClick={downloadPdf} disabled={!c || isLoading}><FileDown className="h-4 w-4" /> Download PDF report</Button>
           <ExportButton
             filename="firm-report"
-            label="Export report"
+            label="Excel / CSV"
             csv
             disabled={!c}
             sheets={() => {
@@ -272,23 +364,46 @@ export function ReportsPage() {
               return sheets
             }}
           />
+          </>
         }
       />
 
-      <FiltersBar filters={filters} set={setFilter} />
+      <FiltersBar filters={filters} set={setFilter} reset={() => setFilters({})} />
 
-      {/* KPI summary row — persistent across tabs, org-wide (not per-lawyer attributed), fixes the "shows 0" bugs */}
-      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <StatTile label="Active Matters" value={String(kpis?.activeMatters ?? 0)} icon={Briefcase} loading={kpisLoading} />
-        <StatTile label="Closed Matters" value={String(kpis?.closedMatters ?? 0)} icon={Briefcase} loading={kpisLoading} />
-        <StatTile label="Active Clients" value={String(kpis?.activeClients ?? 0)} icon={Users} loading={kpisLoading} />
-        <StatTile label="New Clients" value={String(kpis?.newClients ?? 0)} icon={UserPlus} loading={kpisLoading} />
-        <StatTile label="Billable Hours" value={`${kpis?.billableHours ?? 0}h`} icon={Clock} loading={kpisLoading} />
-        {canFinancials && <StatTile label="Revenue" value={formatMoneyCompact(kpis?.revenue ?? 0)} icon={Banknote} loading={kpisLoading} />}
-        {canFinancials && <StatTile label="Outstanding Invoices" value={formatMoneyCompact(kpis?.outstandingInvoices ?? 0)} icon={AlertTriangle} loading={kpisLoading} />}
-        <StatTile label="Hearings This Week" value={String(kpis?.hearingsThisWeek ?? 0)} icon={Gavel} loading={kpisLoading} />
-        <StatTile label="Tasks Due" value={String(kpis?.tasksDue ?? 0)} icon={ListChecks} loading={kpisLoading} />
+      {/* Headline numbers for the period, then the rest in one strip. */}
+      <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        {canFinancials ? (
+          <>
+            <StatTile label="Revenue (invoiced)" value={formatMoneyCompact(kpis?.revenue ?? 0)} icon={Banknote} loading={kpisLoading} />
+            <StatTile label="Collected" value={formatMoneyCompact(c?.financial.collected ?? 0)} hint={`${c?.financial.collectionRate ?? 0}% collection rate`} icon={CircleDollarSign} loading={kpisLoading || isLoading} />
+            <StatTile label="Outstanding invoices" value={formatMoneyCompact(kpis?.outstandingInvoices ?? 0)} icon={AlertTriangle} loading={kpisLoading} emphasis={(kpis?.outstandingInvoices ?? 0) > 0} />
+          </>
+        ) : (
+          <>
+            <StatTile label="Active clients" value={String(kpis?.activeClients ?? 0)} icon={Users} loading={kpisLoading} />
+            <StatTile label="Hearings this week" value={String(kpis?.hearingsThisWeek ?? 0)} icon={CalendarRange} loading={kpisLoading} />
+            <StatTile label="Tasks due" value={String(kpis?.tasksDue ?? 0)} icon={ListChecks} loading={kpisLoading} />
+          </>
+        )}
+        <StatTile label="Active matters" value={String(kpis?.activeMatters ?? 0)} hint={`${kpis?.closedMatters ?? 0} closed`} icon={Briefcase} loading={kpisLoading} />
+        <StatTile label="Billable hours" value={`${kpis?.billableHours ?? 0}h`} icon={Clock} loading={kpisLoading} />
       </div>
+      <Strip
+        loading={kpisLoading}
+        items={[
+          { label: 'Closed matters', value: String(kpis?.closedMatters ?? 0) },
+          ...(canFinancials ? [{ label: 'Active clients', value: String(kpis?.activeClients ?? 0) }] : []),
+          { label: 'New clients', value: String(kpis?.newClients ?? 0) },
+          ...(canFinancials ? [
+            { label: 'Hearings this week', value: String(kpis?.hearingsThisWeek ?? 0) },
+            { label: 'Tasks due', value: String(kpis?.tasksDue ?? 0) },
+          ] : [
+            { label: 'Matters in total', value: String(c?.matters.total ?? 0) },
+            { label: 'Open matters', value: String(c?.matters.open ?? 0) },
+            { label: 'Clients', value: String(c?.clients.rows.length ?? 0) },
+          ]),
+        ]}
+      />
 
       <div className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
         {visibleTabs.map((t) => (

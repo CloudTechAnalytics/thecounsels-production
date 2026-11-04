@@ -44,6 +44,7 @@ import type {
   MemberDirectoryRow,
   OrgRow,
   PlatformStats,
+  PlatformTrends,
   PlatformUser,
   RegistrationSettings,
   RevenueAnalytics,
@@ -523,6 +524,27 @@ export const platformService = {
     }
     let running = 0
     return buckets.map((b) => ({ label: b.label, value: (running += b.value) }))
+  },
+
+  /** Raw timestamps for the dashboard's daily line charts — new firms, new
+   * members and audited activity over the last `days` days. Bucketed on the
+   * client so the 30/90-day toggle doesn't refetch. */
+  async getDailyTrends(days = 90): Promise<PlatformTrends> {
+    const since = new Date()
+    since.setDate(since.getDate() - (days - 1))
+    since.setHours(0, 0, 0, 0)
+    const iso = since.toISOString()
+    const [orgs, members, events] = await Promise.all([
+      supabase.from('organizations').select('created_at, name').gte('created_at', iso).order('created_at'),
+      supabase.from('memberships').select('created_at').gte('created_at', iso).limit(20000),
+      supabase.from('audit_logs').select('created_at').gte('created_at', iso).limit(50000),
+    ])
+    for (const r of [orgs, members, events]) if (r.error) throw r.error
+    return {
+      organizations: (orgs.data ?? []).map((o) => ({ at: o.created_at, name: o.name })),
+      members: (members.data ?? []).map((m) => m.created_at),
+      events: (events.data ?? []).map((e) => e.created_at),
+    }
   },
 
   async getRevenueAnalytics(months = 6): Promise<RevenueAnalytics> {

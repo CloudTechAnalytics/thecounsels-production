@@ -51,6 +51,12 @@ export interface PlatformStats {
   arr: number
 }
 
+export interface PlatformTrends {
+  organizations: { at: string; name: string }[]
+  members: string[]
+  events: string[]
+}
+
 export interface GrowthPoint {
   label: string
   value: number

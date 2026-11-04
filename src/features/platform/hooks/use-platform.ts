@@ -85,6 +85,9 @@ export function useClearAuditLog() {
 export function useOrganizationGrowth() {
   return useQuery({ queryKey: keys.growth, queryFn: () => platformService.getOrganizationGrowth() })
 }
+export function usePlatformTrends() {
+  return useQuery({ queryKey: ['platform', 'trends'], queryFn: () => platformService.getDailyTrends(90) })
+}
 export function usePlans() {
   return useQuery({ queryKey: keys.plans, queryFn: () => platformService.listPlans() })
 }

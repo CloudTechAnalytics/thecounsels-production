@@ -285,6 +285,35 @@ export const fundsService = {
     if (error) throw error
     return data ?? []
   },
+  async claimReimbursement(organizationId: string, requestId: string, c: { amount: number; reason?: string; evidence?: File | null }): Promise<void> {
+    let path: string | null = null
+    if (c.evidence) {
+      path = `${organizationId}/${requestId}/refunds/${crypto.randomUUID()}-${safeName(c.evidence.name)}`
+      await uploadToBucket(organizationId, path, c.evidence)
+    }
+    const { error } = await supabase.rpc('claim_fund_reimbursement', {
+      p_request: requestId, p_amount: c.amount, p_reason: c.reason || null, p_evidence_path: path, p_evidence_name: c.evidence?.name ?? null,
+    })
+    if (error) {
+      if (path) await supabase.storage.from('fund-receipts').remove([path])
+      throw error
+    }
+  },
+  async decideReimbursement(claimId: string, approve: boolean, amount?: number, reason?: string): Promise<void> {
+    const { error } = await supabase.rpc('decide_fund_reimbursement', { p_claim: claimId, p_approve: approve, p_amount: amount ?? null, p_reason: reason || null })
+    if (error) throw error
+  },
+  async payReimbursement(claimId: string, p: { paidOn?: string; method?: string; reference?: string; notes?: string }): Promise<void> {
+    const { error } = await supabase.rpc('pay_fund_reimbursement', {
+      p_claim: claimId, p_paid_on: p.paidOn || null, p_method: p.method || null, p_reference: p.reference || null, p_notes: p.notes || null,
+    })
+    if (error) throw error
+  },
+  async myReimbursementApprovalIds(organizationId: string): Promise<string[]> {
+    const { data, error } = await supabase.rpc('my_reimbursement_approvals', { p_org: organizationId })
+    if (error) throw error
+    return (data ?? []) as string[]
+  },
   async withdrawItem(itemId: string): Promise<void> {
     const { error } = await supabase.rpc('withdraw_retirement_item', { p_item: itemId })
     if (error) throw error

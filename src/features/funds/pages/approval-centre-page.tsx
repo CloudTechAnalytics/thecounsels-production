@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { Wallet, Banknote, ReceiptText, CalendarClock, Inbox } from 'lucide-react'
+import { Wallet, Banknote, ReceiptText, CalendarClock, Inbox, HandCoins } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useFundRequests, useFundApprovalRights } from '@/features/funds/hooks/use-funds'
@@ -100,12 +100,14 @@ export function ApprovalCentrePage() {
   const { activeOrgId, userId } = useAuth()
   const { has } = usePermissions()
   const { data: requests = [], isLoading } = useFundRequests(activeOrgId)
-  const { canActOn } = useFundApprovalRights()
+  const { canActOn, canApproveClaim } = useFundApprovalRights()
   const canManageFunds = has('funds.manage')
 
   const toApprove = requests.filter(canActOn)
   const toPay = canManageFunds ? requests.filter((r) => (r.status === 'approved' || r.status === 'payment_processing') && r.user_id !== userId) : []
   const toReview = canManageFunds ? requests.filter((r) => r.status === 'retirement_submitted' && r.user_id !== userId) : []
+  const claimsToApprove = requests.filter(canApproveClaim)
+  const claimsToPay = canManageFunds ? requests.filter((r) => Number(r.reimbursement_due) > 0 && r.user_id !== userId) : []
 
 
   return (
@@ -123,6 +125,16 @@ export function ApprovalCentrePage() {
         {canManageFunds && (
           <Section title="Expenses and refunds to verify" count={toReview.length} icon={ReceiptText}>
             <RequestList requests={toReview} loading={isLoading} empty="No retirements waiting." showRequester />
+          </Section>
+        )}
+        {(claimsToApprove.length > 0 || has('funds.approve')) && (
+          <Section title="Reimbursement claims to approve" count={claimsToApprove.length} icon={HandCoins}>
+            <RequestList requests={claimsToApprove} loading={isLoading} empty="No reimbursement claims waiting." showRequester />
+          </Section>
+        )}
+        {canManageFunds && (
+          <Section title="Reimbursements to pay" count={claimsToPay.length} icon={HandCoins}>
+            <RequestList requests={claimsToPay} loading={isLoading} empty="No approved reimbursements to pay." showRequester />
           </Section>
         )}
         {has('leave.manage') && <LeaveQueue />}

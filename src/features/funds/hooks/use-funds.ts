@@ -191,6 +191,33 @@ export function useFundRequestHistory(requestId: string | null) {
   })
 }
 
+export function useClaimReimbursement(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  const invalidateStorage = useInvalidateStorageUsage(organizationId)
+  return useMutation({
+    mutationFn: ({ id, ...c }: { id: string; amount: number; reason?: string; evidence?: File | null }) => fundsService.claimReimbursement(organizationId!, id, c),
+    onSuccess: () => { invalidate(); invalidateStorage() },
+  })
+}
+
+export function useDecideReimbursement(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  return useMutation({
+    mutationFn: ({ claimId, approve, amount, reason }: { claimId: string; approve: boolean; amount?: number; reason?: string }) =>
+      fundsService.decideReimbursement(claimId, approve, amount, reason),
+    onSuccess: invalidate,
+  })
+}
+
+export function usePayReimbursement(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  return useMutation({
+    mutationFn: ({ claimId, ...p }: { claimId: string; paidOn?: string; method?: string; reference?: string; notes?: string }) =>
+      fundsService.payReimbursement(claimId, p),
+    onSuccess: invalidate,
+  })
+}
+
 export function useWithdrawRetirementItem(organizationId: string | null) {
   const invalidate = useInvalidateFunds(organizationId)
   return useMutation({ mutationFn: (itemId: string) => fundsService.withdrawItem(itemId), onSuccess: invalidate })
@@ -228,9 +255,17 @@ export function useFundApprovalRights() {
     enabled: Boolean(activeOrgId),
     queryFn: () => fundsService.myApprovalIds(activeOrgId!),
   })
+  const { data: claims } = useQuery({
+    queryKey: ['funds', 'my-approvals', activeOrgId, 'reimbursements'],
+    enabled: Boolean(activeOrgId),
+    queryFn: () => fundsService.myReimbursementApprovalIds(activeOrgId!),
+  })
   const ids = React.useMemo(() => new Set(data ?? []), [data])
+  const claimIds = React.useMemo(() => new Set(claims ?? []), [claims])
   const canActOn = React.useCallback((r: Pick<FundRequest, 'id' | 'status'>) => r.status === 'pending' && ids.has(r.id), [ids])
-  return { canActOn }
+  /** A reimbursement claim on this request is waiting for this user's decision. */
+  const canApproveClaim = React.useCallback((r: Pick<FundRequest, 'id'>) => claimIds.has(r.id), [claimIds])
+  return { canActOn, canApproveClaim }
 }
 
 // ---- Workflows & delegation ----

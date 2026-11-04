@@ -49,7 +49,7 @@ export function RetirementsPage() {
   const { data: requests = [], isLoading } = useFundRequests(activeOrgId)
   const { data: departments } = useDepartments(activeOrgId)
   const navigate = useNavigate()
-  const { canActOn } = useFundApprovalRights()
+  const { canActOn, canApproveClaim } = useFundApprovalRights()
   const seesFirm = has('funds.manage') || has('funds.approve')
 
   const paid = React.useMemo(() => requests.filter((r) => PAID_STATUSES.includes(r.status)), [requests])
@@ -73,7 +73,8 @@ export function RetirementsPage() {
       && (employee === ALL || r.user_id === employee)
       && (dept === ALL || r.department_id === dept)
       && (status === ALL || (status === 'overdue' ? isRetirementOverdue(r) && out > 0 : (r.retirement_status ?? 'not_started') === status))
-      && (balance === ALL || (balance === 'outstanding' ? out > 0 : balance === 'excess' ? out < 0 : out === 0))
+      && (balance === ALL || (balance === 'outstanding' ? out > 0 : balance === 'excess' ? out < 0
+        : balance === 'reimbursement' ? Number(r.reimbursement_claimed) + Number(r.reimbursement_due) > 0 : out === 0))
       && (!from || paidOn >= from) && (!to || paidOn <= to)
   })
 
@@ -174,7 +175,8 @@ export function RetirementsPage() {
               <SelectItem value={ALL}>Any balance</SelectItem>
               <SelectItem value="outstanding">Balance outstanding</SelectItem>
               <SelectItem value="settled">Fully accounted for</SelectItem>
-              <SelectItem value="excess">Spent above advance</SelectItem>
+              <SelectItem value="excess">Spent above advance (owed to employee)</SelectItem>
+              <SelectItem value="reimbursement">Reimbursement in progress</SelectItem>
             </SelectContent>
           </Select>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -232,7 +234,7 @@ export function RetirementsPage() {
                       </td>
                       <td className="px-2 py-2">
                         {(() => {
-                          const step = nextStep(r, { userId, canActOn, canManage: has('funds.manage') })
+                          const step = nextStep(r, { userId, canActOn, canApproveClaim, canManage: has('funds.manage') })
                           return step.action && step.action !== 'edit'
                             ? <Button size="sm" onClick={() => navigate(fundRequestPath(r.id, tabForAction(r, step.action)))}>{step.actionLabel}</Button>
                             : <Button size="sm" variant="outline" onClick={() => navigate(fundRequestPath(r.id, 'summary'))}>Open</Button>

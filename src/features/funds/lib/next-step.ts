@@ -2,7 +2,7 @@ import { formatNaira } from '@/shared/lib/format'
 import { outstandingBalance, isRetirementOverdue, type FundRequest } from '@/features/funds/types'
 
 /** The single action a viewer can take on a request right now. */
-export type FundAction = 'edit' | 'approve' | 'pay' | 'retire' | 'verify' | 'close' | null
+export type FundAction = 'edit' | 'approve' | 'pay' | 'retire' | 'verify' | 'close' | 'claim' | 'approve_claim' | 'pay_claim' | null
 
 export interface NextStep {
   /** One plain sentence: what happens next, and who it's waiting on. */
@@ -17,6 +17,8 @@ export interface ViewerContext {
   userId: string | null
   canActOn: (r: FundRequest) => boolean
   canManage: boolean
+  /** A reimbursement claim on this request awaits the viewer's decision. */
+  canApproveClaim?: (r: FundRequest) => boolean
 }
 
 /** Who the open approval step is waiting on, in words. */
@@ -51,10 +53,18 @@ export function nextStep(r: FundRequest, ctx: ViewerContext): NextStep {
     case 'disbursed':
     case 'partially_retired': {
       const late = isRetirementOverdue(r) && owed > 0
+      if (Number(r.reimbursement_claimed) > 0) {
+        if (ctx.canApproveClaim?.(r)) return { text: `${who} claimed ${formatNaira(Number(r.reimbursement_claimed))} for spending above the advance — approve or decline.`, action: 'approve_claim', actionLabel: 'Review claim', tone: 'you' }
+        return { text: mine ? `Your reimbursement claim of ${formatNaira(Number(r.reimbursement_claimed))} is waiting for approval.` : `Reimbursement claim of ${formatNaira(Number(r.reimbursement_claimed))} is waiting for approval.`, action: null, tone: 'waiting' }
+      }
+      if (Number(r.reimbursement_due) > 0) {
+        if (ctx.canManage && !mine) return { text: `Reimbursement of ${formatNaira(Number(r.reimbursement_due))} approved — pay ${who}.`, action: 'pay_claim', actionLabel: 'Pay reimbursement', tone: 'you' }
+        return { text: mine ? `Your reimbursement of ${formatNaira(Number(r.reimbursement_due))} is approved — finance will pay you.` : `Reimbursement of ${formatNaira(Number(r.reimbursement_due))} approved — waiting for finance to pay.`, action: null, tone: 'waiting' }
+      }
       if (owed < 0) {
-        return ctx.canManage && !mine
-          ? { text: `${formatNaira(-owed)} spent above the advance — reimburse or settle.`, action: 'verify', actionLabel: 'Settle', tone: 'you' }
-          : { text: `You spent ${formatNaira(-owed)} more than you were given — finance will settle it.`, action: null, tone: 'waiting' }
+        return mine
+          ? { text: `You spent ${formatNaira(-owed)} more than you were given — claim it back.`, action: 'claim', actionLabel: 'Claim reimbursement', tone: 'you' }
+          : { text: `${who} spent ${formatNaira(-owed)} above the advance — waiting for them to claim it.`, action: null, tone: 'waiting' }
       }
       if (mine) {
         return { text: `You have ${formatNaira(owed)} to account for — add receipts and/or return unused money${late ? '. Overdue.' : '.'}`, action: 'retire', actionLabel: 'Add receipts / refund', tone: late ? 'late' : 'you' }
@@ -121,7 +131,7 @@ export function requesterOptions(r: FundRequest) {
 export type FundTab = 'overview' | 'expenses' | 'refunds' | 'summary' | 'history'
 
 /** Which tab of the request page an action belongs on. */
-export function tabForAction(r: Pick<FundRequest, 'submitted_expenses' | 'pending_refunds' | 'accepted_amount' | 'disbursed_amount' | 'refunded_amount' | 'reimbursed_amount'>, action: FundAction): FundTab {
+export function tabForAction(r: Pick<FundRequest, 'submitted_expenses' | 'pending_refunds' | 'accepted_amount' | 'disbursed_amount' | 'refunded_amount' | 'reimbursed_amount' | 'excess_borne'>, action: FundAction): FundTab {
   switch (action) {
     case 'retire':
       return 'expenses'
@@ -131,6 +141,10 @@ export function tabForAction(r: Pick<FundRequest, 'submitted_expenses' | 'pendin
       return 'summary'
     case 'close':
       return 'summary'
+    case 'claim':
+    case 'approve_claim':
+    case 'pay_claim':
+      return 'refunds'
     default:
       return 'overview'
   }

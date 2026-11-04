@@ -41,12 +41,12 @@ export function RequestList({ requests, loading, empty, showRequester }: {
   const { userId } = useAuth()
   const { has } = usePermissions()
   const { activeOrgId } = useAuth()
-  const { canActOn } = useFundApprovalRights()
+  const { canActOn, canApproveClaim } = useFundApprovalRights()
   const cancel = useCancelFundRequest(activeOrgId)
   const deleteDraft = useDeleteFundDraft(activeOrgId)
   const recall = useRecallFundRequest(activeOrgId)
   const [confirm, setConfirm] = React.useState<{ kind: 'withdraw' | 'delete'; r: FundRequest } | null>(null)
-  const ctx = { userId, canActOn, canManage: has('funds.manage') }
+  const ctx = { userId, canActOn, canApproveClaim, canManage: has('funds.manage') }
 
   const edit = async (r: FundRequest) => {
     if (requesterOptions(r).needsRecall) {

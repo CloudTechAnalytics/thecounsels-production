@@ -1365,6 +1365,10 @@ export interface Database {
           evidence_name: string | null
           is_exception: boolean
           exception_reason: string | null
+          approved_amount: number | null
+          approved_by: string | null
+          approved_at: string | null
+          auto_approved: boolean
         }
         Insert: { [_ in never]: never }
         Update: { [_ in never]: never }
@@ -1446,6 +1450,9 @@ export interface Database {
           last_retirement_at: string | null
           closed_at: string | null
           closed_by: string | null
+          reimbursement_claimed: number
+          reimbursement_due: number
+          excess_borne: number
           purpose: string | null
           amount: number
           needed_by: string | null
@@ -2946,6 +2953,22 @@ export interface Database {
       cancel_leave_request: {
         Args: { p_request: string }
         Returns: undefined
+      }
+      claim_fund_reimbursement: {
+        Args: { p_request: string; p_amount: number; p_reason?: string | null; p_evidence_path?: string | null; p_evidence_name?: string | null }
+        Returns: Database['public']['Tables']['fund_refunds']['Row']
+      }
+      decide_fund_reimbursement: {
+        Args: { p_claim: string; p_approve: boolean; p_amount?: number | null; p_reason?: string | null }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      pay_fund_reimbursement: {
+        Args: { p_claim: string; p_paid_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      my_reimbursement_approvals: {
+        Args: { p_org: string }
+        Returns: string[]
       }
       declare_fund_refund: {
         Args: { p_request: string; p_amount: number; p_returned_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null; p_evidence_path?: string | null; p_evidence_name?: string | null }

@@ -5,11 +5,12 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
   useAddRetirementItem, useDeleteRetirementItem, useSubmitRetirement, useReviewItems, useDeclareRefund, useVerifyRefund,
-  useRecordRefund, useRecordReimbursement, useWithdrawRetirementItem, useWithdrawRefund, useCloseRetirement, useSetRetirementDueDate, useFundRequestHistory,
+  useRecordRefund, useWithdrawRetirementItem, useWithdrawRefund, useClaimReimbursement, useDecideReimbursement,
+  usePayReimbursement, useFundApprovalRights, useCloseRetirement, useSetRetirementDueDate, useFundRequestHistory,
 } from '@/features/funds/hooks/use-funds'
 import { fundsService } from '@/features/funds/services/funds.service'
 import {
-  DISBURSEMENT_METHODS, FUND_CATEGORIES, REFUND_STATUS_META, RETIREMENT_STATUS_META, fundCategoryLabel, isRetirementOverdue,
+  DISBURSEMENT_METHODS, FUND_CATEGORIES, REFUND_STATUS_META, REIMBURSEMENT_STATUS_META, RETIREMENT_STATUS_META, claimableReimbursement, fundCategoryLabel, isRetirementOverdue,
   outstandingBalance, OPEN_ADVANCE_STATUSES, type FundRequest, type FundRefund,
 } from '@/features/funds/types'
 import { Badge } from '@/shared/components/ui/badge'
@@ -62,7 +63,10 @@ export function FinancialSummary({ r }: { r: FundRequest }) {
     ['Refunds pending verification', Number(r.pending_refunds ?? 0), 'Not counted until confirmed'],
     ['Refunds confirmed', Number(r.refunded_amount ?? 0)],
   ]
+  if (Number(r.reimbursement_claimed) > 0) rows.push(['Reimbursement claimed (awaiting approval)', Number(r.reimbursement_claimed), 'Not counted until approved and paid'])
+  if (Number(r.reimbursement_due) > 0) rows.push(['Reimbursement approved, not yet paid', Number(r.reimbursement_due), 'Not counted until paid'])
   if (Number(r.reimbursed_amount) > 0) rows.push(['Reimbursed to employee', Number(r.reimbursed_amount)])
+  if (Number(r.excess_borne) > 0) rows.push(['Overspend borne by employee (declined)', Number(r.excess_borne)])
   return (
     <div className="rounded-lg border border-border">
       <dl className="divide-y divide-border text-sm">
@@ -74,12 +78,12 @@ export function FinancialSummary({ r }: { r: FundRequest }) {
         ))}
         <div className={cn('flex items-center justify-between gap-3 px-3 py-2.5', outstanding > 0 ? 'bg-warning/10' : outstanding < 0 ? 'bg-destructive/10' : 'bg-success/10')}>
           <dt className="font-medium">
-            {outstanding > 0 ? 'Outstanding — employee still to account for' : outstanding < 0 ? 'Spent above the advance — owed to employee' : 'Outstanding balance'}
+            {outstanding > 0 ? 'Outstanding — employee still to account for' : outstanding < 0 ? 'Spent above the advance — owed to employee (they can claim it)' : 'Outstanding balance'}
           </dt>
           <dd className="font-display text-base font-semibold tabular-nums">{formatNaira(Math.abs(outstanding))}</dd>
         </div>
       </dl>
-      <p className="border-t border-border px-3 py-2 text-[11px] text-muted-foreground">Outstanding = disbursed − verified expenses − confirmed refunds{Number(r.reimbursed_amount) > 0 ? ' + reimbursements' : ''}. Calculated by the server from the records below.</p>
+      <p className="border-t border-border px-3 py-2 text-[11px] text-muted-foreground">Outstanding = disbursed − verified expenses − confirmed refunds{Number(r.reimbursed_amount) > 0 || Number(r.excess_borne) > 0 ? ' + reimbursements paid + overspend borne by the employee' : ''}. Calculated by the server from the records below.</p>
     </div>
   )
 }
@@ -379,65 +383,217 @@ function MoneyForm({ title, submitLabel, defaultAmount, withEvidence, busy, onSu
   )
 }
 
+function ClaimRow({ f, isMine, canApprove, canPay }: { f: FundRefund; isMine: boolean; canApprove: boolean; canPay: boolean }) {
+  const { activeOrgId } = useAuth()
+  const decide = useDecideReimbursement(activeOrgId)
+  const pay = usePayReimbursement(activeOrgId)
+  const withdraw = useWithdrawRefund(activeOrgId)
+  const [mode, setMode] = React.useState<'decide' | 'pay' | null>(null)
+  const [amount, setAmount] = React.useState(String(f.amount))
+  const [reason, setReason] = React.useState('')
+  const [paid, setPaid] = React.useState({ date: today(), method: 'bank_transfer', reference: '' })
+  const st = REIMBURSEMENT_STATUS_META[f.status] ?? { label: f.status, variant: 'muted' as const }
+  const approved = f.approved_amount != null ? Number(f.approved_amount) : null
+
+  const runDecide = async (approve: boolean) => {
+    const value = Number(amount)
+    if (approve && !(value > 0 && value <= Number(f.amount))) { toast.error(`Approve between ₦1 and ${formatNaira(Number(f.amount))}`); return }
+    if ((!approve || value < Number(f.amount)) && !reason.trim()) { toast.error(approve ? 'Say why you are approving less than claimed' : 'Give a reason for declining'); return }
+    try {
+      await decide.mutateAsync({ claimId: f.id, approve, amount: approve ? value : undefined, reason: reason.trim() || undefined })
+      toast.success(approve ? 'Reimbursement approved — finance will pay it' : 'Claim declined — recorded as borne by the employee')
+      setMode(null)
+    } catch (err) { toast.error('Action failed', { description: errorMessage(err) }) }
+  }
+  const runPay = async () => {
+    try {
+      await pay.mutateAsync({ claimId: f.id, paidOn: paid.date, method: paid.method, reference: paid.reference.trim() })
+      toast.success('Reimbursement paid')
+      setMode(null)
+    } catch (err) { toast.error('Could not record payment', { description: errorMessage(err) }) }
+  }
+
+  return (
+    <li className="space-y-2 px-3 py-2.5 text-sm">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p>
+            <span className="font-medium tabular-nums">{formatNaira(Number(f.amount))}</span> claimed
+            {approved != null && approved < Number(f.amount) && <span className="text-muted-foreground"> · {formatNaira(approved)} approved, {formatNaira(Number(f.amount) - approved)} borne by employee</span>}
+            {f.declared_at && <span className="text-muted-foreground"> · {format(new Date(f.declared_at), 'MMM d, yyyy')}</span>}
+          </p>
+          {f.notes && <p className="text-xs text-muted-foreground">Reason: {f.notes}</p>}
+          {f.auto_approved && <p className="text-xs text-muted-foreground">Approved automatically — within the amount originally approved for this request.</p>}
+          {f.status === 'confirmed' && (
+            <p className="text-xs text-muted-foreground">
+              Paid {format(new Date(f.received_on), 'MMM d, yyyy')}
+              {[DISBURSEMENT_METHODS.find((m) => m.value === f.method)?.label ?? f.method, f.reference].filter(Boolean).map((x) => ` · ${x}`).join('')}
+            </p>
+          )}
+          {f.rejection_reason && <p className={cn('text-xs', f.status === 'rejected' ? 'text-destructive' : 'text-muted-foreground')}>{f.status === 'rejected' ? 'Declined' : 'Note'}: {f.rejection_reason}</p>}
+          {f.evidence_path && (
+            <button className="inline-flex items-center gap-1 text-xs text-primary hover:underline" onClick={() => openFile(f.evidence_path!)}>
+              <Paperclip className="h-3 w-3" /> {f.evidence_name ?? 'Evidence'}
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={st.variant}>{st.label}</Badge>
+          {canApprove && f.status === 'claimed' && !mode && <Button size="sm" onClick={() => setMode('decide')}>Review claim</Button>}
+          {canPay && f.status === 'approved' && !mode && <Button size="sm" onClick={() => setMode('pay')}>Pay {formatNaira(approved ?? Number(f.amount))}</Button>}
+          {isMine && f.status === 'claimed' && (
+            <Button size="sm" variant="ghost" loading={withdraw.isPending}
+              onClick={() => withdraw.mutate(f.id, { onSuccess: () => toast.success('Claim withdrawn'), onError: (e) => toast.error('Could not withdraw', { description: errorMessage(e) }) })}>
+              <Undo2 className="h-4 w-4" /> Withdraw
+            </Button>
+          )}
+        </div>
+      </div>
+      {mode === 'decide' && (
+        <div className="space-y-2 rounded-md bg-muted/40 p-3">
+          <div className="grid gap-2 sm:grid-cols-[160px_1fr]">
+            <div className="space-y-1"><Label className="text-xs">Approve amount (₦)</Label><Input type="number" min={0} max={Number(f.amount)} value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+            <div className="space-y-1"><Label className="text-xs">Reason</Label><Input placeholder="Required to decline or approve less" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+          </div>
+          <p className="text-xs text-muted-foreground">Whatever isn’t approved is recorded as borne by the employee, so the advance can still close.</p>
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setMode(null)}>Cancel</Button>
+            <Button size="sm" variant="outline" onClick={() => runDecide(false)} disabled={decide.isPending}>Decline</Button>
+            <Button size="sm" onClick={() => runDecide(true)} loading={decide.isPending}>{Number(amount) < Number(f.amount) ? 'Approve partly' : 'Approve'}</Button>
+          </div>
+        </div>
+      )}
+      {mode === 'pay' && (
+        <div className="space-y-2 rounded-md bg-muted/40 p-3">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="space-y-1"><Label className="text-xs">Paid on</Label><Input type="date" value={paid.date} onChange={(e) => setPaid({ ...paid, date: e.target.value })} /></div>
+            <div className="space-y-1">
+              <Label className="text-xs">Method</Label>
+              <Select value={paid.method} onValueChange={(m) => setPaid({ ...paid, method: m })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {DISBURSEMENT_METHODS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1"><Label className="text-xs">Transaction reference</Label><Input value={paid.reference} onChange={(e) => setPaid({ ...paid, reference: e.target.value })} /></div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setMode(null)}>Cancel</Button>
+            <Button size="sm" onClick={runPay} loading={pay.isPending}>Record payment</Button>
+          </div>
+        </div>
+      )}
+    </li>
+  )
+}
+
+function ClaimForm({ r, claimable }: { r: FundRequest; claimable: number }) {
+  const { activeOrgId } = useAuth()
+  const claim = useClaimReimbursement(activeOrgId)
+  const [amount, setAmount] = React.useState(String(claimable))
+  const [reason, setReason] = React.useState('')
+  const [evidence, setEvidence] = React.useState<File | null>(null)
+  React.useEffect(() => setAmount(String(claimable)), [claimable])
+  const run = async () => {
+    const value = Number(amount)
+    if (!(value > 0 && value <= claimable)) { toast.error(`Claim between ₦1 and ${formatNaira(claimable)}`); return }
+    if (!fileOk(evidence)) { toast.error('Evidence must be a PDF or image up to 10 MB'); return }
+    try {
+      await claim.mutateAsync({ id: r.id, amount: value, reason: reason.trim(), evidence })
+      toast.success('Reimbursement claimed', { description: 'An approver will review it, then finance pays you.' })
+      setReason(''); setEvidence(null)
+    } catch (err) { toast.error('Could not claim', { description: errorMessage(err) }) }
+  }
+  return (
+    <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+      <div>
+        <p className="text-sm font-medium">Claim reimbursement · {formatNaira(claimable)} spent above what you were paid</p>
+        <p className="text-xs text-muted-foreground">Your verified expenses are more than the money you received. Claim the difference — an approver signs it off, then finance pays you.</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
+        <div className="space-y-1.5"><Label>Amount (₦)</Label><Input type="number" min={0} max={claimable} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label>Why did it cost more?</Label><Input placeholder="e.g. Hotel rate went up on arrival" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <input type="file" accept={RECEIPT_TYPES.join(',')} className="max-w-full text-xs" onChange={(e) => setEvidence(e.target.files?.[0] ?? null)} />
+        <Button size="sm" onClick={run} loading={claim.isPending}>Claim reimbursement</Button>
+      </div>
+    </div>
+  )
+}
+
 export function RefundHistory({ r, isMine, canVerify }: { r: FundRequest; isMine: boolean; canVerify: boolean }) {
   const { activeOrgId } = useAuth()
+  const { canApproveClaim } = useFundApprovalRights()
   const declare = useDeclareRefund(activeOrgId)
   const record = useRecordRefund(activeOrgId)
-  const reimburse = useRecordReimbursement(activeOrgId)
   const open = OPEN_ADVANCE_STATUSES.includes(r.status)
   const outstanding = outstandingBalance(r)
   const unaccounted = outstanding - Number(r.pending_refunds ?? 0)
+  const claimable = claimableReimbursement(r)
+  const refunds = r.refunds.filter((f) => f.direction === 'refund')
+  const claims = r.refunds.filter((f) => f.direction === 'reimbursement')
+  const canApprove = canApproveClaim(r)
 
   return (
-    <section>
-      <Heading title="Refunds" />
-      {r.refunds.length === 0 ? <p className="mb-3 text-sm text-muted-foreground">No refunds yet.</p> : (
-        <ul className="mb-3 divide-y divide-border rounded-lg border border-border">
-          {r.refunds.map((f) => <RefundRow key={f.id} f={f} r={r} canVerify={canVerify} isMine={isMine} />)}
-        </ul>
-      )}
-      <div className="space-y-3">
-        {isMine && open && outstanding > 0 && (
-          <MoneyForm
-            title={`Declare unused funds returned · ${formatNaira(Math.max(unaccounted, 0))} unaccounted`}
-            submitLabel="Declare refund" defaultAmount={Math.max(unaccounted, 0)} withEvidence busy={declare.isPending}
-            onSubmit={async (v) => {
-              try {
-                await declare.mutateAsync({ id: r.id, amount: v.amount, returnedOn: v.date, method: v.method, reference: v.reference, notes: v.notes, evidence: v.evidence })
-                toast.success('Refund declared', { description: 'Finance will confirm once the money is received. Until then it doesn’t reduce your balance.' })
-                return true
-              } catch (err) { toast.error('Could not declare refund', { description: errorMessage(err) }); return false }
-            }}
-          />
+    <div className="space-y-8">
+      <section>
+        <Heading title="Refunds · unused money returned to the firm" />
+        {refunds.length === 0 ? <p className="mb-3 text-sm text-muted-foreground">No refunds yet.</p> : (
+          <ul className="mb-3 divide-y divide-border rounded-lg border border-border">
+            {refunds.map((f) => <RefundRow key={f.id} f={f} r={r} canVerify={canVerify} isMine={isMine} />)}
+          </ul>
         )}
-        {canVerify && open && unaccounted > 0 && (
-          <MoneyForm
-            title="Record money received (no declaration)"
-            submitLabel="Record & confirm refund" defaultAmount={unaccounted} busy={record.isPending}
-            onSubmit={async (v) => {
-              try {
-                await record.mutateAsync({ id: r.id, amount: v.amount, receivedOn: v.date, method: v.method, reference: v.reference, notes: v.notes })
-                toast.success('Refund recorded')
-                return true
-              } catch (err) { toast.error('Could not record refund', { description: errorMessage(err) }); return false }
-            }}
-          />
+        <div className="space-y-3">
+          {isMine && open && outstanding > 0 && (
+            <MoneyForm
+              title={`Declare unused funds returned · ${formatNaira(Math.max(unaccounted, 0))} unaccounted`}
+              submitLabel="Declare refund" defaultAmount={Math.max(unaccounted, 0)} withEvidence busy={declare.isPending}
+              onSubmit={async (v) => {
+                try {
+                  await declare.mutateAsync({ id: r.id, amount: v.amount, returnedOn: v.date, method: v.method, reference: v.reference, notes: v.notes, evidence: v.evidence })
+                  toast.success('Refund declared', { description: 'Finance will confirm once the money is received. Until then it doesn’t reduce your balance.' })
+                  return true
+                } catch (err) { toast.error('Could not declare refund', { description: errorMessage(err) }); return false }
+              }}
+            />
+          )}
+          {canVerify && open && unaccounted > 0 && (
+            <MoneyForm
+              title="Record money received (no declaration)"
+              submitLabel="Record & confirm refund" defaultAmount={unaccounted} busy={record.isPending}
+              onSubmit={async (v) => {
+                try {
+                  await record.mutateAsync({ id: r.id, amount: v.amount, receivedOn: v.date, method: v.method, reference: v.reference, notes: v.notes })
+                  toast.success('Refund recorded')
+                  return true
+                } catch (err) { toast.error('Could not record refund', { description: errorMessage(err) }); return false }
+              }}
+            />
+          )}
+        </div>
+      </section>
+
+      <section>
+        <Heading title="Reimbursements · money owed to the employee for spending above the advance" />
+        {claims.length === 0 && claimable <= 0 && (
+          <p className="text-sm text-muted-foreground">
+            {outstanding < 0 ? 'Nothing to claim right now.' : 'Not needed — the employee hasn’t spent more than they were paid.'}
+          </p>
         )}
-        {canVerify && open && outstanding < 0 && (
-          <MoneyForm
-            title={`Approve and reimburse additional expenditure · ${formatNaira(-outstanding)} verified above the advance`}
-            submitLabel="Record reimbursement" defaultAmount={-outstanding} busy={reimburse.isPending}
-            onSubmit={async (v) => {
-              try {
-                await reimburse.mutateAsync({ id: r.id, amount: v.amount, paidOn: v.date, method: v.method, reference: v.reference, notes: v.notes })
-                toast.success('Reimbursement recorded')
-                return true
-              } catch (err) { toast.error('Could not record reimbursement', { description: errorMessage(err) }); return false }
-            }}
-          />
+        {claims.length > 0 && (
+          <ul className="mb-3 divide-y divide-border rounded-lg border border-border">
+            {claims.map((f) => <ClaimRow key={f.id} f={f} isMine={isMine} canApprove={canApprove} canPay={canVerify} />)}
+          </ul>
         )}
-      </div>
-    </section>
+        {isMine && open && claimable > 0 && <ClaimForm r={r} claimable={claimable} />}
+        {!isMine && open && claimable > 0 && (
+          <p className="text-sm text-muted-foreground">{r.requester_name ?? 'The employee'} has {formatNaira(claimable)} of verified spend above the advance they can claim.</p>
+        )}
+      </section>
+    </div>
   )
 }
 

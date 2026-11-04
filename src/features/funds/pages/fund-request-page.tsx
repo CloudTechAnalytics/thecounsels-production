@@ -41,7 +41,7 @@ export function FundRequestPage() {
   const { activeOrgId, userId } = useAuth()
   const { has } = usePermissions()
   const { data: requests, isLoading } = useFundRequests(activeOrgId)
-  const { canActOn } = useFundApprovalRights()
+  const { canActOn, canApproveClaim } = useFundApprovalRights()
   const cancel = useCancelFundRequest(activeOrgId)
   const deleteDraft = useDeleteFundDraft(activeOrgId)
   const recall = useRecallFundRequest(activeOrgId)
@@ -72,14 +72,14 @@ export function FundRequestPage() {
 
   const isMine = r.user_id === userId
   const canManage = has('funds.manage')
-  const step = nextStep(r, { userId, canActOn, canManage })
+  const step = nextStep(r, { userId, canActOn, canApproveClaim, canManage })
   const opts = isMine ? requesterOptions(r) : null
   const meta = FUND_STATUS_META[r.status] ?? { label: r.status, variant: 'muted' as const }
   const partial = r.approved_amount != null && Number(r.approved_amount) < Number(r.amount)
   const earlier = r.approvals.filter((a) => a.round < r.current_round)
   const returnNote = r.status === 'returned' ? r.chain.find((a) => a.status === 'returned')?.comment : null
   const pendingLines = r.items.filter((i) => i.review_status === 'submitted').length
-  const pendingRefunds = r.refunds.filter((f) => f.status === 'declared').length
+  const pendingRefunds = r.refunds.filter((f) => ['declared', 'claimed', 'approved'].includes(f.status)).length
 
   const startEdit = async () => {
     if (opts?.needsRecall) {
@@ -92,7 +92,7 @@ export function FundRequestPage() {
   const tabs: { key: FundTab; label: string; show: boolean; count?: number }[] = [
     { key: 'overview', label: 'Overview', show: true },
     { key: 'expenses', label: 'Expenses', show: paid, count: pendingLines },
-    { key: 'refunds', label: 'Refunds', show: paid, count: pendingRefunds },
+    { key: 'refunds', label: 'Refunds & reimbursements', show: paid, count: pendingRefunds },
     { key: 'summary', label: 'Financial summary', show: paid },
     { key: 'history', label: 'History', show: true },
   ]

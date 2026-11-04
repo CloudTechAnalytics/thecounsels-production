@@ -4,7 +4,7 @@ import { formatStorage } from '@/shared/lib/format'
 import {
   DEFAULT_FUND_SETTINGS,
   type FundRequest, type FundSettings, type FundApprovalRow, type FundRequestRow, type FundRetirementItem,
-  type FundAttachment, type WorkflowWithSteps, type ApprovalWorkflow, type ApprovalWorkflowStep, type ApprovalDelegation,
+  type FundAttachment, type FundRefund, type WorkflowWithSteps, type ApprovalWorkflow, type ApprovalWorkflowStep, type ApprovalDelegation,
 } from '@/features/funds/types'
 
 const REQUEST_SELECT = `*,
@@ -16,7 +16,8 @@ const REQUEST_SELECT = `*,
     approver:profiles!fund_request_approvals_approver_id_fkey(full_name),
     actor:profiles!fund_request_approvals_acted_by_fkey(full_name)),
   items:fund_retirement_items(*),
-  attachments:fund_request_attachments(*)`
+  attachments:fund_request_attachments(*),
+  refunds:fund_refunds(*)`
 
 type RawApproval = FundApprovalRow & { approver: { full_name: string | null } | null; actor: { full_name: string | null } | null }
 type RawRequest = FundRequestRow & {
@@ -27,10 +28,11 @@ type RawRequest = FundRequestRow & {
   approvals: RawApproval[] | null
   items: FundRetirementItem[] | null
   attachments: FundAttachment[] | null
+  refunds: FundRefund[] | null
 }
 
 function shape(r: RawRequest): FundRequest {
-  const { requester, disburser, matter, client, approvals, items, attachments, ...row } = r
+  const { requester, disburser, matter, client, approvals, items, attachments, refunds, ...row } = r
   const all = (approvals ?? [])
     .map(({ approver, actor, ...a }) => ({ ...a, approver_name: approver?.full_name ?? null, actor_name: actor?.full_name ?? null }))
     .sort((a, b) => a.round - b.round || a.step - b.step)
@@ -44,6 +46,7 @@ function shape(r: RawRequest): FundRequest {
     chain: all.filter((a) => a.round === row.current_round),
     items: (items ?? []).sort((a, b) => a.created_at.localeCompare(b.created_at)),
     attachments: (attachments ?? []).sort((a, b) => a.created_at.localeCompare(b.created_at)),
+    refunds: (refunds ?? []).sort((a, b) => a.received_on.localeCompare(b.received_on)),
   }
 }
 
@@ -227,6 +230,13 @@ export const fundsService = {
   },
   async submitRetirement(requestId: string, note?: string): Promise<void> {
     const { error } = await supabase.rpc('submit_fund_retirement', { p_request: requestId, p_note: note || null })
+    if (error) throw error
+  },
+  async recordRefund(requestId: string, r: { amount: number; receivedOn?: string; method?: string; reference?: string; notes?: string }): Promise<void> {
+    const { error } = await supabase.rpc('record_fund_refund', {
+      p_request: requestId, p_amount: r.amount, p_received_on: r.receivedOn || null,
+      p_method: r.method || null, p_reference: r.reference || null, p_notes: r.notes || null,
+    })
     if (error) throw error
   },
   async reviewRetirement(requestId: string, accept: boolean, comment?: string): Promise<void> {

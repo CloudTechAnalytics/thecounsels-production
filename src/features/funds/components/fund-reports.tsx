@@ -3,7 +3,7 @@ import { format, startOfMonth, subMonths } from 'date-fns'
 import { Wallet, CheckCircle2, Banknote, AlertTriangle } from 'lucide-react'
 import { useFundSettings } from '@/features/funds/hooks/use-funds'
 import { useAuth } from '@/features/auth/context/auth-provider'
-import { FUND_STATUS_META, fundCategoryLabel, daysOutstanding, retirementBalance, type FundRequest } from '@/features/funds/types'
+import { FUND_STATUS_META, fundCategoryLabel, daysOutstanding, outstandingBalance, OPEN_ADVANCE_STATUSES, type FundRequest } from '@/features/funds/types'
 import { Card } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { ExportButton } from '@/shared/components/export-button'
@@ -50,10 +50,11 @@ export function FundReports({ requests }: { requests: FundRequest[] }) {
   const paidOut = live.filter((r) => r.disbursed_at)
   // Outstanding retirements are never range-limited — old unretired cash is exactly what matters most.
   const outstanding = requests
-    .filter((r) => r.status === 'disbursed' || r.status === 'retirement_submitted')
+    .filter((r) => OPEN_ADVANCE_STATUSES.includes(r.status) && outstandingBalance(r) > 0)
     .map((r) => ({ r, days: daysOutstanding(r) ?? 0 }))
     .sort((a, b) => b.days - a.days)
-  const overdue = outstanding.filter((o) => o.r.status === 'disbursed' && o.days > dueDays)
+  const overdue = outstanding.filter((o) => o.r.status !== 'retirement_submitted' && o.days > dueDays)
+  const refunds = requests.flatMap((r) => r.refunds.map((f) => ({ r, f })))
 
   const byCategory = React.useMemo(() => {
     const m = new Map<string, number>()
@@ -98,9 +99,19 @@ export function FundReports({ requests }: { requests: FundRequest[] }) {
         Title: r.title,
         'Paid out': Number(r.disbursed_amount ?? 0),
         'Paid on': r.disbursed_at ? format(new Date(r.disbursed_at), 'yyyy-MM-dd') : '',
+        'Expenses accepted': Number(r.accepted_amount ?? 0),
+        Refunded: Number(r.refunded_amount ?? 0),
+        Outstanding: outstandingBalance(r),
         'Days out': days,
         Status: FUND_STATUS_META[r.status]?.label ?? r.status,
-        Overdue: r.status === 'disbursed' && days > dueDays ? 'Yes' : 'No',
+        Overdue: r.status !== 'retirement_submitted' && days > dueDays ? 'Yes' : 'No',
+      })),
+    },
+    {
+      name: 'Refunds received',
+      rows: refunds.map(({ r, f }) => ({
+        Number: r.request_number, Requester: r.requester_name ?? '', 'Received on': f.received_on,
+        Amount: Number(f.amount), Method: f.method ?? '', Reference: f.reference ?? '', Notes: f.notes ?? '',
       })),
     },
   ]
@@ -128,7 +139,7 @@ export function FundReports({ requests }: { requests: FundRequest[] }) {
         <Tile label="Paid out" value={formatNaira(sum(paidOut, (r) => Number(r.disbursed_amount ?? 0)))} hint={`${live.filter((r) => r.status === 'approved').length} approved, not yet paid`} icon={Banknote} />
         <Tile
           label="Unretired"
-          value={formatNaira(sum(outstanding.map((o) => o.r), (r) => Number(r.disbursed_amount ?? 0)))}
+          value={formatNaira(sum(outstanding.map((o) => o.r), outstandingBalance))}
           hint={`${outstanding.length} outstanding · ${overdue.length} overdue (>${dueDays} days)`}
           icon={AlertTriangle}
           tone={overdue.length > 0 ? 'warn' : undefined}
@@ -138,7 +149,7 @@ export function FundReports({ requests }: { requests: FundRequest[] }) {
       <Card className="overflow-hidden">
         <div className="border-b border-border p-4">
           <p className="font-display text-base font-semibold">Outstanding retirements</p>
-          <p className="text-xs text-muted-foreground">Money paid out that hasn't been accounted for with receipts yet.</p>
+          <p className="text-xs text-muted-foreground">Advances not yet fully accounted for — paid out, minus accepted expenses and refunds received.</p>
         </div>
         {outstanding.length === 0 ? (
           <p className="p-6 text-center text-sm text-muted-foreground">Everything paid out has been retired.</p>
@@ -150,20 +161,24 @@ export function FundReports({ requests }: { requests: FundRequest[] }) {
                   <th className="px-4 py-2 font-medium">Request</th>
                   <th className="px-4 py-2 font-medium">Staff</th>
                   <th className="px-4 py-2 text-right font-medium">Paid out</th>
-                  <th className="px-4 py-2 text-right font-medium">Receipts so far</th>
+                  <th className="px-4 py-2 text-right font-medium">Accepted</th>
+                  <th className="px-4 py-2 text-right font-medium">Refunded</th>
+                  <th className="px-4 py-2 text-right font-medium">Outstanding</th>
                   <th className="px-4 py-2 text-right font-medium">Days out</th>
                   <th className="px-4 py-2 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {outstanding.map(({ r, days }) => {
-                  const late = r.status === 'disbursed' && days > dueDays
+                  const late = r.status !== 'retirement_submitted' && days > dueDays
                   return (
                     <tr key={r.id} className="border-b border-border/60 last:border-0">
                       <td className="px-4 py-2"><span className="font-medium">{r.request_number}</span> <span className="text-muted-foreground">{r.title}</span></td>
                       <td className="px-4 py-2">{r.requester_name ?? '—'}</td>
                       <td className="px-4 py-2 text-right tabular-nums">{formatNaira(Number(r.disbursed_amount ?? 0))}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{formatNaira(Number(r.disbursed_amount ?? 0) - retirementBalance(r, r.items))}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{formatNaira(Number(r.accepted_amount ?? 0))}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{formatNaira(Number(r.refunded_amount ?? 0))}</td>
+                      <td className="px-4 py-2 text-right font-medium tabular-nums">{formatNaira(outstandingBalance(r))}</td>
                       <td className={cn('px-4 py-2 text-right tabular-nums', late && 'font-medium text-destructive')}>{days}</td>
                       <td className="px-4 py-2"><Badge variant={late ? 'destructive' : FUND_STATUS_META[r.status].variant}>{late ? 'Overdue' : FUND_STATUS_META[r.status].label}</Badge></td>
                     </tr>

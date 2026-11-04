@@ -6,12 +6,12 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
   useDecideFundRequest, useCancelFundRequest, useDisburseFundRequest, useAddRetirementItem, useDeleteRetirementItem,
   useSubmitRetirement, useReviewRetirement, useFundApprovalRights, useFundSettings, useMarkPaymentProcessing,
-  useDeleteFundDraft, useUploadFundAttachment, useDeleteFundAttachment,
+  useDeleteFundDraft, useUploadFundAttachment, useDeleteFundAttachment, useRecordRefund,
 } from '@/features/funds/hooks/use-funds'
 import { fundsService } from '@/features/funds/services/funds.service'
 import { FundRequestFormDialog, ATTACHMENT_MIME_TYPES, MAX_ATTACHMENT_BYTES } from '@/features/funds/components/fund-request-form-dialog'
 import {
-  FUND_STATUS_META, DISBURSEMENT_METHODS, fundCategoryLabel, fundStatusLabel, retirementBalance, daysOutstanding,
+  FUND_STATUS_META, DISBURSEMENT_METHODS, fundCategoryLabel, fundStatusLabel, outstandingBalance, daysOutstanding, OPEN_ADVANCE_STATUSES,
   type FundRequest, type FundApproval, type FundAttachment,
 } from '@/features/funds/types'
 import { Badge } from '@/shared/components/ui/badge'
@@ -249,6 +249,47 @@ function Attachments({ request, editable }: { request: FundRequest; editable: bo
   )
 }
 
+const LINE_STATUS: Record<string, { label: string; variant: 'muted' | 'default' | 'success' | 'destructive' }> = {
+  draft: { label: 'Not sent', variant: 'muted' },
+  submitted: { label: 'In review', variant: 'default' },
+  accepted: { label: 'Accepted', variant: 'success' },
+  rejected: { label: 'Rejected', variant: 'destructive' },
+}
+
+/** Paid out / accepted / in review / refunded / outstanding — the running
+ * position on an advance, whoever is looking at it. */
+function AdvancePosition({ request }: { request: FundRequest }) {
+  const inReview = request.items.filter((i) => i.review_status === 'submitted').reduce((s, i) => s + Number(i.amount), 0)
+  const notSent = request.items.filter((i) => i.review_status === 'draft').reduce((s, i) => s + Number(i.amount), 0)
+  const outstanding = outstandingBalance(request)
+  const cells = [
+    { label: 'Paid out', value: Number(request.disbursed_amount ?? 0) },
+    { label: 'Expenses accepted', value: Number(request.accepted_amount ?? 0) },
+    { label: 'In review', value: inReview },
+    { label: 'Refunded', value: Number(request.refunded_amount ?? 0) },
+  ]
+  return (
+    <div className="rounded-lg bg-muted/40 p-3 text-sm">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {cells.map((c) => (
+          <div key={c.label}><p className="text-xs text-muted-foreground">{c.label}</p><p className="font-medium tabular-nums">{formatNaira(c.value)}</p></div>
+        ))}
+        <div>
+          <p className="text-xs text-muted-foreground">{outstanding >= 0 ? 'Outstanding' : 'Spent above advance'}</p>
+          <p className={cn('font-display text-base font-semibold tabular-nums', outstanding > 0 && 'text-warning', outstanding < 0 && 'text-destructive')}>
+            {formatNaira(Math.abs(outstanding))}
+          </p>
+        </div>
+      </div>
+      {(inReview > 0 || notSent > 0) && outstanding > 0 && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          If the lines {inReview > 0 ? 'in review' : ''}{inReview > 0 && notSent > 0 ? ' and ' : ''}{notSent > 0 ? 'not yet sent' : ''} are accepted, {formatNaira(Math.max(outstanding - inReview - notSent, 0))} would remain to retire or refund.
+        </p>
+      )}
+    </div>
+  )
+}
+
 function RetirementLines({ request, editable }: { request: FundRequest; editable: boolean }) {
   const { activeOrgId } = useAuth()
   const add = useAddRetirementItem(activeOrgId)
@@ -260,9 +301,7 @@ function RetirementLines({ request, editable }: { request: FundRequest; editable
   const [receipt, setReceipt] = React.useState<File | null>(null)
   const [note, setNote] = React.useState('')
   const fileRef = React.useRef<HTMLInputElement>(null)
-
-  const spent = request.items.reduce((s, i) => s + Number(i.amount), 0)
-  const balance = retirementBalance(request, request.items)
+  const drafts = request.items.filter((i) => i.review_status === 'draft')
 
   const addLine = async () => {
     const value = Number(amount)
@@ -278,10 +317,11 @@ function RetirementLines({ request, editable }: { request: FundRequest; editable
     }
   }
 
-  const submitRetirement = async () => {
+  const submitBatch = async () => {
     try {
       await submit.mutateAsync({ id: request.id, note: note.trim() })
-      toast.success('Retirement submitted', { description: 'Finance will review your receipts.' })
+      setNote('')
+      toast.success('Sent to finance', { description: 'You can retire the rest later — the balance stays open until it’s fully accounted for.' })
     } catch (err) {
       toast.error('Could not submit retirement', { description: errorMessage(err) })
     }
@@ -289,6 +329,7 @@ function RetirementLines({ request, editable }: { request: FundRequest; editable
 
   return (
     <div className="space-y-3">
+      <AdvancePosition request={request} />
       {request.items.length > 0 ? (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
@@ -298,46 +339,47 @@ function RetirementLines({ request, editable }: { request: FundRequest; editable
                 <th className="px-3 py-2 font-medium">Date</th>
                 <th className="px-3 py-2 text-right font-medium">Amount</th>
                 <th className="px-3 py-2 font-medium">Receipt</th>
+                <th className="px-3 py-2 font-medium">Status</th>
                 {editable && <th className="w-10" />}
               </tr>
             </thead>
             <tbody>
-              {request.items.map((i) => (
-                <tr key={i.id} className="border-b border-border/60 last:border-0">
-                  <td className="px-3 py-2">{i.description}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{i.spent_on ? format(new Date(i.spent_on), 'MMM d') : '—'}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{formatNaira(Number(i.amount))}</td>
-                  <td className="px-3 py-2">
-                    {i.receipt_path ? (
-                      <button className="inline-flex items-center gap-1 text-primary hover:underline" onClick={() => openFile(i.receipt_path!)}>
-                        <Paperclip className="h-3.5 w-3.5" /> View
-                      </button>
-                    ) : <span className="text-xs text-warning">No receipt</span>}
-                  </td>
-                  {editable && (
-                    <td className="px-2 py-2">
-                      <Button variant="ghost" size="sm" aria-label="Remove expense" onClick={() => remove.mutate(i, { onError: (e) => toast.error('Could not remove', { description: errorMessage(e) }) })}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+              {request.items.map((i) => {
+                const st = LINE_STATUS[i.review_status] ?? LINE_STATUS.draft
+                return (
+                  <tr key={i.id} className="border-b border-border/60 last:border-0">
+                    <td className="px-3 py-2">
+                      {i.description}
+                      {i.review_comment && i.review_status === 'draft' && <p className="text-xs text-warning">Queried: {i.review_comment}</p>}
                     </td>
-                  )}
-                </tr>
-              ))}
+                    <td className="px-3 py-2 text-muted-foreground">{i.spent_on ? format(new Date(i.spent_on), 'MMM d') : '—'}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{formatNaira(Number(i.amount))}</td>
+                    <td className="px-3 py-2">
+                      {i.receipt_path ? (
+                        <button className="inline-flex items-center gap-1 text-primary hover:underline" onClick={() => openFile(i.receipt_path!)}>
+                          <Paperclip className="h-3.5 w-3.5" /> View
+                        </button>
+                      ) : <span className="text-xs text-warning">No receipt</span>}
+                    </td>
+                    <td className="px-3 py-2"><Badge variant={st.variant}>{st.label}</Badge></td>
+                    {editable && (
+                      <td className="px-2 py-2">
+                        {i.review_status === 'draft' && (
+                          <Button variant="ghost" size="sm" aria-label="Remove expense" onClick={() => remove.mutate(i, { onError: (e) => toast.error('Could not remove', { description: errorMessage(e) }) })}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">No expenses added yet.</p>
       )}
-
-      <div className="grid grid-cols-3 gap-3 rounded-lg bg-muted/40 p-3 text-sm">
-        <div><p className="text-xs text-muted-foreground">Paid out</p><p className="font-medium tabular-nums">{formatNaira(Number(request.disbursed_amount ?? 0))}</p></div>
-        <div><p className="text-xs text-muted-foreground">Spent</p><p className="font-medium tabular-nums">{formatNaira(spent)}</p></div>
-        <div>
-          <p className="text-xs text-muted-foreground">{balance >= 0 ? 'To refund' : 'Spent above amount paid'}</p>
-          <p className={cn('font-medium tabular-nums', balance < 0 && 'text-warning')}>{formatNaira(Math.abs(balance))}</p>
-        </div>
-      </div>
 
       {editable && (
         <div className="space-y-3 rounded-lg border border-border p-4">
@@ -353,9 +395,12 @@ function RetirementLines({ request, editable }: { request: FundRequest; editable
           </div>
           <div className="space-y-1.5 border-t border-border pt-3">
             <Label>Note to finance (optional)</Label>
-            <Textarea rows={2} placeholder="e.g. Balance of ₦5,000 returned in cash to the accounts desk" value={note} onChange={(e) => setNote(e.target.value)} />
-            <div className="flex justify-end">
-              <Button size="sm" onClick={submitRetirement} loading={submit.isPending} disabled={request.items.length === 0}>Submit retirement</Button>
+            <Textarea rows={2} placeholder="e.g. ₦20,000 unused — returning it by transfer today" value={note} onChange={(e) => setNote(e.target.value)} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">You can send some receipts now and the rest later.</p>
+              <Button size="sm" onClick={submitBatch} loading={submit.isPending} disabled={drafts.length === 0}>
+                Send {drafts.length || ''} line{drafts.length === 1 ? '' : 's'} to finance
+              </Button>
             </div>
           </div>
         </div>
@@ -364,25 +409,100 @@ function RetirementLines({ request, editable }: { request: FundRequest; editable
   )
 }
 
+function RefundsList({ request }: { request: FundRequest }) {
+  if (request.refunds.length === 0) return null
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Refunds received</p>
+      <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+        {request.refunds.map((f) => (
+          <li key={f.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+            <span>
+              {format(new Date(f.received_on), 'MMM d, yyyy')}
+              <span className="text-muted-foreground">
+                {[DISBURSEMENT_METHODS.find((m) => m.value === f.method)?.label ?? f.method, f.reference].filter(Boolean).map((x) => ` · ${x}`).join('')}
+                {f.notes ? ` · ${f.notes}` : ''}
+              </span>
+            </span>
+            <span className="font-medium tabular-nums">{formatNaira(Number(f.amount))}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function RecordRefundBox({ request }: { request: FundRequest }) {
+  const { activeOrgId } = useAuth()
+  const record = useRecordRefund(activeOrgId)
+  const outstanding = outstandingBalance(request)
+  const [amount, setAmount] = React.useState(String(Math.max(outstanding, 0)))
+  const [receivedOn, setReceivedOn] = React.useState(today())
+  const [method, setMethod] = React.useState('bank_transfer')
+  const [reference, setReference] = React.useState('')
+  const [notes, setNotes] = React.useState('')
+  if (outstanding <= 0) return null
+
+  const run = async () => {
+    const value = Number(amount)
+    if (!(value > 0 && value <= outstanding)) { toast.error(`Enter an amount up to the outstanding ${formatNaira(outstanding)}`); return }
+    try {
+      await record.mutateAsync({ id: request.id, amount: value, receivedOn, method, reference: reference.trim(), notes: notes.trim() })
+      toast.success('Refund recorded', { description: value >= outstanding ? 'The advance is fully accounted for.' : `${formatNaira(outstanding - value)} still outstanding.` })
+      setReference(''); setNotes('')
+    } catch (err) {
+      toast.error('Could not record refund', { description: errorMessage(err) })
+    }
+  }
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border p-4">
+      <p className="text-sm font-medium">Record money returned <span className="font-normal text-muted-foreground">· {formatNaira(outstanding)} outstanding</span></p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-1.5"><Label>Amount (₦)</Label><Input type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label>Received on</Label><Input type="date" value={receivedOn} onChange={(e) => setReceivedOn(e.target.value)} /></div>
+        <div className="space-y-1.5">
+          <Label>Method</Label>
+          <Select value={method} onValueChange={setMethod}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{DISBURSEMENT_METHODS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5"><Label>Reference</Label><Input placeholder="Transfer / receipt no." value={reference} onChange={(e) => setReference(e.target.value)} /></div>
+      </div>
+      <Input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      <div className="flex justify-end"><Button size="sm" variant="outline" onClick={run} loading={record.isPending}>Record refund</Button></div>
+    </div>
+  )
+}
+
 function ReviewRetirementBox({ request }: { request: FundRequest }) {
   const { activeOrgId } = useAuth()
   const review = useReviewRetirement(activeOrgId)
   const [comment, setComment] = React.useState('')
+  const batch = request.items.filter((i) => i.review_status === 'submitted')
+  const batchTotal = batch.reduce((s, i) => s + Number(i.amount), 0)
+  const after = outstandingBalance(request) - batchTotal
   const run = async (accept: boolean) => {
     try {
       await review.mutateAsync({ id: request.id, accept, comment: comment.trim() || undefined })
-      toast.success(accept ? 'Retirement accepted' : 'Sent back to the requester')
+      toast.success(accept ? (after <= 0 ? 'Accepted — advance closed' : `Accepted — ${formatNaira(after)} still outstanding`) : 'Sent back to the requester')
     } catch (err) {
       toast.error('Action failed', { description: errorMessage(err) })
     }
   }
   return (
     <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-4">
-      <p className="text-sm font-medium">Review retirement</p>
+      <p className="text-sm font-medium">
+        Review {batch.length} line{batch.length === 1 ? '' : 's'} · {formatNaira(batchTotal)}
+        <span className="font-normal text-muted-foreground">
+          {' '}· after accepting, {after > 0 ? `${formatNaira(after)} stays outstanding` : after < 0 ? `${formatNaira(-after)} spent above the advance` : 'the advance closes'}
+        </span>
+      </p>
       <Textarea rows={2} placeholder="Comment (required if querying)" value={comment} onChange={(e) => setComment(e.target.value)} />
       <div className="flex justify-end gap-2">
         <Button variant="outline" size="sm" onClick={() => run(false)} disabled={review.isPending}>Query</Button>
-        <Button size="sm" onClick={() => run(true)} loading={review.isPending}>Accept & close</Button>
+        <Button size="sm" onClick={() => run(true)} loading={review.isPending}>Accept</Button>
       </div>
     </div>
   )
@@ -404,8 +524,8 @@ export function FundRequestDetailDialog({ request, onOpenChange }: { request: Fu
   const meta = FUND_STATUS_META[r.status] ?? { label: r.status, variant: 'muted' as const }
   const isMine = r.user_id === userId
   const canManage = has('funds.manage')
-  const showRetirement = ['disbursed', 'retirement_submitted', 'retired'].includes(r.status)
-  const days = r.status === 'disbursed' ? daysOutstanding(r) : null
+  const showRetirement = [...OPEN_ADVANCE_STATUSES, 'retired'].includes(r.status)
+  const days = r.status === 'disbursed' || r.status === 'partially_retired' ? daysOutstanding(r) : null
   const overdue = days != null && days > (settings?.retirement_due_days ?? 14)
   const earlier = r.approvals.filter((a) => a.round < r.current_round)
   const partial = r.approved_amount != null && Number(r.approved_amount) < Number(r.amount)
@@ -507,19 +627,23 @@ export function FundRequestDetailDialog({ request, onOpenChange }: { request: Fu
                     </span>
                   )}
                 </div>
-                {r.status === 'disbursed' && r.retirement_comment && (
+                {(r.status === 'disbursed' || r.status === 'partially_retired') && r.retirement_comment && (
                   <p className="mb-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
                     <span className="font-medium">Queried by finance:</span> {r.retirement_comment}
                   </p>
                 )}
-                {r.retirement_note && r.status !== 'disbursed' && (
+                {r.retirement_note && r.status === 'retirement_submitted' && (
                   <p className="mb-3 text-sm text-muted-foreground">Note: {r.retirement_note}</p>
                 )}
-                <RetirementLines request={r} editable={isMine && r.status === 'disbursed'} />
+                <RetirementLines request={r} editable={isMine && (r.status === 'disbursed' || r.status === 'partially_retired')} />
+                <div className="mt-3 space-y-3">
+                  <RefundsList request={r} />
+                  {canManage && !isMine && OPEN_ADVANCE_STATUSES.includes(r.status) && <RecordRefundBox key={r.id + r.refunded_amount} request={r} />}
+                </div>
               </section>
             )}
 
-            {canManage && r.status === 'retirement_submitted' && <ReviewRetirementBox request={r} />}
+            {canManage && !isMine && r.status === 'retirement_submitted' && <ReviewRetirementBox request={r} />}
 
             {isMine && ['pending', 'approved', 'returned'].includes(r.status) && (
               <div className="flex justify-end">

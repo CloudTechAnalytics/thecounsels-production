@@ -43,7 +43,7 @@ export function RequestList({ requests, loading, empty, showRequester, onOpen, h
     <ul className="divide-y divide-border">
       {requests.map((r) => {
         const meta = FUND_STATUS_META[r.status] ?? { label: r.status, variant: 'muted' as const }
-        const days = r.status === 'disbursed' ? daysOutstanding(r) : null
+        const days = r.status === 'disbursed' || r.status === 'partially_retired' ? daysOutstanding(r) : null
         const overdue = days != null && days > dueDays
         return (
           <li key={r.id}>
@@ -86,7 +86,7 @@ export function FundsPage() {
   const toApprove = requests.filter(canActOn)
   const toDisburse = canManage ? requests.filter((r) => r.status === 'approved' || r.status === 'payment_processing') : []
   const toReview = canManage ? requests.filter((r) => r.status === 'retirement_submitted') : []
-  const myFollowUps = mine.filter((r) => r.status === 'returned' || r.status === 'disbursed')
+  const myFollowUps = mine.filter((r) => r.status === 'returned' || r.status === 'disbursed' || r.status === 'partially_retired')
   const actionCount = toApprove.length + toDisburse.length + toReview.length + myFollowUps.length
 
   const [tab, setTab] = React.useState<Tab>('mine')
@@ -148,7 +148,7 @@ export function FundsPage() {
         <Card className="overflow-hidden">
           <RequestList
             requests={mine} loading={isLoading} empty="You haven't requested any funds yet." onOpen={setOpen}
-            highlight={(r) => r.status === 'disbursed' || r.status === 'returned' || r.status === 'draft'}
+            highlight={(r) => ['disbursed', 'partially_retired', 'returned', 'draft'].includes(r.status)}
           />
         </Card>
       )}
@@ -160,6 +160,7 @@ export function FundsPage() {
             { title: 'Yours to follow up — clarify or retire', rows: myFollowUps, show: myFollowUps.length > 0, requester: false },
             { title: 'Approved — ready to pay out', rows: toDisburse, show: canManage, requester: true },
             { title: 'Retirements to review', rows: toReview, show: canManage, requester: true },
+            { title: 'Advances with a balance outstanding', rows: canManage ? requests.filter((r) => r.status === 'partially_retired') : [], show: canManage, requester: true },
           ].filter((s) => s.show).map((s) => (
             <section key={s.title}>
               <p className="mb-2 font-display text-sm font-semibold">{s.title} <span className="text-muted-foreground">({s.rows.length})</span></p>

@@ -1342,6 +1342,23 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['approval_delegations']['Insert']>
         Relationships: []
       }
+      fund_refunds: {
+        Row: {
+          id: string
+          organization_id: string
+          request_id: string
+          amount: number
+          received_on: string
+          method: string | null
+          reference: string | null
+          notes: string | null
+          recorded_by: string | null
+          created_at: string
+        }
+        Insert: { [_ in never]: never }
+        Update: { [_ in never]: never }
+        Relationships: []
+      }
       fund_request_attachments: {
         Row: {
           id: string
@@ -1406,6 +1423,8 @@ export interface Database {
           submitted_at: string | null
           payment_date: string | null
           disbursement_notes: string | null
+          accepted_amount: number
+          refunded_amount: number
           purpose: string | null
           amount: number
           needed_by: string | null
@@ -1468,6 +1487,10 @@ export interface Database {
           receipt_size: number | null
           created_by: string | null
           created_at: string
+          review_status: string
+          submitted_at: string | null
+          reviewed_at: string | null
+          review_comment: string | null
         }
         Insert: {
           id?: string
@@ -2895,6 +2918,10 @@ export interface Database {
       cancel_leave_request: {
         Args: { p_request: string }
         Returns: undefined
+      }
+      record_fund_refund: {
+        Args: { p_request: string; p_amount: number; p_received_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
       }
       save_fund_request: {
         Args: {

@@ -8,6 +8,7 @@ import { Users, UserCheck, CalendarClock, Inbox, Wallet, ChevronLeft, ChevronRig
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useEmployees, useAllLeaveRequests, useAllHrRequests, useLeaveTypes } from '@/features/hr/hooks/use-hr'
 import { useFundRequests, useFundApprovalRights } from '@/features/funds/hooks/use-funds'
+import { OPEN_ADVANCE_STATUSES, outstandingBalance } from '@/features/funds/types'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { HR_REQUEST_TYPES } from '@/features/hr/types'
 import { PageHeader } from '@/shared/components/page-header'
@@ -158,7 +159,7 @@ function hrStage(s: string): Stage | null {
 function fundStage(s: string): Stage | null {
   if (s === 'pending') return 'pending'
   if (s === 'returned') return 'pending'
-  if (s === 'approved' || s === 'payment_processing' || s === 'disbursed' || s === 'retirement_submitted') return 'in_review'
+  if (s === 'approved' || s === 'payment_processing' || s === 'disbursed' || s === 'retirement_submitted' || s === 'partially_retired') return 'in_review'
   if (s === 'retired') return 'approved'
   return s === 'rejected' ? 'rejected' : null
 }
@@ -492,7 +493,7 @@ export function HrOverviewPage() {
   const canManageLeave = has('leave.manage')
   const canSeeApprovals = canManageLeave || canManageRequests || pendingFunds > 0
   const canSeeFunds = has('funds.approve') || has('funds.manage')
-  const unretired = funds.filter((f) => f.status === 'disbursed' || f.status === 'retirement_submitted')
+  const unretired = funds.filter((f) => OPEN_ADVANCE_STATUSES.includes(f.status) && outstandingBalance(f) > 0)
 
   return (
     <div>
@@ -510,8 +511,8 @@ export function HrOverviewPage() {
         {canSeeFunds && (
           <StatTile
             label="Unretired Funds"
-            value={formatNaira(unretired.reduce((s, f) => s + Number(f.disbursed_amount ?? 0), 0))}
-            hint={`${unretired.length} payout${unretired.length === 1 ? '' : 's'} awaiting receipts`}
+            value={formatNaira(unretired.reduce((s, f) => s + outstandingBalance(f), 0))}
+            hint={`${unretired.length} advance${unretired.length === 1 ? '' : 's'} not yet accounted for`}
             icon={Wallet}
             loading={loading}
           />

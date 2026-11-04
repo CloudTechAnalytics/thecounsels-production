@@ -129,6 +129,15 @@ export function useSubmitRetirement(organizationId: string | null) {
   })
 }
 
+export function useRecordRefund(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  return useMutation({
+    mutationFn: ({ id, ...r }: { id: string; amount: number; receivedOn?: string; method?: string; reference?: string; notes?: string }) =>
+      fundsService.recordRefund(id, r),
+    onSuccess: invalidate,
+  })
+}
+
 export function useReviewRetirement(organizationId: string | null) {
   const invalidate = useInvalidateFunds(organizationId)
   return useMutation({

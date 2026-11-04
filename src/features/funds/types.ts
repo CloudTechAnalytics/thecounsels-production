@@ -6,6 +6,7 @@ export type FundRequestRow = Database['public']['Tables']['fund_requests']['Row'
 export type FundApprovalRow = Database['public']['Tables']['fund_request_approvals']['Row']
 export type FundRetirementItem = Database['public']['Tables']['fund_retirement_items']['Row']
 
+export type FundRefund = Database['public']['Tables']['fund_refunds']['Row']
 export type FundAttachment = Database['public']['Tables']['fund_request_attachments']['Row']
 export type ApprovalWorkflow = Database['public']['Tables']['approval_workflows']['Row']
 export type ApprovalWorkflowStep = Database['public']['Tables']['approval_workflow_steps']['Row']
@@ -25,6 +26,7 @@ export type FundRequest = FundRequestRow & {
   chain: FundApproval[]
   items: FundRetirementItem[]
   attachments: FundAttachment[]
+  refunds: FundRefund[]
 }
 
 export const FUND_CATEGORIES = [
@@ -53,6 +55,7 @@ export const FUND_STATUS_META: Record<string, { label: string; variant: BadgePro
   payment_processing: { label: 'Payment processing', variant: 'default' },
   disbursed: { label: 'Disbursed · retirement pending', variant: 'warning' },
   retirement_submitted: { label: 'Retirement in review', variant: 'default' },
+  partially_retired: { label: 'Partially retired · balance outstanding', variant: 'warning' },
   retired: { label: 'Retired', variant: 'success' },
 }
 
@@ -89,10 +92,20 @@ export const DEFAULT_FUND_SETTINGS: Omit<FundSettings, 'organization_id' | 'upda
   retirement_due_days: 14,
 }
 
-/** Money still with the staff member (positive) or owed back to them (negative). */
-export function retirementBalance(r: Pick<FundRequestRow, 'disbursed_amount'>, items: Pick<FundRetirementItem, 'amount'>[]): number {
-  const spent = items.reduce((s, i) => s + Number(i.amount), 0)
-  return Math.round((Number(r.disbursed_amount ?? 0) - spent) * 100) / 100
+/** Statuses where an advance has been paid and isn't fully accounted for yet. */
+export const OPEN_ADVANCE_STATUSES = ['disbursed', 'retirement_submitted', 'partially_retired']
+
+/** Paid out − accepted expenses − refunds received. Positive: still with
+ * the employee. Negative: they spent more than they were given. */
+export function outstandingBalance(r: Pick<FundRequestRow, 'disbursed_amount' | 'accepted_amount' | 'refunded_amount'>): number {
+  return Math.round((Number(r.disbursed_amount ?? 0) - Number(r.accepted_amount ?? 0) - Number(r.refunded_amount ?? 0)) * 100) / 100
+}
+
+/** Same, but also counting lines still awaiting finance review — what the
+ * employee sees while preparing a batch. */
+export function retirementBalance(r: Pick<FundRequestRow, 'disbursed_amount' | 'refunded_amount'>, items: Pick<FundRetirementItem, 'amount' | 'review_status'>[]): number {
+  const spent = items.filter((i) => i.review_status !== 'rejected').reduce((s, i) => s + Number(i.amount), 0)
+  return Math.round((Number(r.disbursed_amount ?? 0) - spent - Number(r.refunded_amount ?? 0)) * 100) / 100
 }
 
 /** Days since payout for a request whose retirement is still outstanding. */

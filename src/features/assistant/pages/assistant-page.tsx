@@ -181,7 +181,7 @@ export function AssistantPage() {
                   {conversations?.find((c) => c.id === activeConversationId)?.title ?? 'Conversation'}
                 </p>
               </div>
-              <MessageThread messages={messages} currentUserId={userId} isLoading={messagesLoading} pendingReply={send.isPending} />
+              <MessageThread messages={messages} currentUserId={userId} isLoading={messagesLoading} pendingReply={send.isPending} formatted />
             </>
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">

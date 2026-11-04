@@ -70,7 +70,7 @@ export function MatterAiChatPanel({ matterId, readOnly }: { matterId: string; re
           </Button>
         )}
       </div>
-      <MessageThread messages={messages} currentUserId={userId} isLoading={isLoading} pendingReply={send.isPending} />
+      <MessageThread messages={messages} currentUserId={userId} isLoading={isLoading} pendingReply={send.isPending} formatted />
       {readOnly ? (
         <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
           This matter is closed — chat is read-only. Historical messages still show above.

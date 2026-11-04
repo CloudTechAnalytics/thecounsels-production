@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { Button } from '@/shared/components/ui/button'
 import { toast } from '@/shared/components/ui/sonner'
 import { logClientError } from '@/shared/lib/error-log'
+import { RichText } from '@/shared/components/rich-text'
 
 export function MatterAiSummaryCard({ matter, onNavigateTab }: { matter: MatterRow; onNavigateTab: (tab: 'ai-chat') => void }) {
   const { activeOrgId } = useAuth()
@@ -76,7 +77,7 @@ export function MatterAiSummaryCard({ matter, onNavigateTab }: { matter: MatterR
       <CardContent>
         {matter.ai_summary ? (
           <>
-            <p className="whitespace-pre-wrap text-sm text-muted-foreground">{matter.ai_summary}</p>
+            <RichText text={matter.ai_summary} className="text-sm text-muted-foreground" />
             {matter.ai_summary_generated_at && (
               <p className="mt-3 text-xs text-muted-foreground">
                 Generated {formatDistanceToNow(new Date(matter.ai_summary_generated_at), { addSuffix: true })}

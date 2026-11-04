@@ -5,6 +5,7 @@ import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { initialsOf } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
+import { RichText } from '@/shared/components/rich-text'
 import type { ThreadMessage } from '@/features/messaging/types'
 
 function AuthorAvatar({ author }: { author: ThreadMessage['author'] }) {
@@ -29,6 +30,7 @@ export function MessageThread({
   isLoadingMore,
   onDelete,
   pendingReply,
+  formatted,
 }: {
   messages: ThreadMessage[]
   currentUserId: string | null
@@ -42,6 +44,8 @@ export function MessageThread({
    * replies in well under a second), but without this any reply — however
    * brief — leaves the composer looking stuck rather than working. */
   pendingReply?: boolean
+  /** AI threads — render the other side's Markdown (bold, lists, tables) instead of raw text. */
+  formatted?: boolean
 }) {
   const bottomRef = React.useRef<HTMLDivElement>(null)
   React.useEffect(() => {
@@ -83,10 +87,17 @@ export function MessageThread({
         return (
           <div key={m.id} className={cn('group flex items-end gap-2', mine && 'flex-row-reverse')}>
             {!mine && <AuthorAvatar author={m.author} />}
-            <div className={cn('max-w-[70%] rounded-lg px-3 py-2 text-sm', mine ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
+            <div
+              className={cn(
+                'rounded-lg px-3 py-2 text-sm',
+                mine ? 'max-w-[70%] bg-primary text-primary-foreground' : formatted ? 'max-w-[85%] rounded-bl-sm border border-border bg-card px-4 py-3 shadow-sm' : 'max-w-[70%] bg-muted',
+              )}
+            >
               {!mine && <p className="mb-0.5 text-xs font-semibold">{m.author?.full_name ?? 'Unknown'}</p>}
               {m.deletedAt ? (
                 <p className="italic opacity-70">Message deleted</p>
+              ) : formatted && !mine ? (
+                <RichText text={m.body} className="text-foreground/90" />
               ) : (
                 <p className="whitespace-pre-wrap break-words">{m.body}</p>
               )}

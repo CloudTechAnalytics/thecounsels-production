@@ -1,12 +1,13 @@
 import * as React from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Banknote, CheckCircle2, Undo2, Scale, Hourglass, AlertTriangle, Search } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useFundRequests } from '@/features/funds/hooks/use-funds'
 import { useDepartments } from '@/features/hr/hooks/use-hr'
-import { FundRequestDetailDialog } from '@/features/funds/components/fund-request-detail-dialog'
+import { fundRequestPath, nextStep, tabForAction } from '@/features/funds/lib/next-step'
+import { useFundApprovalRights } from '@/features/funds/hooks/use-funds'
 import {
   PAID_STATUSES, RETIREMENT_STATUS_META, isRetirementOverdue, outstandingBalance, type FundRequest,
 } from '@/features/funds/types'
@@ -47,7 +48,8 @@ export function RetirementsPage() {
   const { has } = usePermissions()
   const { data: requests = [], isLoading } = useFundRequests(activeOrgId)
   const { data: departments } = useDepartments(activeOrgId)
-  const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
+  const { canActOn } = useFundApprovalRights()
   const seesFirm = has('funds.manage') || has('funds.approve')
 
   const paid = React.useMemo(() => requests.filter((r) => PAID_STATUSES.includes(r.status)), [requests])
@@ -79,14 +81,6 @@ export function RetirementsPage() {
   const overdue = rows.filter((r) => isRetirementOverdue(r) && outstandingBalance(r) > 0)
   const pendingVerification = rows.filter((r) => Number(r.submitted_expenses) > 0 || Number(r.pending_refunds) > 0)
 
-  const openId = params.get('request')
-  const selected = openId ? requests.find((r) => r.id === openId) ?? null : null
-  const setSelected = (r: FundRequest | null) => {
-    const next = new URLSearchParams(params)
-    if (r) { next.set('request', r.id); next.set('focus', 'retirement') }
-    else { next.delete('request'); next.delete('focus') }
-    setParams(next, { replace: true })
-  }
 
   return (
     <div>
@@ -236,7 +230,14 @@ export function RetirementsPage() {
                           {late && <Badge variant="destructive">Overdue</Badge>}
                         </div>
                       </td>
-                      <td className="px-2 py-2"><Button size="sm" variant="outline" onClick={() => setSelected(r)}>Open</Button></td>
+                      <td className="px-2 py-2">
+                        {(() => {
+                          const step = nextStep(r, { userId, canActOn, canManage: has('funds.manage') })
+                          return step.action && step.action !== 'edit'
+                            ? <Button size="sm" onClick={() => navigate(fundRequestPath(r.id, tabForAction(r, step.action)))}>{step.actionLabel}</Button>
+                            : <Button size="sm" variant="outline" onClick={() => navigate(fundRequestPath(r.id, 'summary'))}>Open</Button>
+                        })()}
+                      </td>
                     </tr>
                   )
                 })}
@@ -246,7 +247,6 @@ export function RetirementsPage() {
         )}
       </Card>
 
-      <FundRequestDetailDialog request={selected} focus={params.get('focus') ?? undefined} onOpenChange={(o) => { if (!o) setSelected(null) }} />
     </div>
   )
 }

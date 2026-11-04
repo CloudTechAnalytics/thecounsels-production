@@ -1,15 +1,13 @@
 import * as React from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Search, X, FilePlus2, BadgeCheck, Banknote, ReceiptText } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useFundRequests, useFundApprovalRights } from '@/features/funds/hooks/use-funds'
 import { RequestList } from '@/features/funds/components/request-list'
-import { FundRequestFormDialog } from '@/features/funds/components/fund-request-form-dialog'
-import { FundRequestDetailDialog } from '@/features/funds/components/fund-request-detail-dialog'
 import { FundReports } from '@/features/funds/components/fund-reports'
-import { FUND_STATUS_META, fundCategoryLabel, fundStatusLabel, type FundRequest } from '@/features/funds/types'
+import { FUND_STATUS_META, fundCategoryLabel, fundStatusLabel } from '@/features/funds/types'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -67,9 +65,8 @@ export function FundsPage() {
   const { has } = usePermissions()
   const { data: requests = [], isLoading } = useFundRequests(activeOrgId)
   const { canActOn } = useFundApprovalRights()
-  const [params, setParams] = useSearchParams()
-  const [creating, setCreating] = React.useState(false)
-  const [editing, setEditing] = React.useState<FundRequest | null>(null)
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
   const canSeeAll = has('funds.approve') || has('funds.manage')
   const canManage = has('funds.manage')
   const canApprove = has('funds.approve')
@@ -96,19 +93,9 @@ export function FundsPage() {
     && (!search.trim() || [r.title, r.request_number ?? '', r.requester_name ?? ''].some((s) => s.toLowerCase().includes(search.trim().toLowerCase()))),
   )
 
-  const openId = params.get('request')
-  const open = openId ? requests.find((r) => r.id === openId) ?? null : null
-  const focus = params.get('focus') ?? undefined
-  const setOpen = (r: FundRequest | null, section?: string) => {
-    const next = new URLSearchParams(params)
-    if (r) next.set('request', r.id)
-    else next.delete('request')
-    if (r && section) next.set('focus', section)
-    else next.delete('focus')
-    setParams(next, { replace: true })
-  }
-  // The row passes the request it was showing; edit the live copy (it may have just been recalled to draft).
-  const editingLive = editing ? requests.find((x) => x.id === editing.id) ?? editing : null
+
+  const legacyId = params.get('request')
+  if (legacyId) return <Navigate to={`/hr/funds/${legacyId}`} replace />
 
   const tabs: { key: Tab; label: string; show: boolean; count?: number }[] = [
     { key: 'mine', label: 'My requests', show: true },
@@ -122,7 +109,7 @@ export function FundsPage() {
       <PageHeader
         title="Fund Requests"
         description="Request money for work, get it approved and paid, then retire it with receipts."
-        actions={<Button onClick={() => setCreating(true)}>Request funds</Button>}
+        actions={<Button onClick={() => navigate('/hr/funds/new')}>Request funds</Button>}
       />
       <HowItWorks />
 
@@ -145,7 +132,7 @@ export function FundsPage() {
       {tab === 'mine' && (
         <Card className="overflow-hidden">
           <RequestList
-            requests={mine} loading={isLoading} empty="You haven't requested any funds yet — use Request funds at the top right." onOpen={setOpen} onEdit={setEditing}
+            requests={mine} loading={isLoading} empty="You haven't requested any funds yet — use Request funds at the top right."
           />
         </Card>
       )}
@@ -161,7 +148,7 @@ export function FundsPage() {
             <section key={s.title}>
               <p className="mb-2 font-display text-sm font-semibold">{s.title} <span className="text-muted-foreground">({s.rows.length})</span></p>
               <Card className="overflow-hidden">
-                <RequestList requests={s.rows} loading={isLoading} empty="Nothing here right now." showRequester={s.requester} onOpen={setOpen} onEdit={setEditing} />
+                <RequestList requests={s.rows} loading={isLoading} empty="Nothing here right now." showRequester={s.requester} />
               </Card>
             </section>
           ))}
@@ -204,15 +191,12 @@ export function FundsPage() {
               }]}
             />
           </div>
-          <RequestList requests={all} loading={isLoading} empty="No requests match." showRequester onOpen={setOpen} onEdit={setEditing} />
+          <RequestList requests={all} loading={isLoading} empty="No requests match." showRequester />
         </Card>
       )}
 
       {tab === 'reports' && canManage && <FundReports requests={requests.filter((r) => r.status !== 'draft')} />}
 
-      <FundRequestFormDialog open={creating} onOpenChange={setCreating} />
-      <FundRequestFormDialog open={Boolean(editing)} onOpenChange={(o) => { if (!o) setEditing(null) }} request={editingLive} />
-      <FundRequestDetailDialog request={open} focus={focus} onOpenChange={(o) => { if (!o) setOpen(null) }} />
     </div>
   )
 }

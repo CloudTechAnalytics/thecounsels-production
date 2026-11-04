@@ -33,11 +33,12 @@ export function useFundRequests(organizationId: string | null) {
 
 function useInvalidateFunds(organizationId: string | null) {
   const qc = useQueryClient()
-  return () => {
-    qc.invalidateQueries({ queryKey: ['funds', 'requests', organizationId] })
-    qc.invalidateQueries({ queryKey: ['funds', 'my-approvals', organizationId] })
-    qc.invalidateQueries({ queryKey: ['funds', 'history'] })
-  }
+  // Returned so mutateAsync waits for fresh data before callers navigate on.
+  return () => Promise.all([
+    qc.invalidateQueries({ queryKey: ['funds', 'requests', organizationId] }),
+    qc.invalidateQueries({ queryKey: ['funds', 'my-approvals', organizationId] }),
+    qc.invalidateQueries({ queryKey: ['funds', 'history'] }),
+  ])
 }
 
 export function useSaveFundRequest(organizationId: string | null) {

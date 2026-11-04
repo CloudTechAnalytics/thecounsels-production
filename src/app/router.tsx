@@ -67,6 +67,8 @@ import { PayrollPage } from '@/features/payroll/pages/payroll-page'
 import { MyPayslipsPage } from '@/features/payroll/pages/my-payslips-page'
 import { ApprovalCentrePage } from '@/features/funds/pages/approval-centre-page'
 import { RetirementsPage } from '@/features/funds/pages/retirements-page'
+import { FundRequestPage } from '@/features/funds/pages/fund-request-page'
+import { FundRequestFormPage } from '@/features/funds/pages/fund-request-form-page'
 import { HrFinanceSettingsPage } from '@/features/hr/pages/hr-finance-settings-page'
 import { HrDocumentsPage } from '@/features/hr/pages/hr-documents-page'
 import { AnnouncementsPage } from '@/features/hr/pages/announcements-page'
@@ -279,6 +281,9 @@ export const router = createBrowserRouter([
                       { path: 'leave', element: withPermission(<LeavePage />, 'leave.request') },
                       { path: 'requests', element: withPermission(<HrRequestsPage />, 'hr_requests.submit') },
                       { path: 'funds', element: withPermission(<FundsPage />, 'funds.request') },
+                      { path: 'funds/new', element: withPermission(<FundRequestFormPage />, 'funds.request') },
+                      { path: 'funds/:id', element: withPermission(<FundRequestPage />, 'funds.request') },
+                      { path: 'funds/:id/edit', element: withPermission(<FundRequestFormPage />, 'funds.request') },
                       { path: 'payslips', element: withPermission(<MyPayslipsPage />, 'payroll.view_own') },
                       { path: 'payroll', element: withPermission(<PayrollPage />, 'payroll.manage') },
                       { path: 'retirements', element: withPermission(<RetirementsPage />, 'funds.request') },

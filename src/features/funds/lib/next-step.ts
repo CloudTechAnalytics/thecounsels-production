@@ -117,3 +117,24 @@ export function requesterOptions(r: FundRequest) {
     canWithdraw: ['draft', 'pending', 'returned', 'approved'].includes(r.status) && !(r.status === 'draft' && !r.request_number),
   }
 }
+
+export type FundTab = 'overview' | 'expenses' | 'refunds' | 'summary' | 'history'
+
+/** Which tab of the request page an action belongs on. */
+export function tabForAction(r: Pick<FundRequest, 'submitted_expenses' | 'pending_refunds' | 'accepted_amount' | 'disbursed_amount' | 'refunded_amount' | 'reimbursed_amount'>, action: FundAction): FundTab {
+  switch (action) {
+    case 'retire':
+      return 'expenses'
+    case 'verify':
+      if (Number(r.submitted_expenses) > 0) return 'expenses'
+      if (Number(r.pending_refunds) > 0 || outstandingBalance(r) < 0) return 'refunds'
+      return 'summary'
+    case 'close':
+      return 'summary'
+    default:
+      return 'overview'
+  }
+}
+
+/** Link to a request's page, optionally opened on a tab. */
+export const fundRequestPath = (id: string, tab?: FundTab) => `/hr/funds/${id}${tab && tab !== 'overview' ? `?tab=${tab}` : ''}`

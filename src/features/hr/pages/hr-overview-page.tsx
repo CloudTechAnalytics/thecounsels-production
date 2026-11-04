@@ -201,7 +201,7 @@ function useHrActivity() {
       out.push({
         id: r.id, ref: r.request_number ?? 'Funds', kind: 'funds', who: r.requester_name ?? 'Someone',
         detail: r.title, amount: formatNaira(Number(r.approved_amount ?? r.amount)),
-        stage: fundStage(r.status), createdAt: r.submitted_at ?? r.created_at, href: `/hr/funds?request=${r.id}`,
+        stage: fundStage(r.status), createdAt: r.submitted_at ?? r.created_at, href: `/hr/funds/${r.id}`,
         needsMe: canActOn(r) || (canFundsManage && ['approved', 'payment_processing', 'retirement_submitted'].includes(r.status)),
       })
     }

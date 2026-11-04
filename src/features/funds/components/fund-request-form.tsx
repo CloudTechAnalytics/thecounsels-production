@@ -6,13 +6,12 @@ import { useMatters } from '@/features/matters/hooks/use-matters'
 import { useClients } from '@/features/clients/hooks/use-clients'
 import { isMatterClosed } from '@/features/matters/types'
 import { useFundSettings, useSaveFundRequest } from '@/features/funds/hooks/use-funds'
-import { FUND_CATEGORIES, fundCategoryLabel, type FundRequest } from '@/features/funds/types'
+import { FUND_CATEGORIES, fundCategoryLabel, type FundRequest, type FundRequestRow } from '@/features/funds/types'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
 import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
 
@@ -51,8 +50,8 @@ function ClientSelect({ value, onChange }: { value: string; onChange: (v: string
   )
 }
 
-/** New request, or editing a draft / a request returned for clarification. */
-export function FundRequestFormDialog({ open, onOpenChange, request }: { open: boolean; onOpenChange: (o: boolean) => void; request?: FundRequest | null }) {
+/** New request, or editing a draft / a returned or recalled request — laid out on a page. */
+export function FundRequestForm({ request, onDone, onCancel }: { request?: FundRequest | null; onDone: (rec: FundRequestRow) => void; onCancel: () => void }) {
   const { activeOrgId } = useAuth()
   const { has } = usePermissions()
   const { data: settings } = useFundSettings(activeOrgId)
@@ -68,7 +67,6 @@ export function FundRequestFormDialog({ open, onOpenChange, request }: { open: b
   const [submitting, setSubmitting] = React.useState<'draft' | 'submit' | null>(null)
 
   React.useEffect(() => {
-    if (!open) return
     setTitle(request?.title ?? '')
     setCategory(request?.category ?? FUND_CATEGORIES[0].value)
     setAmount(request ? String(request.amount) : '')
@@ -77,7 +75,7 @@ export function FundRequestFormDialog({ open, onOpenChange, request }: { open: b
     setClientId(request?.client_id ?? '')
     setPurpose(request?.purpose ?? '')
     setFiles([])
-  }, [open, request])
+  }, [request?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = Number(amount)
   const needsPartner = settings?.leadership_threshold != null && value >= settings.leadership_threshold
@@ -106,7 +104,7 @@ export function FundRequestFormDialog({ open, onOpenChange, request }: { open: b
       toast.success(submit ? `Request ${rec.request_number ?? ''} submitted` : 'Draft saved', {
         description: submit ? 'It has gone to the first approver.' : 'Submit it whenever you’re ready.',
       })
-      onOpenChange(false)
+      onDone(rec)
     } catch (err) {
       toast.error(submit ? 'Could not submit request' : 'Could not save draft', { description: errorMessage(err) })
     } finally {
@@ -118,12 +116,7 @@ export function FundRequestFormDialog({ open, onOpenChange, request }: { open: b
   const returnNote = returned ? request.chain.find((a) => a.status === 'returned')?.comment ?? request.approvals.filter((a) => a.status === 'returned').at(-1)?.comment : null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{request ? (returned ? 'Update and resubmit' : 'Edit draft') : 'Request funds'}</DialogTitle>
-          <DialogDescription>Your firm's approval rules decide who signs off, based on the amount, category and your department.</DialogDescription>
-        </DialogHeader>
+    <div className="space-y-5">
         {returnNote && (
           <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm"><span className="font-medium">Clarification requested:</span> {returnNote}</p>
         )}
@@ -190,12 +183,11 @@ export function FundRequestFormDialog({ open, onOpenChange, request }: { open: b
             <p className="text-xs text-muted-foreground">This amount also needs a partner's approval.</p>
           )}
         </div>
-        <DialogFooter className="gap-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+        <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
+          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
           {!returned && <Button variant="outline" onClick={() => run(false)} loading={submitting === 'draft'} disabled={submitting !== null}>Save draft</Button>}
           <Button onClick={() => run(true)} loading={submitting === 'submit'} disabled={submitting !== null}>{returned ? 'Resubmit' : 'Submit request'}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </div>
   )
 }

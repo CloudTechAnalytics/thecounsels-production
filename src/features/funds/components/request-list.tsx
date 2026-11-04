@@ -1,10 +1,11 @@
 import * as React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { MoreHorizontal, Eye, Pencil, Undo2, Trash2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useFundApprovalRights, useCancelFundRequest, useDeleteFundDraft, useRecallFundRequest } from '@/features/funds/hooks/use-funds'
-import { nextStep, requesterOptions, type FundAction } from '@/features/funds/lib/next-step'
+import { nextStep, requesterOptions, tabForAction, fundRequestPath } from '@/features/funds/lib/next-step'
 import { FundProgress } from '@/features/funds/components/fund-progress'
 import { fundCategoryLabel, type FundRequest } from '@/features/funds/types'
 import { Button } from '@/shared/components/ui/button'
@@ -24,29 +25,19 @@ const TONE: Record<string, string> = {
   stopped: 'text-muted-foreground',
 }
 
-/** Which part of the request window an action jumps to. */
-export const ACTION_FOCUS: Record<Exclude<FundAction, null | 'edit'>, string> = {
-  approve: 'decision',
-  pay: 'payout',
-  retire: 'retirement',
-  verify: 'retirement',
-  close: 'retirement',
-}
-
 /**
  * Request rows that say, in words, what happens next and who it's waiting
  * on, with that step's button right on the row and a ⋯ menu for view /
  * edit / withdraw / delete — so nobody has to open a request to find out
  * what to do with it.
  */
-export function RequestList({ requests, loading, empty, showRequester, onOpen, onEdit }: {
+export function RequestList({ requests, loading, empty, showRequester }: {
   requests: FundRequest[]
   loading: boolean
   empty: string
   showRequester?: boolean
-  onOpen: (r: FundRequest, focus?: string) => void
-  onEdit: (r: FundRequest) => void
 }) {
+  const navigate = useNavigate()
   const { userId } = useAuth()
   const { has } = usePermissions()
   const { activeOrgId } = useAuth()
@@ -62,7 +53,7 @@ export function RequestList({ requests, loading, empty, showRequester, onOpen, o
       try { await recall.mutateAsync(r.id); toast.success('Pulled back from approval', { description: 'Make your changes, then submit it again.' }) }
       catch (err) { toast.error('Could not edit this request', { description: errorMessage(err) }); return }
     }
-    onEdit(r)
+    navigate(`/hr/funds/${r.id}/edit`)
   }
 
   if (loading) {
@@ -79,7 +70,7 @@ export function RequestList({ requests, loading, empty, showRequester, onOpen, o
           const opts = mine ? requesterOptions(r) : null
           return (
             <li key={r.id} className={cn('flex flex-col gap-3 p-4 sm:flex-row sm:items-center', step.tone === 'you' && 'bg-primary/5', step.tone === 'late' && 'bg-destructive/5')}>
-              <button className="min-w-0 flex-1 text-left" onClick={() => onOpen(r)}>
+              <button className="min-w-0 flex-1 text-left" onClick={() => navigate(fundRequestPath(r.id))}>
                 <div className="flex flex-wrap items-baseline gap-x-2">
                   <span className="truncate text-sm font-medium">{showRequester && !mine ? `${r.requester_name ?? 'Someone'} — ` : ''}{r.title}</span>
                   <span className="text-xs text-muted-foreground">{r.request_number ?? 'Draft'} · {fundCategoryLabel(r.category)} · {format(new Date(r.submitted_at ?? r.created_at), 'MMM d')}</span>
@@ -91,7 +82,7 @@ export function RequestList({ requests, loading, empty, showRequester, onOpen, o
                 <p className="text-sm font-semibold tabular-nums">{formatNaira(Number(r.approved_amount ?? r.amount))}</p>
                 <div className="flex items-center gap-1">
                   {step.action && (
-                    <Button size="sm" onClick={() => (step.action === 'edit' ? edit(r) : onOpen(r, ACTION_FOCUS[step.action!]))}>
+                    <Button size="sm" onClick={() => (step.action === 'edit' ? edit(r) : navigate(fundRequestPath(r.id, tabForAction(r, step.action))))}>
                       {step.actionLabel}
                     </Button>
                   )}
@@ -100,7 +91,7 @@ export function RequestList({ requests, loading, empty, showRequester, onOpen, o
                       <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="More actions"><MoreHorizontal className="h-4 w-4" /></Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onOpen(r)}><Eye /> View details</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate(fundRequestPath(r.id))}><Eye /> View details</DropdownMenuItem>
                       {opts?.canEdit && step.action !== 'edit' && (
                         <DropdownMenuItem onClick={() => edit(r)}><Pencil /> Edit{opts.needsRecall ? ' (pulls it back from approval)' : ''}</DropdownMenuItem>
                       )}

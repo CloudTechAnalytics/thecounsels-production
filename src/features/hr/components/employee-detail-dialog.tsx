@@ -41,7 +41,7 @@ function FundsHistory({ employee }: { employee: EmployeeRecord }) {
     <ul className="divide-y divide-border">
       {rows.map((r) => (
         <li key={r.id}>
-          <Link to={`/hr/funds?request=${r.id}`} className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-primary">
+          <Link to={`/hr/funds/${r.id}`} className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-primary">
             <span className="min-w-0"><span className="font-medium">{r.request_number}</span> <span className="text-muted-foreground">{r.title}</span></span>
             <span className="flex shrink-0 items-center gap-2">
               <span className="tabular-nums">{formatNaira(Number(r.approved_amount ?? r.amount))}</span>

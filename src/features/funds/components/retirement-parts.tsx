@@ -42,17 +42,17 @@ const LINE_STATUS: Record<string, { label: string; variant: 'muted' | 'default' 
   rejected: { label: 'Rejected', variant: 'destructive' },
 }
 
-function Heading({ letter, title, right }: { letter: string; title: string; right?: React.ReactNode }) {
+function Heading({ title, right }: { title: string; right?: React.ReactNode }) {
   return (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-      <p className="font-display text-sm font-semibold"><span className="mr-1.5 text-muted-foreground">{letter}.</span>{title}</p>
+      <p className="font-display text-sm font-semibold">{title}</p>
       {right}
     </div>
   )
 }
 
 // ---- D. Financial summary -------------------------------------------------
-function FinancialSummary({ r }: { r: FundRequest }) {
+export function FinancialSummary({ r }: { r: FundRequest }) {
   const outstanding = outstandingBalance(r)
   const rows: [string, number, string?][] = [
     ['Approved', Number(r.approved_amount ?? r.amount)],
@@ -85,7 +85,7 @@ function FinancialSummary({ r }: { r: FundRequest }) {
 }
 
 // ---- B. Expense submissions ----------------------------------------------
-function ExpenseSubmissions({ r, isMine, canVerify }: { r: FundRequest; isMine: boolean; canVerify: boolean }) {
+export function ExpenseSubmissions({ r, isMine, canVerify }: { r: FundRequest; isMine: boolean; canVerify: boolean }) {
   const { activeOrgId } = useAuth()
   const add = useAddRetirementItem(activeOrgId)
   const remove = useDeleteRetirementItem(activeOrgId)
@@ -145,7 +145,7 @@ function ExpenseSubmissions({ r, isMine, canVerify }: { r: FundRequest; isMine: 
 
   return (
     <section>
-      <Heading letter="B" title="Expense submissions" />
+      <Heading title="Expense submissions" />
       {r.items.length === 0 ? <p className="mb-3 text-sm text-muted-foreground">No expenses submitted yet.</p> : (
         <div className="mb-3 overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
@@ -356,7 +356,7 @@ function MoneyForm({ title, submitLabel, defaultAmount, withEvidence, busy, onSu
   )
 }
 
-function RefundHistory({ r, isMine, canVerify }: { r: FundRequest; isMine: boolean; canVerify: boolean }) {
+export function RefundHistory({ r, isMine, canVerify }: { r: FundRequest; isMine: boolean; canVerify: boolean }) {
   const { activeOrgId } = useAuth()
   const declare = useDeclareRefund(activeOrgId)
   const record = useRecordRefund(activeOrgId)
@@ -367,7 +367,7 @@ function RefundHistory({ r, isMine, canVerify }: { r: FundRequest; isMine: boole
 
   return (
     <section>
-      <Heading letter="C" title="Refund history" />
+      <Heading title="Refunds" />
       {r.refunds.length === 0 ? <p className="mb-3 text-sm text-muted-foreground">No refunds yet.</p> : (
         <ul className="mb-3 divide-y divide-border rounded-lg border border-border">
           {r.refunds.map((f) => <RefundRow key={f.id} f={f} r={r} canVerify={canVerify} />)}
@@ -419,11 +419,11 @@ function RefundHistory({ r, isMine, canVerify }: { r: FundRequest; isMine: boole
 }
 
 // ---- E. Audit history -----------------------------------------------------
-function AuditHistory({ requestId }: { requestId: string }) {
+export function AuditHistory({ requestId }: { requestId: string }) {
   const { data = [], isLoading } = useFundRequestHistory(requestId)
   return (
     <section>
-      <Heading letter="E" title="Audit history" />
+      <Heading title="Audit history" />
       {isLoading ? <Skeleton className="h-20 w-full" /> : data.length === 0 ? <p className="text-sm text-muted-foreground">No history yet.</p> : (
         <ol className="space-y-2 border-l border-border pl-4">
           {data.map((h) => (
@@ -439,76 +439,64 @@ function AuditHistory({ requestId }: { requestId: string }) {
   )
 }
 
-/** Sections B–E of a retirement (A — the original request, approvals and
- * payout — is the top of the request dialog). */
-export function RetirementPanel({ r }: { r: FundRequest }) {
+/** Retirement status, deadline (finance can move it) and, for the employee,
+ * how much they still have to account for. Shown above the money tabs. */
+export function RetirementStatusBar({ r }: { r: FundRequest }) {
   const { activeOrgId, userId } = useAuth()
   const { has } = usePermissions()
   const isMine = r.user_id === userId
   const canVerify = has('funds.manage') && !isMine
-  const close = useCloseRetirement(activeOrgId)
   const setDue = useSetRetirementDueDate(activeOrgId)
   const [due, setDueValue] = React.useState(r.retirement_due_date ?? '')
   React.useEffect(() => setDueValue(r.retirement_due_date ?? ''), [r.retirement_due_date])
   const rst = RETIREMENT_STATUS_META[r.retirement_status ?? 'not_started'] ?? RETIREMENT_STATUS_META.not_started
   const overdue = isRetirementOverdue(r) && outstandingBalance(r) > 0
-  const outstanding = outstandingBalance(r)
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3">
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-medium">Retirement</span>
-          <Badge variant={rst.variant}>{rst.label}</Badge>
-          {overdue && <Badge variant="destructive">Overdue</Badge>}
-          {r.retirement_due_date && <span className="text-xs text-muted-foreground">Due {format(new Date(r.retirement_due_date), 'MMM d, yyyy')}</span>}
-          {r.last_retirement_at && <span className="text-xs text-muted-foreground">· last activity {format(new Date(r.last_retirement_at), 'MMM d')}</span>}
-        </div>
-        {canVerify && OPEN_ADVANCE_STATUSES.includes(r.status) && (
-          <div className="flex items-center gap-2">
-            <Input type="date" className="h-8 w-[150px]" value={due} onChange={(e) => setDueValue(e.target.value)} aria-label="Retirement deadline" />
-            <Button
-              size="sm" variant="ghost" disabled={!due || due === r.retirement_due_date} loading={setDue.isPending}
-              onClick={async () => {
-                try { await setDue.mutateAsync({ id: r.id, due }); toast.success('Deadline updated') }
-                catch (err) { toast.error('Could not update deadline', { description: errorMessage(err) }) }
-              }}
-            >
-              Set deadline
-            </Button>
-          </div>
-        )}
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="font-medium">Retirement</span>
+        <Badge variant={rst.variant}>{rst.label}</Badge>
+        {overdue && <Badge variant="destructive">Overdue</Badge>}
+        {r.retirement_due_date && <span className="text-xs text-muted-foreground">Due {format(new Date(r.retirement_due_date), 'MMM d, yyyy')}</span>}
+        {r.last_retirement_at && <span className="text-xs text-muted-foreground">· last activity {format(new Date(r.last_retirement_at), 'MMM d')}</span>}
       </div>
-      {isMine && outstanding > 0 && OPEN_ADVANCE_STATUSES.includes(r.status) && (
-        <p className={cn('rounded-lg p-3 text-sm', overdue ? 'border border-destructive/40 bg-destructive/10' : 'border border-warning/40 bg-warning/10')}>
-          You still have <span className="font-semibold">{formatNaira(outstanding)}</span> to account for — submit receipts and/or return unused funds{overdue ? '. This is overdue.' : '.'}
-        </p>
-      )}
-
-      <section>
-        <Heading letter="D" title="Financial summary" />
-        <FinancialSummary r={r} />
-      </section>
-      <ExpenseSubmissions r={r} isMine={isMine} canVerify={canVerify} />
-      <RefundHistory r={r} isMine={isMine} canVerify={canVerify} />
-
-      {canVerify && r.status === 'retired' && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-success/40 bg-success/10 p-3">
-          <p className="text-sm">Fully reconciled: every expense verified, every refund confirmed, nothing outstanding.</p>
+      {canVerify && OPEN_ADVANCE_STATUSES.includes(r.status) && (
+        <div className="flex items-center gap-2">
+          <Input type="date" className="h-8 w-[150px]" value={due} onChange={(e) => setDueValue(e.target.value)} aria-label="Retirement deadline" />
           <Button
-            size="sm" loading={close.isPending}
+            size="sm" variant="ghost" disabled={!due || due === r.retirement_due_date} loading={setDue.isPending}
             onClick={async () => {
-              try { await close.mutateAsync({ id: r.id }); toast.success('Advance closed') }
-              catch (err) { toast.error('Could not close', { description: errorMessage(err) }) }
+              try { await setDue.mutateAsync({ id: r.id, due }); toast.success('Deadline updated') }
+              catch (err) { toast.error('Could not update deadline', { description: errorMessage(err) }) }
             }}
           >
-            Close retirement
+            Set deadline
           </Button>
         </div>
       )}
-
-      <AuditHistory requestId={r.id} />
     </div>
   )
 }
 
+/** Finance closes a fully reconciled advance. */
+export function CloseRetirementBox({ r }: { r: FundRequest }) {
+  const { activeOrgId, userId } = useAuth()
+  const { has } = usePermissions()
+  const close = useCloseRetirement(activeOrgId)
+  if (!has('funds.manage') || r.user_id === userId || r.status !== 'retired') return null
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-success/40 bg-success/10 p-3">
+      <p className="text-sm">Fully reconciled: every expense verified, every refund confirmed, nothing outstanding.</p>
+      <Button
+        size="sm" loading={close.isPending}
+        onClick={async () => {
+          try { await close.mutateAsync({ id: r.id }); toast.success('Advance closed') }
+          catch (err) { toast.error('Could not close', { description: errorMessage(err) }) }
+        }}
+      >
+        Close retirement
+      </Button>
+    </div>
+  )
+}

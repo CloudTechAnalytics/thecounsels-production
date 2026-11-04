@@ -46,7 +46,7 @@ export function FundReports({ requests }: { requests: FundRequest[] }) {
   }, [requests, range])
 
   const live = inRange.filter((r) => r.status !== 'cancelled')
-  const approvedLike = live.filter((r) => ['approved', 'disbursed', 'retirement_submitted', 'retired'].includes(r.status))
+  const approvedLike = live.filter((r) => ['approved', 'payment_processing', 'disbursed', 'retirement_submitted', 'partially_retired', 'retired', 'closed'].includes(r.status))
   const paidOut = live.filter((r) => r.disbursed_at)
   // Outstanding retirements are never range-limited — old unretired cash is exactly what matters most.
   const outstanding = requests

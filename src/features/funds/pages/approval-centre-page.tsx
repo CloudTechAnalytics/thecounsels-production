@@ -99,7 +99,7 @@ function HrRequestQueue() {
 /** Everything awaiting the signed-in user, across fund requests, payouts,
  * retirements, leave and HR requests — one place to clear the queue. */
 export function ApprovalCentrePage() {
-  const { activeOrgId } = useAuth()
+  const { activeOrgId, userId } = useAuth()
   const { has } = usePermissions()
   const { data: requests = [], isLoading } = useFundRequests(activeOrgId)
   const { canActOn } = useFundApprovalRights()
@@ -107,8 +107,8 @@ export function ApprovalCentrePage() {
   const canManageFunds = has('funds.manage')
 
   const toApprove = requests.filter(canActOn)
-  const toPay = canManageFunds ? requests.filter((r) => r.status === 'approved' || r.status === 'payment_processing') : []
-  const toReview = canManageFunds ? requests.filter((r) => r.status === 'retirement_submitted') : []
+  const toPay = canManageFunds ? requests.filter((r) => (r.status === 'approved' || r.status === 'payment_processing') && r.user_id !== userId) : []
+  const toReview = canManageFunds ? requests.filter((r) => r.status === 'retirement_submitted' && r.user_id !== userId) : []
 
   const openId = params.get('request')
   const open = openId ? requests.find((r) => r.id === openId) ?? null : null
@@ -132,7 +132,7 @@ export function ApprovalCentrePage() {
           </Section>
         )}
         {canManageFunds && (
-          <Section title="Retirements to review" count={toReview.length} icon={ReceiptText}>
+          <Section title="Expenses and refunds to verify" count={toReview.length} icon={ReceiptText}>
             <RequestList requests={toReview} loading={isLoading} empty="No retirements waiting." showRequester onOpen={setOpen} />
           </Section>
         )}

@@ -81,11 +81,12 @@ export function FundsPage() {
   const [creating, setCreating] = React.useState(false)
   const canSeeAll = has('funds.approve') || has('funds.manage')
   const canManage = has('funds.manage')
+  const canApprove = has('funds.approve')
 
   const mine = requests.filter((r) => r.user_id === userId)
   const toApprove = requests.filter(canActOn)
   const toDisburse = canManage ? requests.filter((r) => r.status === 'approved' || r.status === 'payment_processing') : []
-  const toReview = canManage ? requests.filter((r) => r.status === 'retirement_submitted') : []
+  const toReview = canManage ? requests.filter((r) => r.status === 'retirement_submitted' && r.user_id !== userId) : []
   const myFollowUps = mine.filter((r) => r.status === 'returned' || r.status === 'disbursed' || r.status === 'partially_retired')
   const actionCount = toApprove.length + toDisburse.length + toReview.length + myFollowUps.length
 
@@ -115,7 +116,7 @@ export function FundsPage() {
 
   const tabs: { key: Tab; label: string; show: boolean; count?: number }[] = [
     { key: 'mine', label: 'My requests', show: true },
-    { key: 'approve', label: 'Needs my action', show: true, count: actionCount },
+    { key: 'approve', label: canApprove || canManage ? 'Needs my action' : 'To follow up', show: true, count: actionCount },
     { key: 'all', label: 'All requests', show: canSeeAll },
     { key: 'reports', label: 'Reports', show: canManage },
   ]
@@ -156,11 +157,10 @@ export function FundsPage() {
       {tab === 'approve' && (
         <div className="space-y-6">
           {[
-            { title: 'Waiting for your approval', rows: toApprove, show: true, requester: true },
-            { title: 'Yours to follow up — clarify or retire', rows: myFollowUps, show: myFollowUps.length > 0, requester: false },
+            { title: 'Waiting for your approval', rows: toApprove, show: canApprove, requester: true },
+            { title: 'Yours to follow up — clarify or retire', rows: myFollowUps, show: myFollowUps.length > 0 || !(canApprove || canManage), requester: false },
             { title: 'Approved — ready to pay out', rows: toDisburse, show: canManage, requester: true },
-            { title: 'Retirements to review', rows: toReview, show: canManage, requester: true },
-            { title: 'Advances with a balance outstanding', rows: canManage ? requests.filter((r) => r.status === 'partially_retired') : [], show: canManage, requester: true },
+            { title: 'Retirements and refunds to verify', rows: toReview, show: canManage, requester: true },
           ].filter((s) => s.show).map((s) => (
             <section key={s.title}>
               <p className="mb-2 font-display text-sm font-semibold">{s.title} <span className="text-muted-foreground">({s.rows.length})</span></p>

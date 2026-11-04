@@ -25,9 +25,11 @@ export function FundRulesCard() {
   const [requireManager, setRequireManager] = React.useState(true)
   const [threshold, setThreshold] = React.useState('')
   const [dueDays, setDueDays] = React.useState('14')
+  const [dueBasis, setDueBasis] = React.useState('disbursement')
 
   React.useEffect(() => {
     if (!settings) return
+    setDueBasis(settings.retirement_due_basis)
     setRequireManager(settings.require_line_manager)
     setThreshold(settings.leadership_threshold != null ? String(settings.leadership_threshold) : '')
     setDueDays(String(settings.retirement_due_days))
@@ -39,7 +41,7 @@ export function FundRulesCard() {
     if (!Number.isInteger(days) || days < 1 || days > 365) { toast.error('Retirement deadline must be 1–365 days'); return }
     if (limit != null && !(limit > 0)) { toast.error('Partner approval amount must be greater than zero, or left blank'); return }
     try {
-      await save.mutateAsync({ require_line_manager: requireManager, leadership_threshold: limit, retirement_due_days: days })
+      await save.mutateAsync({ require_line_manager: requireManager, leadership_threshold: limit, retirement_due_days: days, retirement_due_basis: dueBasis })
       toast.success('Fund settings saved')
     } catch (err) {
       toast.error('Could not save settings', { description: errorMessage(err) })
@@ -65,11 +67,24 @@ export function FundRulesCard() {
           <Label>Partner approval for amounts of (₦)</Label>
           <Input type="number" min={0} placeholder="Leave blank to never require it" value={threshold} onChange={(e) => setThreshold(e.target.value)} />
         </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label>Retire within (days of payout)</Label>
+          <Label>Retirement deadline (days)</Label>
           <Input type="number" min={1} max={365} value={dueDays} onChange={(e) => setDueDays(e.target.value)} />
         </div>
+        <div className="space-y-1.5">
+          <Label>Counted from</Label>
+          <Select value={dueBasis} onValueChange={setDueBasis}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="disbursement">The payout date</SelectItem>
+              <SelectItem value="needed_by">The date funds were needed (end of assignment)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+      <p className="text-xs text-muted-foreground">Finance can also set a custom deadline on any individual advance. Overdue advances trigger a daily reminder to the employee, finance and their line manager.</p>
       <div className="flex justify-end">
         <Button onClick={onSave} loading={save.isPending}>Save rules</Button>
       </div>

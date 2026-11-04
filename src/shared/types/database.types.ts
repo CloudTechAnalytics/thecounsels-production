@@ -1354,6 +1354,17 @@ export interface Database {
           notes: string | null
           recorded_by: string | null
           created_at: string
+          direction: string
+          status: string
+          declared_by: string | null
+          declared_at: string | null
+          confirmed_by: string | null
+          confirmed_at: string | null
+          rejection_reason: string | null
+          evidence_path: string | null
+          evidence_name: string | null
+          is_exception: boolean
+          exception_reason: string | null
         }
         Insert: { [_ in never]: never }
         Update: { [_ in never]: never }
@@ -1391,6 +1402,7 @@ export interface Database {
           require_line_manager: boolean
           leadership_threshold: number | null
           retirement_due_days: number
+          retirement_due_basis: string
           updated_by: string | null
           updated_at: string
         }
@@ -1399,6 +1411,7 @@ export interface Database {
           require_line_manager?: boolean
           leadership_threshold?: number | null
           retirement_due_days?: number
+          retirement_due_basis?: string
           updated_by?: string | null
           updated_at?: string
         }
@@ -1425,6 +1438,14 @@ export interface Database {
           disbursement_notes: string | null
           accepted_amount: number
           refunded_amount: number
+          retirement_status: string | null
+          retirement_due_date: string | null
+          submitted_expenses: number
+          pending_refunds: number
+          reimbursed_amount: number
+          last_retirement_at: string | null
+          closed_at: string | null
+          closed_by: string | null
           purpose: string | null
           amount: number
           needed_by: string | null
@@ -1491,6 +1512,10 @@ export interface Database {
           submitted_at: string | null
           reviewed_at: string | null
           review_comment: string | null
+          category: string | null
+          vendor: string | null
+          notes: string | null
+          reviewed_by: string | null
         }
         Insert: {
           id?: string
@@ -1505,6 +1530,9 @@ export interface Database {
           receipt_size?: number | null
           created_by?: string | null
           created_at?: string
+          category?: string | null
+          vendor?: string | null
+          notes?: string | null
         }
         Update: Partial<Database['public']['Tables']['fund_retirement_items']['Insert']>
         Relationships: []
@@ -2918,6 +2946,34 @@ export interface Database {
       cancel_leave_request: {
         Args: { p_request: string }
         Returns: undefined
+      }
+      declare_fund_refund: {
+        Args: { p_request: string; p_amount: number; p_returned_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null; p_evidence_path?: string | null; p_evidence_name?: string | null }
+        Returns: Database['public']['Tables']['fund_refunds']['Row']
+      }
+      verify_fund_refund: {
+        Args: { p_refund: string; p_confirm: boolean; p_reason?: string | null; p_allow_excess?: boolean }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      record_fund_reimbursement: {
+        Args: { p_request: string; p_amount: number; p_paid_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      review_retirement_items: {
+        Args: { p_request: string; p_decisions: Json }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      close_fund_retirement: {
+        Args: { p_request: string; p_note?: string | null }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      set_retirement_due_date: {
+        Args: { p_request: string; p_due: string }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      fund_request_history: {
+        Args: { p_request: string }
+        Returns: { id: string; created_at: string; action: string; summary: string | null; actor_name: string | null; metadata: Json }[]
       }
       record_fund_refund: {
         Args: { p_request: string; p_amount: number; p_received_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null }

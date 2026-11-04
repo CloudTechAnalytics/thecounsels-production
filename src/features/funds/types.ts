@@ -56,6 +56,7 @@ export const FUND_STATUS_META: Record<string, { label: string; variant: BadgePro
   disbursed: { label: 'Disbursed · retirement pending', variant: 'warning' },
   retirement_submitted: { label: 'Retirement in review', variant: 'default' },
   partially_retired: { label: 'Partially retired · balance outstanding', variant: 'warning' },
+  closed: { label: 'Closed', variant: 'success' },
   retired: { label: 'Retired', variant: 'success' },
 }
 
@@ -88,24 +89,49 @@ export const DISBURSEMENT_METHODS = [
 
 export const DEFAULT_FUND_SETTINGS: Omit<FundSettings, 'organization_id' | 'updated_by' | 'updated_at'> = {
   require_line_manager: true,
+  retirement_due_basis: 'disbursement',
   leadership_threshold: null,
   retirement_due_days: 14,
 }
 
 /** Statuses where an advance has been paid and isn't fully accounted for yet. */
 export const OPEN_ADVANCE_STATUSES = ['disbursed', 'retirement_submitted', 'partially_retired']
+/** Every status an advance can be in once paid out. */
+export const PAID_STATUSES = [...OPEN_ADVANCE_STATUSES, 'retired', 'closed']
 
-/** Paid out − accepted expenses − refunds received. Positive: still with
- * the employee. Negative: they spent more than they were given. */
-export function outstandingBalance(r: Pick<FundRequestRow, 'disbursed_amount' | 'accepted_amount' | 'refunded_amount'>): number {
-  return Math.round((Number(r.disbursed_amount ?? 0) - Number(r.accepted_amount ?? 0) - Number(r.refunded_amount ?? 0)) * 100) / 100
+/** Paid out − verified expenses − confirmed refunds + confirmed
+ * reimbursements, as maintained by settle_fund_request() (0179) — the
+ * columns are server-computed; this only combines them. Positive: still
+ * with the employee. Negative: they spent more than they were given. */
+export function outstandingBalance(r: Pick<FundRequestRow, 'disbursed_amount' | 'accepted_amount' | 'refunded_amount' | 'reimbursed_amount'>): number {
+  return Math.round((Number(r.disbursed_amount ?? 0) - Number(r.accepted_amount ?? 0) - Number(r.refunded_amount ?? 0) + Number(r.reimbursed_amount ?? 0)) * 100) / 100
+}
+
+export const RETIREMENT_STATUS_META: Record<string, { label: string; variant: BadgeProps['variant'] }> = {
+  not_started: { label: 'Not started', variant: 'muted' },
+  in_progress: { label: 'In progress', variant: 'default' },
+  pending_verification: { label: 'Pending finance verification', variant: 'default' },
+  refund_pending: { label: 'Refund pending verification', variant: 'default' },
+  partially_retired: { label: 'Partially retired · balance outstanding', variant: 'warning' },
+  excess_spend: { label: 'Spent above advance', variant: 'warning' },
+  fully_retired: { label: 'Fully retired', variant: 'success' },
+  closed: { label: 'Closed', variant: 'success' },
+}
+
+export const isRetirementOverdue = (r: Pick<FundRequestRow, 'status' | 'retirement_due_date'>) =>
+  (r.status === 'disbursed' || r.status === 'partially_retired') && Boolean(r.retirement_due_date) && r.retirement_due_date! < new Date().toISOString().slice(0, 10)
+
+export const REFUND_STATUS_META: Record<string, { label: string; variant: BadgeProps['variant'] }> = {
+  declared: { label: 'Pending verification', variant: 'warning' },
+  confirmed: { label: 'Confirmed', variant: 'success' },
+  rejected: { label: 'Rejected', variant: 'destructive' },
 }
 
 /** Same, but also counting lines still awaiting finance review — what the
  * employee sees while preparing a batch. */
-export function retirementBalance(r: Pick<FundRequestRow, 'disbursed_amount' | 'refunded_amount'>, items: Pick<FundRetirementItem, 'amount' | 'review_status'>[]): number {
+export function retirementBalance(r: Pick<FundRequestRow, 'disbursed_amount' | 'refunded_amount' | 'reimbursed_amount'>, items: Pick<FundRetirementItem, 'amount' | 'review_status'>[]): number {
   const spent = items.filter((i) => i.review_status !== 'rejected').reduce((s, i) => s + Number(i.amount), 0)
-  return Math.round((Number(r.disbursed_amount ?? 0) - spent - Number(r.refunded_amount ?? 0)) * 100) / 100
+  return Math.round((Number(r.disbursed_amount ?? 0) - spent - Number(r.refunded_amount ?? 0) + Number(r.reimbursed_amount ?? 0)) * 100) / 100
 }
 
 /** Days since payout for a request whose retirement is still outstanding. */

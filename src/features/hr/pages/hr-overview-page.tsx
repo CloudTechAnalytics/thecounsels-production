@@ -160,7 +160,7 @@ function fundStage(s: string): Stage | null {
   if (s === 'pending') return 'pending'
   if (s === 'returned') return 'pending'
   if (s === 'approved' || s === 'payment_processing' || s === 'disbursed' || s === 'retirement_submitted' || s === 'partially_retired') return 'in_review'
-  if (s === 'retired') return 'approved'
+  if (s === 'retired' || s === 'closed') return 'approved'
   return s === 'rejected' ? 'rejected' : null
 }
 

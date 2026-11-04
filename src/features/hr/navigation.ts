@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { LayoutGrid, UserSquare2, CalendarClock, FolderLock, Inbox, Megaphone, FileBarChart, ClipboardCheck, Wallet, Banknote, ReceiptText, ListChecks, Settings2, type LucideIcon } from 'lucide-react'
+import { LayoutGrid, UserSquare2, CalendarClock, FolderLock, Inbox, Megaphone, FileBarChart, ClipboardCheck, Wallet, Banknote, ReceiptText, ListChecks, Settings2, Scale, type LucideIcon } from 'lucide-react'
 import type { PermissionKey } from '@/shared/lib/permissions'
 import { LeaveNavBadge } from '@/features/hr/components/leave-nav-badge'
 import { AnnouncementsNavBadge } from '@/features/hr/components/announcements-nav-badge'
@@ -46,6 +46,7 @@ export const HR_NAVIGATION: HrNavSection[] = [
     heading: 'Finance',
     items: [
       { label: 'Fund Requests', to: '/hr/funds', icon: Wallet, permission: 'funds.request' },
+      { label: 'Expense Retirement', to: '/hr/retirements', icon: Scale, permission: 'funds.request' },
       { label: 'Payroll', to: '/hr/payroll', icon: Banknote, permission: 'payroll.manage' },
       { label: 'Payslips', to: '/hr/payslips', icon: ReceiptText, permission: 'payroll.view_own' },
     ],

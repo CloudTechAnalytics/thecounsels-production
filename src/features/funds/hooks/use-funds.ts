@@ -17,7 +17,7 @@ export function useSaveFundSettings(organizationId: string | null) {
   const qc = useQueryClient()
   const { userId } = useAuth()
   return useMutation({
-    mutationFn: (patch: Pick<FundSettings, 'require_line_manager' | 'leadership_threshold' | 'retirement_due_days'>) =>
+    mutationFn: (patch: Pick<FundSettings, 'require_line_manager' | 'leadership_threshold' | 'retirement_due_days' | 'retirement_due_basis'>) =>
       fundsService.saveSettings(organizationId!, patch, userId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['funds', 'settings', organizationId] }),
   })
@@ -36,6 +36,7 @@ function useInvalidateFunds(organizationId: string | null) {
   return () => {
     qc.invalidateQueries({ queryKey: ['funds', 'requests', organizationId] })
     qc.invalidateQueries({ queryKey: ['funds', 'my-approvals', organizationId] })
+    qc.invalidateQueries({ queryKey: ['funds', 'history'] })
   }
 }
 
@@ -106,7 +107,7 @@ export function useAddRetirementItem(organizationId: string | null) {
   const invalidate = useInvalidateFunds(organizationId)
   const invalidateStorage = useInvalidateStorageUsage(organizationId)
   return useMutation({
-    mutationFn: (p: { requestId: string; description: string; amount: number; spentOn?: string; receipt?: File | null }) =>
+    mutationFn: (p: { requestId: string; description: string; amount: number; spentOn?: string; category?: string; vendor?: string; notes?: string; receipt?: File | null }) =>
       fundsService.addRetirementItem({ organizationId: organizationId!, ...p }),
     onSuccess: () => { invalidate(); invalidateStorage() },
   })
@@ -126,6 +127,61 @@ export function useSubmitRetirement(organizationId: string | null) {
   return useMutation({
     mutationFn: ({ id, note }: { id: string; note?: string }) => fundsService.submitRetirement(id, note),
     onSuccess: invalidate,
+  })
+}
+
+export function useDeclareRefund(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  const invalidateStorage = useInvalidateStorageUsage(organizationId)
+  return useMutation({
+    mutationFn: ({ id, ...r }: { id: string; amount: number; returnedOn?: string; method?: string; reference?: string; notes?: string; evidence?: File | null }) =>
+      fundsService.declareRefund(organizationId!, id, r),
+    onSuccess: () => { invalidate(); invalidateStorage() },
+  })
+}
+
+export function useVerifyRefund(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  return useMutation({
+    mutationFn: ({ refundId, confirm, reason, allowExcess }: { refundId: string; confirm: boolean; reason?: string; allowExcess?: boolean }) =>
+      fundsService.verifyRefund(refundId, confirm, reason, allowExcess),
+    onSuccess: invalidate,
+  })
+}
+
+export function useRecordReimbursement(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  return useMutation({
+    mutationFn: ({ id, ...r }: { id: string; amount: number; paidOn?: string; method?: string; reference?: string; notes?: string }) =>
+      fundsService.recordReimbursement(id, r),
+    onSuccess: invalidate,
+  })
+}
+
+export function useReviewItems(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  return useMutation({
+    mutationFn: ({ id, decisions }: { id: string; decisions: { id: string; decision: 'accept' | 'reject' | 'return'; comment?: string }[] }) =>
+      fundsService.reviewItems(id, decisions),
+    onSuccess: invalidate,
+  })
+}
+
+export function useCloseRetirement(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  return useMutation({ mutationFn: ({ id, note }: { id: string; note?: string }) => fundsService.closeRetirement(id, note), onSuccess: invalidate })
+}
+
+export function useSetRetirementDueDate(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  return useMutation({ mutationFn: ({ id, due }: { id: string; due: string }) => fundsService.setDueDate(id, due), onSuccess: invalidate })
+}
+
+export function useFundRequestHistory(requestId: string | null) {
+  return useQuery({
+    queryKey: ['funds', 'history', requestId],
+    enabled: Boolean(requestId),
+    queryFn: () => fundsService.history(requestId!),
   })
 }
 

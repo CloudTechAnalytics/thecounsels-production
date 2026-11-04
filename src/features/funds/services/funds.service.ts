@@ -86,7 +86,7 @@ export const fundsService = {
   },
   async saveSettings(
     organizationId: string,
-    patch: Pick<FundSettings, 'require_line_manager' | 'leadership_threshold' | 'retirement_due_days'>,
+    patch: Pick<FundSettings, 'require_line_manager' | 'leadership_threshold' | 'retirement_due_days' | 'retirement_due_basis'>,
     userId: string | null,
   ): Promise<void> {
     const { error } = await supabase
@@ -196,9 +196,12 @@ export const fundsService = {
     description: string
     amount: number
     spentOn?: string
+    category?: string
+    vendor?: string
+    notes?: string
     receipt?: File | null
   }): Promise<void> {
-    const { organizationId, requestId, description, amount, spentOn, receipt } = params
+    const { organizationId, requestId, description, amount, spentOn, receipt, category, vendor, notes } = params
     let path: string | null = null
     if (receipt) {
       path = `${organizationId}/${requestId}/${crypto.randomUUID()}-${safeName(receipt.name)}`
@@ -210,6 +213,9 @@ export const fundsService = {
       description,
       amount,
       spent_on: spentOn || null,
+      category: category || null,
+      vendor: vendor || null,
+      notes: notes || null,
       receipt_path: path,
       receipt_name: receipt?.name ?? null,
       receipt_mime: receipt?.type || null,
@@ -231,6 +237,48 @@ export const fundsService = {
   async submitRetirement(requestId: string, note?: string): Promise<void> {
     const { error } = await supabase.rpc('submit_fund_retirement', { p_request: requestId, p_note: note || null })
     if (error) throw error
+  },
+  async declareRefund(organizationId: string, requestId: string, r: { amount: number; returnedOn?: string; method?: string; reference?: string; notes?: string; evidence?: File | null }): Promise<void> {
+    let path: string | null = null
+    if (r.evidence) {
+      path = `${organizationId}/${requestId}/refunds/${crypto.randomUUID()}-${safeName(r.evidence.name)}`
+      await uploadToBucket(organizationId, path, r.evidence)
+    }
+    const { error } = await supabase.rpc('declare_fund_refund', {
+      p_request: requestId, p_amount: r.amount, p_returned_on: r.returnedOn || null, p_method: r.method || null,
+      p_reference: r.reference || null, p_notes: r.notes || null, p_evidence_path: path, p_evidence_name: r.evidence?.name ?? null,
+    })
+    if (error) {
+      if (path) await supabase.storage.from('fund-receipts').remove([path])
+      throw error
+    }
+  },
+  async verifyRefund(refundId: string, confirm: boolean, reason?: string, allowExcess = false): Promise<void> {
+    const { error } = await supabase.rpc('verify_fund_refund', { p_refund: refundId, p_confirm: confirm, p_reason: reason || null, p_allow_excess: allowExcess })
+    if (error) throw error
+  },
+  async recordReimbursement(requestId: string, r: { amount: number; paidOn?: string; method?: string; reference?: string; notes?: string }): Promise<void> {
+    const { error } = await supabase.rpc('record_fund_reimbursement', {
+      p_request: requestId, p_amount: r.amount, p_paid_on: r.paidOn || null, p_method: r.method || null, p_reference: r.reference || null, p_notes: r.notes || null,
+    })
+    if (error) throw error
+  },
+  async reviewItems(requestId: string, decisions: { id: string; decision: 'accept' | 'reject' | 'return'; comment?: string }[]): Promise<void> {
+    const { error } = await supabase.rpc('review_retirement_items', { p_request: requestId, p_decisions: decisions })
+    if (error) throw error
+  },
+  async closeRetirement(requestId: string, note?: string): Promise<void> {
+    const { error } = await supabase.rpc('close_fund_retirement', { p_request: requestId, p_note: note || null })
+    if (error) throw error
+  },
+  async setDueDate(requestId: string, due: string): Promise<void> {
+    const { error } = await supabase.rpc('set_retirement_due_date', { p_request: requestId, p_due: due })
+    if (error) throw error
+  },
+  async history(requestId: string) {
+    const { data, error } = await supabase.rpc('fund_request_history', { p_request: requestId })
+    if (error) throw error
+    return data ?? []
   },
   async recordRefund(requestId: string, r: { amount: number; receivedOn?: string; method?: string; reference?: string; notes?: string }): Promise<void> {
     const { error } = await supabase.rpc('record_fund_refund', {

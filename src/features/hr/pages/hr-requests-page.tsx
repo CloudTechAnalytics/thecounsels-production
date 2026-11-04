@@ -58,7 +58,7 @@ const NEXT_STATUS: Record<string, { label: string; status: string }[]> = {
 }
 
 function ManageRequestsTab() {
-  const { activeOrgId } = useAuth()
+  const { activeOrgId, userId } = useAuth()
   const { data: requests, isLoading } = useAllHrRequests(activeOrgId)
   const updateStatus = useUpdateHrRequestStatus(activeOrgId)
 
@@ -88,7 +88,7 @@ function ManageRequestsTab() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Badge variant={meta.variant}>{meta.label}</Badge>
-                  {actions.map((a) => (
+                  {r.user_id !== userId && actions.map((a) => (
                     <Button key={a.status} size="sm" variant={a.status === 'rejected' ? 'outline' : 'default'} onClick={() => act(r.id, a.status)}>
                       {a.label}
                     </Button>

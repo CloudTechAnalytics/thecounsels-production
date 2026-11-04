@@ -8,7 +8,8 @@ export interface HrNavItem {
   label: string
   to: string
   icon: LucideIcon
-  permission?: PermissionKey
+  /** One key, or several where holding any one of them is enough. */
+  permission?: PermissionKey | PermissionKey[]
   end?: boolean
   /** Rendered inline after the label, e.g. an unread-count pill. */
   badge?: ComponentType
@@ -27,7 +28,7 @@ export const HR_NAVIGATION: HrNavSection[] = [
   {
     items: [
       { label: 'HR Dashboard', to: '/hr', icon: LayoutGrid, permission: 'hr.view_reports', end: true },
-      { label: 'Approval Centre', to: '/hr/approvals', icon: ListChecks, permission: 'funds.request' },
+      { label: 'Approval Centre', to: '/hr/approvals', icon: ListChecks, permission: ['funds.approve', 'funds.manage', 'leave.manage', 'hr_requests.manage'] },
     ],
   },
   {
@@ -53,7 +54,7 @@ export const HR_NAVIGATION: HrNavSection[] = [
     heading: 'Reports & setup',
     items: [
       { label: 'HR & Finance Reports', to: '/hr/reports', icon: FileBarChart, permission: 'hr.view_reports' },
-      { label: 'Settings', to: '/hr/settings', icon: Settings2, permission: 'funds.request' },
+      { label: 'Settings', to: '/hr/settings', icon: Settings2, permission: ['funds.approve', 'funds.manage', 'departments.manage', 'staff.manage', 'payroll.manage'] },
     ],
   },
 ]

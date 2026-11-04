@@ -124,7 +124,7 @@ function MyLeaveTab() {
 }
 
 function TeamLeaveTab() {
-  const { activeOrgId } = useAuth()
+  const { activeOrgId, userId } = useAuth()
   const { data: requests, isLoading } = useAllLeaveRequests(activeOrgId)
   const { data: leaveTypes } = useLeaveTypes(activeOrgId)
   const review = useReviewLeaveRequest(activeOrgId)
@@ -157,7 +157,7 @@ function TeamLeaveTab() {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {r.status === 'pending' ? (
+                  {r.status === 'pending' && r.user_id !== userId ? (
                     <>
                       <Button size="sm" variant="outline" onClick={() => act(r.id, false)}>Reject</Button>
                       <Button size="sm" onClick={() => act(r.id, true)}>Approve</Button>

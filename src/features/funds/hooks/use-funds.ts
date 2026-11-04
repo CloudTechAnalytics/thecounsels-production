@@ -17,7 +17,7 @@ export function useSaveFundSettings(organizationId: string | null) {
   const qc = useQueryClient()
   const { userId } = useAuth()
   return useMutation({
-    mutationFn: (patch: Pick<FundSettings, 'require_line_manager' | 'leadership_threshold' | 'retirement_due_days' | 'allow_self_approval'>) =>
+    mutationFn: (patch: Pick<FundSettings, 'require_line_manager' | 'leadership_threshold' | 'retirement_due_days'>) =>
       fundsService.saveSettings(organizationId!, patch, userId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['funds', 'settings', organizationId] }),
   })

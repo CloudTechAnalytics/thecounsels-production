@@ -25,7 +25,7 @@ function totals(slips: Payslip[]) {
 }
 
 export function PayrollRunPanel({ run, onBack }: { run: PayrollRun; onBack: () => void }) {
-  const { activeOrgId, activeMembership } = useAuth()
+  const { activeOrgId, activeMembership, userId } = useAuth()
   const { data: slips = [], isLoading } = usePayslips(run.id)
   const recalc = useRecalculatePayrollRun(activeOrgId)
   const action = usePayrollRunAction(activeOrgId)
@@ -97,9 +97,13 @@ export function PayrollRunPanel({ run, onBack }: { run: PayrollRun; onBack: () =
               >
                 Recalculate
               </Button>
-              <Button size="sm" onClick={() => doAction('approve', 'Payroll approved — staff can now see their payslips')} loading={action.isPending} disabled={slips.length === 0}>
-                Approve & release payslips
-              </Button>
+              {run.created_by === userId ? (
+                <span className="self-center text-xs text-muted-foreground">You prepared this — another payroll manager must approve it</span>
+              ) : (
+                <Button size="sm" onClick={() => doAction('approve', 'Payroll approved — staff can now see their payslips')} loading={action.isPending} disabled={slips.length === 0}>
+                  Approve & release payslips
+                </Button>
+              )}
             </>
           )}
           {run.status === 'approved' && (

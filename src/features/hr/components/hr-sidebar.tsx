@@ -8,7 +8,7 @@ import { cn } from '@/shared/lib/utils'
 
 function useVisible() {
   const { has } = usePermissions()
-  return (item: HrNavItem) => !item.permission || has(item.permission)
+  return (item: HrNavItem) => !item.permission || (Array.isArray(item.permission) ? item.permission.some((p) => has(p)) : has(item.permission))
 }
 
 /** Entirely separate from the firm's practice sidebar — its own header,

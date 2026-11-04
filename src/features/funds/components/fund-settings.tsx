@@ -1,10 +1,11 @@
 import * as React from 'react'
 import { format } from 'date-fns'
-import { UserCheck, ShieldAlert } from 'lucide-react'
+import { UserCheck } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useFundSettings, useSaveFundSettings, useDelegations, useCreateDelegation, useEndDelegation } from '@/features/funds/hooks/use-funds'
 import { useEmployeeRegister } from '@/features/hr/hooks/use-employees'
+import { isApproverRole } from '@/features/funds/types'
 import { Card } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
@@ -22,14 +23,12 @@ export function FundRulesCard() {
   const { data: settings, isLoading } = useFundSettings(activeOrgId)
   const save = useSaveFundSettings(activeOrgId)
   const [requireManager, setRequireManager] = React.useState(true)
-  const [allowSelf, setAllowSelf] = React.useState(false)
   const [threshold, setThreshold] = React.useState('')
   const [dueDays, setDueDays] = React.useState('14')
 
   React.useEffect(() => {
     if (!settings) return
     setRequireManager(settings.require_line_manager)
-    setAllowSelf(settings.allow_self_approval)
     setThreshold(settings.leadership_threshold != null ? String(settings.leadership_threshold) : '')
     setDueDays(String(settings.retirement_due_days))
   }, [settings])
@@ -40,7 +39,7 @@ export function FundRulesCard() {
     if (!Number.isInteger(days) || days < 1 || days > 365) { toast.error('Retirement deadline must be 1–365 days'); return }
     if (limit != null && !(limit > 0)) { toast.error('Partner approval amount must be greater than zero, or left blank'); return }
     try {
-      await save.mutateAsync({ require_line_manager: requireManager, allow_self_approval: allowSelf, leadership_threshold: limit, retirement_due_days: days })
+      await save.mutateAsync({ require_line_manager: requireManager, leadership_threshold: limit, retirement_due_days: days })
       toast.success('Fund settings saved')
     } catch (err) {
       toast.error('Could not save settings', { description: errorMessage(err) })
@@ -58,13 +57,9 @@ export function FundRulesCard() {
       <ToggleSwitch
         checked={requireManager} onChange={setRequireManager} icon={UserCheck}
         label="Line manager approves first"
-        hint="Requests go to the requester's manager (set on their employee record) before finance."
+        hint="Requests go to the requester's manager first — only if that manager is an approver (Managing Partner, Partner, Finance or HR manager). Otherwise this step is skipped."
       />
-      <ToggleSwitch
-        checked={allowSelf} onChange={setAllowSelf} icon={ShieldAlert}
-        label="Allow approvers to approve their own requests"
-        hint="Off by default. Only turn on if some requests would otherwise have nobody to approve them."
-      />
+      <p className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">Nobody can approve, pay out or review their own request. This can't be switched off.</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label>Partner approval for amounts of (₦)</Label>
@@ -91,8 +86,9 @@ export function DelegationsCard() {
   const { data: employees } = useEmployeeRegister(activeOrgId)
   const create = useCreateDelegation(activeOrgId)
   const end = useEndDelegation(activeOrgId)
-  const people = (employees ?? []).filter((e) => e.user_id && e.membershipStatus === 'active')
-  const nameOf = (id: string) => people.find((p) => p.user_id === id)?.fullName ?? 'Someone'
+  const people = (employees ?? []).filter((e) => e.user_id && e.membershipStatus === 'active' && isApproverRole(e.roleKey))
+  const nameOf = (id: string) => (employees ?? []).find((p) => p.user_id === id)?.fullName ?? 'Someone'
+  const isApprover = has('funds.approve')
   const todayIso = new Date().toISOString().slice(0, 10)
 
   const [delegator, setDelegator] = React.useState(userId ?? '')
@@ -116,12 +112,13 @@ export function DelegationsCard() {
   }
 
   const live = delegations.filter((d) => d.is_active && d.ends_on >= todayIso)
+  if (!isApprover && !canManage) return null
 
   return (
     <Card className="space-y-4 p-6">
       <div>
         <p className="font-display text-base font-semibold">Approval delegation</p>
-        <p className="text-xs text-muted-foreground">Away? Let a colleague approve fund requests on your behalf for a set period. Their decisions are recorded as made by them, as your delegate.</p>
+        <p className="text-xs text-muted-foreground">Away? Let another approver cover your fund approvals for a set period. Only approvers (Managing Partner, Partner, Finance, HR manager) can delegate or be delegated to, and nobody can approve their own request through a delegation.</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {canManage && (

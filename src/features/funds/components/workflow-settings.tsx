@@ -5,7 +5,7 @@ import { useApprovalWorkflows, useSaveWorkflow, useDeleteWorkflow } from '@/feat
 import { useDepartments } from '@/features/hr/hooks/use-hr'
 import { useBranches } from '@/features/branches/hooks/use-branches'
 import { useEmployeeRegister } from '@/features/hr/hooks/use-employees'
-import { APPROVER_TYPES, FUND_CATEGORIES, fundCategoryLabel, type WorkflowWithSteps } from '@/features/funds/types'
+import { APPROVER_TYPES, APPROVER_ROLE_KEYS, FUND_CATEGORIES, fundCategoryLabel, isApproverRole, type WorkflowWithSteps } from '@/features/funds/types'
 import { ROLE_META } from '@/shared/lib/permissions'
 import { Card } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
@@ -20,7 +20,7 @@ import { errorMessage } from '@/shared/lib/errors'
 import { formatNaira } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
 
-const FIRM_ROLES = Object.entries(ROLE_META).filter(([, m]) => m.group !== 'Platform').sort((a, b) => a[1].rank - b[1].rank)
+const APPROVER_ROLES = APPROVER_ROLE_KEYS.map((k) => [k, ROLE_META[k]] as const)
 
 interface StepDraft {
   step_order: number
@@ -58,7 +58,7 @@ function WorkflowDialog({ workflow, open, onOpenChange }: { workflow: WorkflowWi
   const { data: branches } = useBranches(activeOrgId)
   const { data: employees } = useEmployeeRegister(activeOrgId)
   const save = useSaveWorkflow(activeOrgId)
-  const people = (employees ?? []).filter((e) => e.user_id && e.membershipStatus === 'active')
+  const people = (employees ?? []).filter((e) => e.user_id && e.membershipStatus === 'active' && isApproverRole(e.roleKey))
 
   const [name, setName] = React.useState('')
   const [priority, setPriority] = React.useState('100')
@@ -68,7 +68,6 @@ function WorkflowDialog({ workflow, open, onOpenChange }: { workflow: WorkflowWi
   const [categories, setCategories] = React.useState<string[]>([])
   const [deptIds, setDeptIds] = React.useState<string[]>([])
   const [branchIds, setBranchIds] = React.useState<string[]>([])
-  const [allowSelf, setAllowSelf] = React.useState(false)
   const [steps, setSteps] = React.useState<StepDraft[]>([blankStep(1)])
 
   React.useEffect(() => {
@@ -81,7 +80,6 @@ function WorkflowDialog({ workflow, open, onOpenChange }: { workflow: WorkflowWi
     setCategories(workflow?.categories ?? [])
     setDeptIds(workflow?.department_ids ?? [])
     setBranchIds(workflow?.branch_ids ?? [])
-    setAllowSelf(workflow?.allow_self_approval ?? false)
     setSteps(workflow?.steps.length ? workflow.steps.map((s) => ({ step_order: s.step_order, name: s.name, approver_type: s.approver_type, approver_value: s.approver_value, approver_user_id: s.approver_user_id })) : [blankStep(1)])
   }, [open, workflow])
 
@@ -101,7 +99,7 @@ function WorkflowDialog({ workflow, open, onOpenChange }: { workflow: WorkflowWi
       await save.mutateAsync({
         wf: {
           id: workflow?.id, name: name.trim(), priority: Number(priority) || 100, is_active: active,
-          min_amount: min, max_amount: max, categories, department_ids: deptIds, branch_ids: branchIds, allow_self_approval: allowSelf,
+          min_amount: min, max_amount: max, categories, department_ids: deptIds, branch_ids: branchIds,
         },
         steps: steps.map((s) => ({
           step_order: s.step_order, name: s.name.trim(), approver_type: s.approver_type,
@@ -170,7 +168,7 @@ function WorkflowDialog({ workflow, open, onOpenChange }: { workflow: WorkflowWi
                         <SelectTrigger><SelectValue placeholder="Choose a role" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="managing_partner,partner">Managing Partner or Partner</SelectItem>
-                          {FIRM_ROLES.map(([k, m]) => <SelectItem key={k} value={k}>{m.label}</SelectItem>)}
+                          {APPROVER_ROLES.map(([k, m]) => <SelectItem key={k} value={k}>{m.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     ) : s.approver_type === 'specific_user' ? (
@@ -180,7 +178,7 @@ function WorkflowDialog({ workflow, open, onOpenChange }: { workflow: WorkflowWi
                       </Select>
                     ) : (
                       <p className="pt-2 text-xs text-muted-foreground">
-                        {s.approver_type === 'permission' ? 'Finance, partners — anyone with fund approval rights' : 'Worked out per request'}
+                        {s.approver_type === 'permission' ? 'Managing Partner, Partner, Finance or HR manager' : 'Worked out per request — skipped if not an approver'}
                       </p>
                     )}
                   </div>
@@ -199,10 +197,7 @@ function WorkflowDialog({ workflow, open, onOpenChange }: { workflow: WorkflowWi
             <label className="flex cursor-pointer items-center gap-2 text-sm">
               <input type="checkbox" className="h-4 w-4" checked={active} onChange={(e) => setActive(e.target.checked)} /> Active
             </label>
-            <label className="flex cursor-pointer items-start gap-2 text-sm">
-              <input type="checkbox" className="mt-0.5 h-4 w-4" checked={allowSelf} onChange={(e) => setAllowSelf(e.target.checked)} />
-              <span>Allow an approver to approve their own request on this workflow <span className="block text-xs text-muted-foreground">Off by default. Turn on only where nobody else can approve (e.g. the Managing Partner's own requests).</span></span>
-            </label>
+            <p className="text-xs text-muted-foreground">Only approvers (Managing Partner, Partner, Finance, HR manager) can approve. A line manager or department head who isn't an approver is skipped, and nobody ever approves their own request.</p>
           </section>
         </div>
         <DialogFooter>
@@ -267,7 +262,6 @@ export function WorkflowSettings() {
                 </div>
                 <div className="flex items-center gap-1">
                   {!w.is_active && <Badge variant="muted">Inactive</Badge>}
-                  {w.allow_self_approval && <Badge variant="warning">Self-approval allowed</Badge>}
                   <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Edit workflow" onClick={() => setEditing(w)}><Pencil className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Delete workflow" onClick={() => setDeleting(w)}><Trash2 className="h-4 w-4" /></Button>
                 </div>

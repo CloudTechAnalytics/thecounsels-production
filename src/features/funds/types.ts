@@ -63,11 +63,17 @@ export function fundStatusLabel(r: Pick<FundRequestRow, 'status' | 'amount' | 'a
   return FUND_STATUS_META[r.status]?.label ?? r.status
 }
 
+/** Roles that hold funds.approve (migrations 0174 + 0177). Only these
+ * can approve fund requests, appear as named approvers, or take a
+ * delegation — the database enforces the same list. */
+export const APPROVER_ROLE_KEYS = ['managing_partner', 'partner', 'finance', 'hr_manager', 'hr_administrator', 'hr'] as const
+export const isApproverRole = (key: string | null | undefined) => Boolean(key && (APPROVER_ROLE_KEYS as readonly string[]).includes(key))
+
 export const APPROVER_TYPES = [
-  { value: 'line_manager', label: "Requester's line manager" },
-  { value: 'department_head', label: "Requester's department head" },
-  { value: 'role', label: 'Anyone with a role' },
-  { value: 'permission', label: 'Anyone who can approve funds' },
+  { value: 'line_manager', label: "Requester's line manager (if an approver)" },
+  { value: 'department_head', label: "Requester's department head (if an approver)" },
+  { value: 'role', label: 'Anyone with an approver role' },
+  { value: 'permission', label: 'Any approver' },
   { value: 'specific_user', label: 'A specific person' },
 ]
 
@@ -79,7 +85,6 @@ export const DISBURSEMENT_METHODS = [
 
 export const DEFAULT_FUND_SETTINGS: Omit<FundSettings, 'organization_id' | 'updated_by' | 'updated_at'> = {
   require_line_manager: true,
-  allow_self_approval: false,
   leadership_threshold: null,
   retirement_due_days: 14,
 }

@@ -1271,7 +1271,6 @@ export interface Database {
           categories: string[]
           department_ids: string[]
           branch_ids: string[]
-          allow_self_approval: boolean
           created_by: string | null
           created_at: string
           updated_at: string
@@ -1288,7 +1287,6 @@ export interface Database {
           categories?: string[]
           department_ids?: string[]
           branch_ids?: string[]
-          allow_self_approval?: boolean
           updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['approval_workflows']['Insert']>
@@ -1376,13 +1374,11 @@ export interface Database {
           require_line_manager: boolean
           leadership_threshold: number | null
           retirement_due_days: number
-          allow_self_approval: boolean
           updated_by: string | null
           updated_at: string
         }
         Insert: {
           organization_id: string
-          allow_self_approval?: boolean
           require_line_manager?: boolean
           leadership_threshold?: number | null
           retirement_due_days?: number

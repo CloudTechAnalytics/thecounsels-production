@@ -16,6 +16,7 @@ export interface EmployeeRecord extends EmployeeRow {
   managerUserId: string | null
   hasLogin: boolean
   roleName: string | null
+  roleKey: string | null
   membershipStatus: string | null
   avatarUrl: string | null
 }
@@ -56,6 +57,7 @@ export const employeesService = {
         managerUserId: mgr?.user_id ?? null,
         hasLogin: Boolean(e.user_id),
         roleName: m?.role?.name ?? null,
+        roleKey: m?.role?.key ?? null,
         membershipStatus: m?.status ?? null,
         avatarUrl: e.photo_url ?? m?.profile?.avatar_url ?? null,
       }

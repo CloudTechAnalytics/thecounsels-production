@@ -125,6 +125,7 @@ export const REFUND_STATUS_META: Record<string, { label: string; variant: BadgeP
   declared: { label: 'Pending verification', variant: 'warning' },
   confirmed: { label: 'Confirmed', variant: 'success' },
   rejected: { label: 'Rejected', variant: 'destructive' },
+  withdrawn: { label: 'Withdrawn', variant: 'muted' },
 }
 
 /** Same, but also counting lines still awaiting finance review — what the

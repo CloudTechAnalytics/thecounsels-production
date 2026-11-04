@@ -1,11 +1,11 @@
 import * as React from 'react'
 import { format } from 'date-fns'
-import { Paperclip, Trash2, AlertTriangle } from 'lucide-react'
+import { Paperclip, Trash2, AlertTriangle, Undo2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
   useAddRetirementItem, useDeleteRetirementItem, useSubmitRetirement, useReviewItems, useDeclareRefund, useVerifyRefund,
-  useRecordRefund, useRecordReimbursement, useCloseRetirement, useSetRetirementDueDate, useFundRequestHistory,
+  useRecordRefund, useRecordReimbursement, useWithdrawRetirementItem, useWithdrawRefund, useCloseRetirement, useSetRetirementDueDate, useFundRequestHistory,
 } from '@/features/funds/hooks/use-funds'
 import { fundsService } from '@/features/funds/services/funds.service'
 import {
@@ -89,6 +89,7 @@ export function ExpenseSubmissions({ r, isMine, canVerify }: { r: FundRequest; i
   const { activeOrgId } = useAuth()
   const add = useAddRetirementItem(activeOrgId)
   const remove = useDeleteRetirementItem(activeOrgId)
+  const withdraw = useWithdrawRetirementItem(activeOrgId)
   const submit = useSubmitRetirement(activeOrgId)
   const review = useReviewItems(activeOrgId)
   const editable = isMine && OPEN_ADVANCE_STATUSES.includes(r.status)
@@ -156,7 +157,7 @@ export function ExpenseSubmissions({ r, isMine, canVerify }: { r: FundRequest; i
                 <th className="px-3 py-2 text-right font-medium">Amount</th>
                 <th className="px-3 py-2 font-medium">Receipt</th>
                 <th className="px-3 py-2 font-medium">Status</th>
-                {(editable || (canVerify && pending.length > 0)) && <th className="px-3 py-2 font-medium" />}
+                {(editable || (canVerify && pending.length > 0)) && <th className="px-3 py-2 font-medium">{editable ? 'Actions' : 'Your decision'}</th>}
               </tr>
             </thead>
             <tbody>
@@ -195,10 +196,22 @@ export function ExpenseSubmissions({ r, isMine, canVerify }: { r: FundRequest; i
                     ) : editable ? (
                       <td className="px-2 py-2">
                         {i.review_status === 'draft' && (
-                          <Button variant="ghost" size="sm" aria-label="Remove expense" onClick={() => remove.mutate(i, { onError: (e) => toast.error('Could not remove', { description: errorMessage(e) }) })}>
-                            <Trash2 className="h-4 w-4" />
+                          <Button
+                            variant="ghost" size="sm" className="text-destructive"
+                            onClick={() => remove.mutate(i, { onSuccess: () => toast.success('Expense deleted'), onError: (e) => toast.error('Could not delete', { description: errorMessage(e) }) })}
+                          >
+                            <Trash2 className="h-4 w-4" /> Delete
                           </Button>
                         )}
+                        {i.review_status === 'submitted' && (
+                          <Button
+                            variant="ghost" size="sm" title="Take it back from finance so you can change or delete it"
+                            onClick={() => withdraw.mutate(i.id, { onSuccess: () => toast.success('Withdrawn — you can now change or delete it'), onError: (e) => toast.error('Could not withdraw', { description: errorMessage(e) }) })}
+                          >
+                            <Undo2 className="h-4 w-4" /> Withdraw
+                          </Button>
+                        )}
+                        {(i.review_status === 'accepted' || i.review_status === 'rejected') && <span className="text-xs text-muted-foreground">Locked</span>}
                       </td>
                     ) : (canVerify && pending.length > 0) ? <td /> : null}
                   </tr>
@@ -239,6 +252,7 @@ export function ExpenseSubmissions({ r, isMine, canVerify }: { r: FundRequest; i
             <input ref={fileRef} type="file" accept={RECEIPT_TYPES.join(',')} className="max-w-full text-xs" onChange={(e) => setReceipt(e.target.files?.[0] ?? null)} />
             <Button size="sm" variant="outline" onClick={addLine} loading={add.isPending}>Add expense</Button>
           </div>
+          <p className="text-xs text-muted-foreground">Unsent expenses can be deleted. Sent ones can be withdrawn until finance checks them. Once verified or rejected, they're locked for the record.</p>
           <div className="space-y-1.5 border-t border-border pt-3">
             <Label>Note to finance (optional)</Label>
             <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
@@ -256,9 +270,10 @@ export function ExpenseSubmissions({ r, isMine, canVerify }: { r: FundRequest; i
 }
 
 // ---- C. Refund history ----------------------------------------------------
-function RefundRow({ f, r, canVerify }: { f: FundRefund; r: FundRequest; canVerify: boolean }) {
+function RefundRow({ f, r, canVerify, isMine }: { f: FundRefund; r: FundRequest; canVerify: boolean; isMine: boolean }) {
   const { activeOrgId } = useAuth()
   const verify = useVerifyRefund(activeOrgId)
+  const withdraw = useWithdrawRefund(activeOrgId)
   const [reason, setReason] = React.useState('')
   const [open, setOpen] = React.useState(false)
   const st = REFUND_STATUS_META[f.status] ?? { label: f.status, variant: 'muted' as const }
@@ -296,6 +311,14 @@ function RefundRow({ f, r, canVerify }: { f: FundRefund; r: FundRequest; canVeri
         <div className="flex items-center gap-2">
           <Badge variant={st.variant}>{st.label}</Badge>
           {canVerify && f.status === 'declared' && !open && <Button size="sm" variant="outline" onClick={() => setOpen(true)}>Verify</Button>}
+          {isMine && f.status === 'declared' && (
+            <Button
+              size="sm" variant="ghost" loading={withdraw.isPending}
+              onClick={() => withdraw.mutate(f.id, { onSuccess: () => toast.success('Refund declaration withdrawn'), onError: (e) => toast.error('Could not withdraw', { description: errorMessage(e) }) })}
+            >
+              <Undo2 className="h-4 w-4" /> Withdraw
+            </Button>
+          )}
         </div>
       </div>
       {open && (
@@ -370,7 +393,7 @@ export function RefundHistory({ r, isMine, canVerify }: { r: FundRequest; isMine
       <Heading title="Refunds" />
       {r.refunds.length === 0 ? <p className="mb-3 text-sm text-muted-foreground">No refunds yet.</p> : (
         <ul className="mb-3 divide-y divide-border rounded-lg border border-border">
-          {r.refunds.map((f) => <RefundRow key={f.id} f={f} r={r} canVerify={canVerify} />)}
+          {r.refunds.map((f) => <RefundRow key={f.id} f={f} r={r} canVerify={canVerify} isMine={isMine} />)}
         </ul>
       )}
       <div className="space-y-3">

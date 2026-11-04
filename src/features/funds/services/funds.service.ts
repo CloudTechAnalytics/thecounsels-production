@@ -285,6 +285,14 @@ export const fundsService = {
     if (error) throw error
     return data ?? []
   },
+  async withdrawItem(itemId: string): Promise<void> {
+    const { error } = await supabase.rpc('withdraw_retirement_item', { p_item: itemId })
+    if (error) throw error
+  },
+  async withdrawRefund(refundId: string): Promise<void> {
+    const { error } = await supabase.rpc('withdraw_fund_refund', { p_refund: refundId })
+    if (error) throw error
+  },
   async recordRefund(requestId: string, r: { amount: number; receivedOn?: string; method?: string; reference?: string; notes?: string }): Promise<void> {
     const { error } = await supabase.rpc('record_fund_refund', {
       p_request: requestId, p_amount: r.amount, p_received_on: r.receivedOn || null,

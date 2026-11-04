@@ -29,7 +29,7 @@ export function FundRequestFormPage() {
 
   const returned = request?.status === 'returned'
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full">
       <Link to={back} className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> {id ? 'Back to request' : 'Fund Requests'}
       </Link>

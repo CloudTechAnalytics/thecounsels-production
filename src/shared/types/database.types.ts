@@ -2994,6 +2994,14 @@ export interface Database {
         }
         Returns: Database['public']['Tables']['fund_requests']['Row']
       }
+      withdraw_retirement_item: {
+        Args: { p_item: string }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      withdraw_fund_refund: {
+        Args: { p_refund: string }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
       recall_fund_request: {
         Args: { p_request: string }
         Returns: Database['public']['Tables']['fund_requests']['Row']

@@ -98,7 +98,7 @@ export function FundRequestPage() {
   ]
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="w-full">
       <Link to="/hr/funds" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> Fund Requests
       </Link>
@@ -165,7 +165,7 @@ export function FundRequestPage() {
       </div>
 
       {tab === 'overview' && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="space-y-6">
             {canActOn(r) && <DecisionBox key={r.id + r.current_step} request={r} />}
             {canManage && !isMine && (r.status === 'approved' || r.status === 'payment_processing') && <PayoutBox key={r.id} request={r} />}
@@ -231,14 +231,16 @@ export function FundRequestPage() {
       )}
 
       {tab === 'summary' && paid && (
-        <div className="max-w-2xl space-y-5">
+        <div className="space-y-5">
           <RetirementStatusBar r={r} />
-          <FinancialSummary r={r} />
-          <CloseRetirementBox r={r} />
+          <div className="grid gap-5 lg:grid-cols-2">
+            <FinancialSummary r={r} />
+            <div className="space-y-5"><CloseRetirementBox r={r} /></div>
+          </div>
         </div>
       )}
 
-      {tab === 'history' && <Card className="max-w-3xl p-5"><AuditHistory requestId={r.id} /></Card>}
+      {tab === 'history' && <Card className="p-5"><AuditHistory requestId={r.id} /></Card>}
 
       <ConfirmDialog
         open={Boolean(confirm)}

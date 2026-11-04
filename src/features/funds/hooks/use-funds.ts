@@ -191,6 +191,16 @@ export function useFundRequestHistory(requestId: string | null) {
   })
 }
 
+export function useWithdrawRetirementItem(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  return useMutation({ mutationFn: (itemId: string) => fundsService.withdrawItem(itemId), onSuccess: invalidate })
+}
+
+export function useWithdrawRefund(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  return useMutation({ mutationFn: (refundId: string) => fundsService.withdrawRefund(refundId), onSuccess: invalidate })
+}
+
 export function useRecordRefund(organizationId: string | null) {
   const invalidate = useInvalidateFunds(organizationId)
   return useMutation({

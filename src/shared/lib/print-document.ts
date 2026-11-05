@@ -42,7 +42,7 @@ function mark(firm: PrintFirm): string {
 
 export function letterhead(firm: PrintFirm, doc: { title: string; number?: string | null; badge?: { label: string; tone: BadgeTone } | null }): string {
   const name = firm.legal_name || firm.name
-  const contacts = [firm.phone, firm.billing_email, firm.website].filter(Boolean).map(esc)
+  const contacts = [firm.phone, firm.billing_email, firm.website].filter(Boolean).map((c) => `<span style="white-space:nowrap">${esc(c)}</span>`)
   return `<header class="lh">
     <div class="firm">
       ${mark(firm)}
@@ -52,12 +52,21 @@ export function letterhead(firm: PrintFirm, doc: { title: string; number?: strin
         ${contacts.length ? `<div class="firm-contact">${contacts.join('<span class="dot">•</span>')}</div>` : ''}
       </div>
     </div>
-    <div class="doc">
+    ${doc.title ? `<div class="doc">
       <div class="doc-title">${esc(doc.title)}</div>
       ${doc.number ? `<div class="doc-no">${esc(doc.number)}</div>` : ''}
       ${doc.badge ? `<span class="badge ${doc.badge.tone}">${esc(doc.badge.label)}</span>` : ''}
-    </div>
+    </div>` : ''}
   </header>`
+}
+
+/** A signature line: the person's saved e-signature above the rule when they
+ * have one, then their name and role/date beneath. */
+export function signatureBlock(label: string, name?: string | null, sub?: string | null, image?: string | null): string {
+  return `<div class="sig">
+    <div class="sig-img">${image ? `<img src="${esc(image)}" alt="Signature" />` : ''}</div>
+    <div class="sig-line">${esc(label)}${name ? `<br><strong>${esc(name)}</strong>` : ''}${sub ? `<br><span>${esc(sub)}</span>` : ''}</div>
+  </div>`
 }
 
 /** Label/value pairs in a tidy grid, e.g. dates and references. */
@@ -146,6 +155,12 @@ const BASE_CSS = `
   .stamp{display:inline-block;transform:rotate(-10deg);border:3px solid rgba(31,107,58,.55);color:rgba(31,107,58,.6);border-radius:10px;padding:6px 16px;font-family:'Playfair Display',Georgia,serif;font-size:30px;font-weight:700;letter-spacing:.12em}
   .sign{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;margin-top:14mm}
   .sign>div{flex:1;border-top:1px solid #a8a29e;padding-top:6px;color:#78716c;font-size:11px}
+  .sigs{display:flex;gap:28px;margin-top:12mm;break-inside:avoid}
+  .sig{flex:1;min-width:0}
+  .sig-img{height:54px;display:flex;align-items:flex-end}
+  .sig-img img{max-height:52px;max-width:100%;object-fit:contain}
+  .sig-line{border-top:1px solid #a8a29e;padding-top:6px;color:#78716c;font-size:11px;line-height:1.5}
+  .sig-line strong{color:#1c1917;font-size:12px}
   .foot{margin-top:auto;padding-top:8px;display:flex;justify-content:space-between;gap:16px;border-top:1px solid #e7e5e4;color:#a8a29e;font-size:9.5px}
   .foot b{color:#B38A3E;font-weight:600}
   @media screen{.sheet{margin:24px auto;box-shadow:0 10px 40px rgba(28,25,23,.12)}}
@@ -153,7 +168,7 @@ const BASE_CSS = `
 `
 
 /** Wraps the body in a page with the letterhead and footer, opens it, and prints once fonts and the logo have loaded. */
-export function openPrintDocument(opts: { title: string; firm: PrintFirm; head: string; body: string; footNote?: string; css?: string }): void {
+export function openPrintDocument(opts: { title: string; firm: PrintFirm; head: string; body: string; footNote?: string; css?: string; win?: Window | null }): void {
   const firmName = opts.firm.legal_name || opts.firm.name
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(opts.title)}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -177,8 +192,9 @@ export function openPrintDocument(opts: { title: string; firm: PrintFirm; head: 
       })()
     </script>
   </body></html>`
-  const w = window.open('', '_blank', 'width=900,height=1000')
+  const w = opts.win ?? window.open('', '_blank', 'width=900,height=1000')
   if (!w) return
+  w.document.open()
   w.document.write(html)
   w.document.close()
 }

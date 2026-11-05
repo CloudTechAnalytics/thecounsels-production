@@ -3,6 +3,7 @@ import { ChangePasswordCard } from '@/features/settings/components/change-passwo
 import { ProfileCard } from '@/features/settings/components/profile-card'
 import { SessionsCard } from '@/features/settings/components/sessions-card'
 import { TwoFactorCard } from '@/features/settings/components/two-factor-card'
+import { SignatureCard } from '@/features/settings/components/signature-card'
 import { NotificationPreferencesCard } from '@/features/notifications/components/notification-preferences-card'
 import { PageHeader } from '@/shared/components/page-header'
 
@@ -13,6 +14,7 @@ export function SettingsPage() {
 
       <div className="space-y-6">
         <ProfileCard />
+        <SignatureCard />
 
         <div className="grid gap-6 lg:grid-cols-2">
           <ChangePasswordCard />

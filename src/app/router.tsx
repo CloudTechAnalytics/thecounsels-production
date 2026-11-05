@@ -56,6 +56,9 @@ import { MattersPage } from '@/features/matters/pages/matters-page'
 import { MatterDetailPage } from '@/features/matters/pages/matter-detail-page'
 import { DocumentsPage } from '@/features/documents/pages/documents-page'
 import { BulkImportPage } from '@/features/documents/pages/bulk-import-page'
+import { TemplatesPage as DocumentTemplatesPage } from '@/features/documents/pages/templates-page'
+import { TemplateEditorPage } from '@/features/documents/pages/template-editor-page'
+import { UseTemplatePage } from '@/features/documents/pages/use-template-page'
 import { HrLayout } from '@/features/hr/components/hr-layout'
 import { HrOverviewPage } from '@/features/hr/pages/hr-overview-page'
 import { EmployeesPage } from '@/features/hr/pages/employees-page'
@@ -250,6 +253,10 @@ export const router = createBrowserRouter([
                       { path: 'clients/:id', element: withPermission(<ClientDetailPage />, 'clients.view') },
                       { path: 'documents', element: withPermission(<DocumentsPage />, 'documents.view') },
                       { path: 'documents/import', element: withPermission(<BulkImportPage />, 'documents.upload') },
+                      { path: 'documents/templates', element: withPermission(<DocumentTemplatesPage />, 'documents.view') },
+                      { path: 'documents/templates/new', element: withPermission(<TemplateEditorPage />, 'documents.manage') },
+                      { path: 'documents/templates/:id/edit', element: withPermission(<TemplateEditorPage />, 'documents.manage') },
+                      { path: 'documents/templates/:id/use', element: withPermission(<UseTemplatePage />, 'documents.view') },
                       { path: 'hearings', element: withPermission(<HearingsPage />, 'hearings.view') },
                       { path: 'appointments', element: withPlanFeature(withPermission(<AppointmentsPage />, 'appointments.view'), 'appointments') },
                       { path: 'calendar', element: withPermission(<CalendarPage />, 'calendar.view') },

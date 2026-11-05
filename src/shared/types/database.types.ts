@@ -1317,6 +1317,41 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['approval_workflow_steps']['Insert']>
         Relationships: []
       }
+      user_signatures: {
+        Row: { user_id: string; image: string; updated_at: string }
+        Insert: { user_id: string; image: string; updated_at?: string }
+        Update: { image?: string; updated_at?: string }
+        Relationships: []
+      }
+      document_templates: {
+        Row: {
+          id: string
+          organization_id: string
+          name: string
+          category: string | null
+          description: string | null
+          body: string
+          created_by: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          name: string
+          category?: string | null
+          description?: string | null
+          body?: string
+        }
+        Update: {
+          name?: string
+          category?: string | null
+          description?: string | null
+          body?: string
+        }
+        Relationships: []
+      }
       approval_rules: {
         Row: {
           id: string

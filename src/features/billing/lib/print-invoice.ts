@@ -1,6 +1,6 @@
 import type { InvoiceDetail } from '@/features/billing/types'
 import { formatNaira } from '@/shared/lib/format'
-import { amountInWords, esc, facts, letterhead, openPrintDocument, printDate, type BadgeTone, type PrintFirm } from '@/shared/lib/print-document'
+import { amountInWords, esc, facts, letterhead, openPrintDocument, printDate, signatureBlock, type BadgeTone, type PrintFirm } from '@/shared/lib/print-document'
 
 const STATUS: Record<string, { label: string; tone: BadgeTone }> = {
   draft: { label: 'Draft', tone: 'grey' },
@@ -11,7 +11,11 @@ const STATUS: Record<string, { label: string; tone: BadgeTone }> = {
 }
 
 /** Open a print-ready invoice in a new window and trigger the browser's Save-as-PDF. */
-export function printInvoice(inv: InvoiceDetail, firm: PrintFirm): void {
+export function printInvoice(
+  inv: InvoiceDetail,
+  firm: PrintFirm,
+  opts: { signatures?: Record<string, string>; signer?: { id: string; name: string | null; title?: string | null } | null; win?: Window | null } = {},
+): void {
   const balance = Number(inv.total) - Number(inv.amount_paid)
   const overdue = balance > 0 && inv.status !== 'void' && inv.status !== 'draft' && !!inv.due_date && new Date(inv.due_date + 'T23:59:59') < new Date()
   const badge = overdue ? { label: 'Overdue', tone: 'red' as const } : STATUS[inv.status] ?? null
@@ -65,6 +69,10 @@ export function printInvoice(inv: InvoiceDetail, firm: PrintFirm): void {
       ${inv.payments.map((p) => `<tr><td>${esc(printDate(p.paid_at, 'd MMM yyyy'))}</td><td>${esc(p.receipt_number ?? '—')}</td><td>${esc(p.method ?? '—')}</td><td class="r">${formatNaira(Number(p.amount))}</td></tr>`).join('')}
       </tbody></table></div>` : ''}
     ${inv.notes ? `<div class="note"><div class="t">Notes &amp; payment instructions</div>${esc(inv.notes)}</div>` : ''}
+    <div class="sigs">
+      ${signatureBlock('Authorised signatory', opts.signer?.name ?? null, [opts.signer?.title, `For ${firm.legal_name || firm.name}`].filter(Boolean).join(' · '), opts.signer ? opts.signatures?.[opts.signer.id] : null)}
+      <div class="sig"></div>
+    </div>
     <p class="muted" style="margin-top:7mm;text-align:center;font-family:'Playfair Display',Georgia,serif;font-size:14px">Thank you for your instruction.</p>
   `
 
@@ -74,5 +82,6 @@ export function printInvoice(inv: InvoiceDetail, firm: PrintFirm): void {
     head: letterhead(firm, { title: 'Invoice', number: inv.invoice_number, badge }),
     body,
     footNote: `Invoice ${inv.invoice_number ?? ''}`,
+    win: opts.win,
   })
 }

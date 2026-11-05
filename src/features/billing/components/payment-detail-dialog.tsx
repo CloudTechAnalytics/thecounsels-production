@@ -17,6 +17,7 @@ import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { formatNaira } from '@/shared/lib/format'
+import { getSignatures, openBlankPrintWindow } from '@/shared/lib/signatures'
 import { toast } from '@/shared/components/ui/sonner'
 
 const NONE = '__none__'
@@ -62,9 +63,10 @@ export function PaymentDetailDialog({
 
   const org = activeMembership?.organization
 
-  const printOrDownload = () => {
+  const printOrDownload = async () => {
     if (!payment || !org) return
-    printReceipt(payment, org)
+    const win = openBlankPrintWindow()
+    printReceipt(payment, org, { signatures: await getSignatures([payment.created_by]), win })
   }
 
   const saveEdit = async () => {

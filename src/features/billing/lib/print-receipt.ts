@@ -1,9 +1,9 @@
 import type { PaymentRow } from '@/features/billing/types'
 import { formatNaira } from '@/shared/lib/format'
-import { amountInWords, esc, facts, letterhead, openPrintDocument, printDate, type PrintFirm } from '@/shared/lib/print-document'
+import { amountInWords, esc, facts, letterhead, openPrintDocument, printDate, signatureBlock, type PrintFirm } from '@/shared/lib/print-document'
 
 /** Open a print-ready payment receipt in a new window and trigger the browser's Save-as-PDF. */
-export function printReceipt(payment: PaymentRow, firm: PrintFirm): void {
+export function printReceipt(payment: PaymentRow, firm: PrintFirm, opts: { signatures?: Record<string, string>; win?: Window | null } = {}): void {
   const amount = Number(payment.amount)
   const invoiceTotal = Number(payment.invoice?.total ?? 0)
   const amountPaidTotal = Number(payment.invoice?.amount_paid ?? 0)
@@ -41,10 +41,9 @@ export function printReceipt(payment: PaymentRow, firm: PrintFirm): void {
       </tbody>
     </table>
     ${payment.notes ? `<div class="note"><div class="t">Notes</div>${esc(payment.notes)}</div>` : ''}
-    <div class="sign">
-      <div>Received by${payment.created_by_profile?.full_name ? `<br><strong style="color:#1c1917">${esc(payment.created_by_profile.full_name)}</strong>` : ''}</div>
-      <div>Recorded<br><strong style="color:#1c1917">${esc(printDate(payment.created_at, 'd MMM yyyy, h:mm a'))}</strong></div>
-      <div style="border:none;text-align:center"><span class="stamp">RECEIVED</span></div>
+    <div class="sigs" style="align-items:flex-end">
+      ${signatureBlock('Received by', payment.created_by_profile?.full_name ?? null, `For ${firm.legal_name || firm.name} · ${printDate(payment.created_at, 'd MMM yyyy')}`, payment.created_by ? opts.signatures?.[payment.created_by] : null)}
+      <div class="sig" style="text-align:center"><span class="stamp">RECEIVED</span></div>
     </div>
     <p class="muted" style="margin-top:9mm;text-align:center;font-family:'Playfair Display',Georgia,serif;font-size:14px">Thank you for your payment.</p>
   `
@@ -55,5 +54,6 @@ export function printReceipt(payment: PaymentRow, firm: PrintFirm): void {
     head: letterhead(firm, { title: 'Receipt', number: payment.receipt_number, badge: settled ? { label: 'Invoice settled', tone: 'green' } : { label: 'Part payment', tone: 'gold' } }),
     body,
     footNote: `Official receipt ${payment.receipt_number ?? ''}`,
+    win: opts.win,
   })
 }

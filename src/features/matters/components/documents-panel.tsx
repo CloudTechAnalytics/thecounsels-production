@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { format } from 'date-fns'
-import { UploadCloud, FileText, Loader2 } from 'lucide-react'
+import { UploadCloud, FileText, Loader2, FileSignature } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useDocuments, useUploadDocuments, useDeleteOrgDocument } from '@/features/documents/hooks/use-documents'
@@ -52,6 +53,13 @@ export function DocumentsPanel({ matterId, readOnly = false }: { matterId: strin
 
   return (
     <div className="space-y-4">
+      {!readOnly && (
+        <div className="flex justify-end">
+          <Link to={`/documents/templates?matter=${matterId}`} className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm hover:border-primary/50 hover:bg-primary/5">
+            <FileSignature className="h-4 w-4 text-primary" /> Create from template
+          </Link>
+        </div>
+      )}
       {canUpload && (
         <Card
           role="button"

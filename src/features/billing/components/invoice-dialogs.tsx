@@ -23,6 +23,7 @@ import { printInvoice } from '@/features/billing/lib/print-invoice'
 import { PaymentDetailDialog } from '@/features/billing/components/payment-detail-dialog'
 import { EmailInvoiceDialog } from '@/features/billing/components/email-invoice-dialog'
 import { supabase } from '@/shared/lib/supabase'
+import { getSignatures, openBlankPrintWindow } from '@/shared/lib/signatures'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
@@ -534,9 +535,20 @@ export function InvoiceDetailDialog({
     }
   }
 
-  const downloadPdf = () => {
+  const downloadPdf = async () => {
     if (!inv || !activeOrgId) return
-    printInvoice(inv, activeMembership?.organization ?? { name: 'Your firm' })
+    const win = openBlankPrintWindow()
+    // Signed by whoever raised the invoice (their saved e-signature, if any).
+    const signerId = inv.created_by ?? profile?.id ?? null
+    const [signatures, signer] = await Promise.all([
+      getSignatures([signerId]),
+      signerId ? supabase.from('profiles').select('id, full_name, title').eq('id', signerId).maybeSingle() : Promise.resolve({ data: null }),
+    ])
+    printInvoice(inv, activeMembership?.organization ?? { name: 'Your firm' }, {
+      signatures,
+      signer: signer.data ? { id: signer.data.id, name: signer.data.full_name, title: signer.data.title } : null,
+      win,
+    })
     void supabase.rpc('log_audit', {
       p_org: activeOrgId,
       p_action: 'invoice.pdf_downloaded',

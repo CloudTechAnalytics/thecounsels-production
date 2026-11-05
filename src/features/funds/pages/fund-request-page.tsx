@@ -1,7 +1,9 @@
 import * as React from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
-import { ArrowLeft, Pencil } from 'lucide-react'
+import { ArrowLeft, Pencil, Printer } from 'lucide-react'
+import { printFundVoucher } from '@/features/funds/lib/print-fund-voucher'
+import { getSignatures, openBlankPrintWindow } from '@/shared/lib/signatures'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import {
   useFundRequests, useFundApprovalRights, useCancelFundRequest, useDeleteFundDraft, useRecallFundRequest,
@@ -37,7 +39,7 @@ export function FundRequestPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const { activeOrgId, userId } = useAuth()
+  const { activeOrgId, activeMembership, userId } = useAuth()
   const { data: requests, isLoading } = useFundRequests(activeOrgId)
   const { canActOn, canApproveClaim, canFinance } = useFundApprovalRights()
   const cancel = useCancelFundRequest(activeOrgId)
@@ -79,6 +81,14 @@ export function FundRequestPage() {
   const pendingLines = r.items.filter((i) => i.review_status === 'submitted').length
   const pendingRefunds = r.refunds.filter((f) => ['declared', 'claimed', 'approved'].includes(f.status)).length
 
+  // Signed by the requester, the approvers and whoever paid it out.
+  const printVoucher = async () => {
+    if (!activeMembership) return
+    const win = openBlankPrintWindow()
+    const signatures = await getSignatures([r.user_id, r.disbursed_by, ...r.approvals.map((a) => a.acted_by)])
+    printFundVoucher(r, activeMembership.organization, { signatures, win })
+  }
+
   const startEdit = async () => {
     if (opts?.needsRecall) {
       try { await recall.mutateAsync(r.id); toast.success('Pulled back from approval', { description: 'Make your changes, then submit it again.' }) }
@@ -112,7 +122,10 @@ export function FundRequestPage() {
             {r.submitted_at ? ` · submitted ${format(new Date(r.submitted_at), 'MMM d, yyyy')}` : ''}
           </p>
         </div>
-        <div className="text-right">
+        <div className="flex flex-col items-end gap-2 text-right">
+          {r.status !== 'draft' && (
+            <Button variant="outline" size="sm" onClick={printVoucher}><Printer className="h-4 w-4" /> Print voucher</Button>
+          )}
           <p className="font-display text-2xl font-semibold tabular-nums">{formatNaira(Number(r.approved_amount ?? r.amount))}</p>
           {paid && outstandingBalance(r) !== 0 && (
             <p className={cn('text-sm', outstandingBalance(r) > 0 ? 'text-warning' : 'text-destructive')}>

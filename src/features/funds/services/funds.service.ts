@@ -285,6 +285,10 @@ export const fundsService = {
     if (error) throw error
     return data ?? []
   },
+  async waiveReimbursement(requestId: string, note?: string): Promise<void> {
+    const { error } = await supabase.rpc('waive_fund_reimbursement', { p_request: requestId, p_note: note || null })
+    if (error) throw error
+  },
   async claimReimbursement(organizationId: string, requestId: string, c: { amount: number; reason?: string; evidence?: File | null }): Promise<void> {
     let path: string | null = null
     if (c.evidence) {

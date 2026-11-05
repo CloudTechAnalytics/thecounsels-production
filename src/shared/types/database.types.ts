@@ -2958,6 +2958,10 @@ export interface Database {
         Args: { p_request: string; p_amount: number; p_reason?: string | null; p_evidence_path?: string | null; p_evidence_name?: string | null }
         Returns: Database['public']['Tables']['fund_refunds']['Row']
       }
+      waive_fund_reimbursement: {
+        Args: { p_request: string; p_note?: string | null }
+        Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
       decide_fund_reimbursement: {
         Args: { p_claim: string; p_approve: boolean; p_amount?: number | null; p_reason?: string | null }
         Returns: Database['public']['Tables']['fund_requests']['Row']

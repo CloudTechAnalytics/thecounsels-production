@@ -135,6 +135,7 @@ export const REIMBURSEMENT_STATUS_META: Record<string, { label: string; variant:
   confirmed: { label: 'Paid', variant: 'success' },
   rejected: { label: 'Declined · borne by employee', variant: 'destructive' },
   withdrawn: { label: 'Withdrawn', variant: 'muted' },
+  waived: { label: 'Not claimed · borne by employee', variant: 'muted' },
 }
 
 export const REFUND_STATUS_META: Record<string, { label: string; variant: BadgeProps['variant'] }> = {

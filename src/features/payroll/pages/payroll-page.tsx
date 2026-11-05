@@ -109,7 +109,9 @@ function RunsTab() {
 }
 
 function SalariesTab() {
-  const { activeOrgId } = useAuth()
+  const { activeOrgId, activeMembership, userId } = useAuth()
+  // Branch payroll managers set their branch's salaries, but not their own (0188).
+  const firmWide = (activeMembership?.access_scope ?? 'organization') === 'organization'
   const { data: people = [], isLoading } = usePayrollEmployees(activeOrgId)
   const [editing, setEditing] = React.useState<PayrollEmployee | null>(null)
   const monthlyGross = (p: PayrollEmployee) =>
@@ -155,7 +157,11 @@ function SalariesTab() {
                       <td className="px-4 py-2 text-right font-medium tabular-nums">{s ? formatNaira(monthlyGross(p)) : '—'}</td>
                       <td className="px-4 py-2 text-xs text-muted-foreground">{s?.bank_name ? `${s.bank_name} · ${s.account_number ?? ''}` : '—'}</td>
                       <td className="px-4 py-2 text-right">
-                        <Button variant="outline" size="sm" onClick={() => setEditing(p)}>{s ? 'Edit' : 'Set salary'}</Button>
+                        {!firmWide && p.employee.user_id === userId ? (
+                          <span className="text-xs text-muted-foreground" title="Your own salary is set by another payroll manager">Set by payroll</span>
+                        ) : (
+                          <Button variant="outline" size="sm" onClick={() => setEditing(p)}>{s ? 'Edit' : 'Set salary'}</Button>
+                        )}
                       </td>
                     </tr>
                   )

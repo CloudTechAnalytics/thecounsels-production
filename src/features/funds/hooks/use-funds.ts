@@ -200,6 +200,14 @@ export function useClaimReimbursement(organizationId: string | null) {
   })
 }
 
+export function useWaiveReimbursement(organizationId: string | null) {
+  const invalidate = useInvalidateFunds(organizationId)
+  return useMutation({
+    mutationFn: ({ id, note }: { id: string; note?: string }) => fundsService.waiveReimbursement(id, note),
+    onSuccess: invalidate,
+  })
+}
+
 export function useDecideReimbursement(organizationId: string | null) {
   const invalidate = useInvalidateFunds(organizationId)
   return useMutation({

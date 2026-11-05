@@ -5,7 +5,7 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
   useAddRetirementItem, useDeleteRetirementItem, useSubmitRetirement, useReviewItems, useDeclareRefund, useVerifyRefund,
-  useRecordRefund, useWithdrawRetirementItem, useWithdrawRefund, useClaimReimbursement, useDecideReimbursement,
+  useRecordRefund, useWithdrawRetirementItem, useWithdrawRefund, useClaimReimbursement, useWaiveReimbursement, useDecideReimbursement,
   usePayReimbursement, useFundApprovalRights, useCloseRetirement, useSetRetirementDueDate, useFundRequestHistory,
 } from '@/features/funds/hooks/use-funds'
 import { fundsService } from '@/features/funds/services/funds.service'
@@ -418,11 +418,12 @@ function ClaimRow({ f, isMine, canApprove, canPay }: { f: FundRefund; isMine: bo
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p>
-            <span className="font-medium tabular-nums">{formatNaira(Number(f.amount))}</span> claimed
+            <span className="font-medium tabular-nums">{formatNaira(Number(f.amount))}</span> {f.status === 'waived' ? 'not claimed — employee chose not to be reimbursed' : 'claimed'}
             {approved != null && approved < Number(f.amount) && <span className="text-muted-foreground"> · {formatNaira(approved)} approved, {formatNaira(Number(f.amount) - approved)} borne by employee</span>}
             {f.declared_at && <span className="text-muted-foreground"> · {format(new Date(f.declared_at), 'MMM d, yyyy')}</span>}
           </p>
-          {f.notes && <p className="text-xs text-muted-foreground">Reason: {f.notes}</p>}
+          {f.notes && f.status !== 'waived' && <p className="text-xs text-muted-foreground">Reason: {f.notes}</p>}
+          {f.notes && f.status === 'waived' && f.notes !== 'Employee chose not to be reimbursed' && <p className="text-xs text-muted-foreground">Note: {f.notes}</p>}
           {f.auto_approved && <p className="text-xs text-muted-foreground">Approved automatically — within the amount originally approved for this request.</p>}
           {f.status === 'confirmed' && (
             <p className="text-xs text-muted-foreground">
@@ -492,6 +493,8 @@ function ClaimRow({ f, isMine, canApprove, canPay }: { f: FundRefund; isMine: bo
 function ClaimForm({ r, claimable }: { r: FundRequest; claimable: number }) {
   const { activeOrgId } = useAuth()
   const claim = useClaimReimbursement(activeOrgId)
+  const waive = useWaiveReimbursement(activeOrgId)
+  const [waiving, setWaiving] = React.useState(false)
   const [amount, setAmount] = React.useState(String(claimable))
   const [reason, setReason] = React.useState('')
   const [evidence, setEvidence] = React.useState<File | null>(null)
@@ -506,6 +509,26 @@ function ClaimForm({ r, claimable }: { r: FundRequest; claimable: number }) {
       setReason(''); setEvidence(null)
     } catch (err) { toast.error('Could not claim', { description: errorMessage(err) }) }
   }
+  const runWaive = async () => {
+    try {
+      await waive.mutateAsync({ id: r.id, note: reason.trim() || undefined })
+      toast.success('Recorded — you won’t be reimbursed', { description: `${formatNaira(claimable)} is recorded as borne by you. Finance can now close the advance.` })
+      setWaiving(false)
+    } catch (err) { toast.error('Could not record that', { description: errorMessage(err) }) }
+  }
+  if (waiving) {
+    return (
+      <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-4">
+        <p className="text-sm font-medium">Don’t reimburse me · {formatNaira(claimable)}</p>
+        <p className="text-xs text-muted-foreground">You’ll bear the {formatNaira(claimable)} you spent above the advance. It’s recorded on the request, the balance becomes ₦0 and the advance can close. This can’t be undone.</p>
+        <div className="space-y-1.5"><Label>Note (optional)</Label><Input placeholder="e.g. Personal upgrade, not a firm cost" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+        <div className="flex justify-end gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setWaiving(false)}>Back</Button>
+          <Button size="sm" onClick={runWaive} loading={waive.isPending}>Confirm — no reimbursement</Button>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
       <div>
@@ -518,7 +541,10 @@ function ClaimForm({ r, claimable }: { r: FundRequest; claimable: number }) {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <input type="file" accept={RECEIPT_TYPES.join(',')} className="max-w-full text-xs" onChange={(e) => setEvidence(e.target.files?.[0] ?? null)} />
-        <Button size="sm" onClick={run} loading={claim.isPending}>Claim reimbursement</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setWaiving(true)}>No need — don’t reimburse me</Button>
+          <Button size="sm" onClick={run} loading={claim.isPending}>Claim reimbursement</Button>
+        </div>
       </div>
     </div>
   )

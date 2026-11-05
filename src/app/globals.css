@@ -11,6 +11,9 @@
 
 @layer base {
   :root {
+    /* Tells the browser which palette its own controls should use — date and
+       time picker icons, select arrows, checkboxes, file buttons, scrollbars. */
+    color-scheme: light;
     /* Surfaces — warm ivory */
     --background: 40 38% 96%;
     --foreground: 24 16% 15%;
@@ -66,6 +69,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     --background: 220 16% 10%;
     --foreground: 40 18% 92%;
 

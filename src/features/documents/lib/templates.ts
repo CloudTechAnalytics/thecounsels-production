@@ -84,7 +84,8 @@ function inline(text: string): string {
   return esc(text)
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/(^|[^*])\*(?!\s)([^*]+?)\*(?!\*)/g, '$1<em>$2</em>')
-    .replace(/__(.+?)__/g, '<u>$1</u>')
+    // __underline__ only around words — runs of underscores are blank lines to sign on.
+    .replace(/(^|[^_])__([^_\s][^_]*?)__(?!_)/g, '$1<u>$2</u>')
 }
 
 /** Body → HTML. `values` fills placeholders; anything unfilled is shown as a

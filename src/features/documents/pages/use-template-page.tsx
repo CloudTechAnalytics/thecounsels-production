@@ -11,6 +11,7 @@ import { useDocumentTemplate } from '@/features/documents/hooks/use-templates'
 import { useUploadDocuments } from '@/features/documents/hooks/use-documents'
 import { LETTER_CSS, contextValues, placeholderKeys, prettyField, renderTemplate, wordDocument } from '@/features/documents/lib/templates'
 import { letterhead, openPrintDocument } from '@/shared/lib/print-document'
+import { printDocumentToPdf } from '@/shared/lib/html-to-pdf'
 import { openBlankPrintWindow } from '@/shared/lib/signatures'
 import { supabase } from '@/shared/lib/supabase'
 import { Card } from '@/shared/components/ui/card'
@@ -80,28 +81,39 @@ export function UseTemplatePage() {
   const finalHtml = template ? renderTemplate(template.body, values, { signature }) : ''
   const title = template ? `${template.name}${client ? ` — ${client.display_name}` : ''}` : 'Document'
 
+  // One definition of the finished letter, shared by print, PDF and save.
+  const page = {
+    title,
+    firm,
+    head: letterhead(firm, { title: '' }),
+    body: `<div class="letter" style="margin-top:7mm">${finalHtml}</div>`,
+    css: LETTER_CSS,
+    footNote: matter?.matter_number ? `Ref: ${matter.matter_number}` : template?.name,
+  }
   const print = () => {
     if (!template) return
-    const win = openBlankPrintWindow()
-    openPrintDocument({
-      title,
-      firm,
-      head: letterhead(firm, { title: '' }),
-      body: `<div class="letter" style="margin-top:7mm">${finalHtml}</div>`,
-      css: LETTER_CSS,
-      footNote: matter?.matter_number ? `Ref: ${matter.matter_number}` : template.name,
-      win,
-    })
+    openPrintDocument({ ...page, win: openBlankPrintWindow() })
   }
   const fileName = `${title.replace(/[\\/:*?"<>|]+/g, '-')} ${format(new Date(), 'yyyy-MM-dd')}.doc`
+  const pdfName = fileName.replace(/\.doc$/, '.pdf')
   const downloadWord = () => downloadBlob(wordDocument(title, firm, finalHtml), fileName)
+  const [pdfBusy, setPdfBusy] = React.useState(false)
+  const downloadPdf = async () => {
+    setPdfBusy(true)
+    try { downloadBlob(await printDocumentToPdf(page), pdfName) }
+    catch (err) { toast.error('Could not create the PDF', { description: errorMessage(err) }) }
+    finally { setPdfBusy(false) }
+  }
+  // Saved as the same designed, signed PDF the print shows — what you see in the matter is what was sent.
   const saveToMatter = async () => {
     if (!matter) return
+    setPdfBusy(true)
     try {
-      const file = new File([wordDocument(title, firm, finalHtml)], fileName, { type: 'application/msword' })
-      await upload.mutateAsync({ file, matterId: matter.id, category: template?.category ?? 'Correspondence', displayName: fileName })
-      toast.success('Saved to the matter’s documents', { description: fileName })
+      const file = new File([await printDocumentToPdf(page)], pdfName, { type: 'application/pdf' })
+      await upload.mutateAsync({ file, matterId: matter.id, category: template?.category ?? 'Correspondence', displayName: pdfName })
+      toast.success('Saved to the matter’s documents', { description: `${pdfName} — with letterhead and signature` })
     } catch (err) { toast.error('Could not save to the matter', { description: errorMessage(err) }) }
+    finally { setPdfBusy(false) }
   }
 
   if (isLoading) return <Skeleton className="h-96 w-full" />
@@ -126,12 +138,13 @@ export function UseTemplatePage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {has('documents.upload') && (
-            <Button variant="outline" onClick={saveToMatter} disabled={!matter} loading={upload.isPending} title={matter ? undefined : 'Choose a matter first'}>
+            <Button variant="outline" onClick={saveToMatter} disabled={!matter || pdfBusy} loading={upload.isPending} title={matter ? undefined : 'Choose a matter first'}>
               <FolderUp className="h-4 w-4" /> Save to matter
             </Button>
           )}
           <Button variant="outline" onClick={downloadWord}><FileDown className="h-4 w-4" /> Word</Button>
-          <Button onClick={print}><Printer className="h-4 w-4" /> Print / PDF</Button>
+          <Button variant="outline" onClick={downloadPdf} loading={pdfBusy && !upload.isPending}><FileDown className="h-4 w-4" /> Download PDF</Button>
+          <Button onClick={print}><Printer className="h-4 w-4" /> Print</Button>
         </div>
       </div>
 

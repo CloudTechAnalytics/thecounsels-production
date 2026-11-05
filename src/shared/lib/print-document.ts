@@ -167,10 +167,14 @@ const BASE_CSS = `
   @media print{html,body{background:#fff}.sheet{margin:0;box-shadow:none}}
 `
 
-/** Wraps the body in a page with the letterhead and footer, opens it, and prints once fonts and the logo have loaded. */
-export function openPrintDocument(opts: { title: string; firm: PrintFirm; head: string; body: string; footNote?: string; css?: string; win?: Window | null }): void {
+export interface PrintDocumentOptions { title: string; firm: PrintFirm; head: string; body: string; footNote?: string; css?: string }
+
+/** The full HTML page — letterhead, body, footer. `autoPrint` adds the script
+ * that opens the print dialog once fonts and the logo have loaded; the PDF
+ * builder (html-to-pdf.ts) renders the same page without it. */
+export function buildPrintDocument(opts: PrintDocumentOptions, autoPrint = true): string {
   const firmName = opts.firm.legal_name || opts.firm.name
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(opts.title)}</title>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(opts.title)}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <style>${BASE_CSS}${opts.css ?? ''}</style></head><body>
@@ -181,7 +185,7 @@ export function openPrintDocument(opts: { title: string; firm: PrintFirm; head: 
       <div style="height:8mm"></div>
       <div class="foot"><span>${esc(firmName)} · ${esc(opts.footNote ?? 'Computer-generated document')}</span><span>Generated ${esc(format(new Date(), 'd MMM yyyy, h:mm a'))} · <b>The Counsel</b></span></div>
     </div>
-    <script>
+    ${autoPrint ? `<script>
       (function () {
         var imgs = Array.prototype.slice.call(document.images).map(function (i) {
           return i.complete ? null : new Promise(function (r) { i.onload = i.onerror = r })
@@ -190,8 +194,13 @@ export function openPrintDocument(opts: { title: string; firm: PrintFirm; head: 
         var timeout = new Promise(function (r) { setTimeout(r, 2500) })
         Promise.race([Promise.all([fonts].concat(imgs)), timeout]).then(function () { setTimeout(function () { window.print() }, 200) })
       })()
-    </script>
+    </script>` : ''}
   </body></html>`
+}
+
+/** Opens the page in a print window (pre-opened `win` if given) and prints. */
+export function openPrintDocument(opts: PrintDocumentOptions & { win?: Window | null }): void {
+  const html = buildPrintDocument(opts)
   const w = opts.win ?? window.open('', '_blank', 'width=900,height=1000')
   if (!w) return
   w.document.open()

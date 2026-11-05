@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { Printer, Loader2, Plus, Pencil, Receipt as ReceiptIcon, Trash2, X, Check } from 'lucide-react'
+import { Printer, Loader2, Plus, Pencil, Receipt as ReceiptIcon, Trash2, X, Check, Mail } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useClients } from '@/features/clients/hooks/use-clients'
 import { useMatters } from '@/features/matters/hooks/use-matters'
@@ -21,6 +21,7 @@ import type { ManualInvoiceItemFormValues } from '@/features/billing/schemas'
 import { INVOICE_STATUS_META, MANUAL_ITEM_KINDS, INVOICE_ITEM_KIND_META, isInvoiceOverdue, timeAmount } from '@/features/billing/types'
 import { printInvoice } from '@/features/billing/lib/print-invoice'
 import { PaymentDetailDialog } from '@/features/billing/components/payment-detail-dialog'
+import { EmailInvoiceDialog } from '@/features/billing/components/email-invoice-dialog'
 import { supabase } from '@/shared/lib/supabase'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
@@ -423,6 +424,7 @@ export function InvoiceDetailDialog({
   const [payNotes, setPayNotes] = React.useState('')
   const [confirmPayOpen, setConfirmPayOpen] = React.useState(false)
   const [voidOpen, setVoidOpen] = React.useState(false)
+  const [emailOpen, setEmailOpen] = React.useState(false)
   const [voidReason, setVoidReason] = React.useState('')
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [openPaymentId, setOpenPaymentId] = React.useState<string | null>(null)
@@ -691,12 +693,26 @@ export function InvoiceDetailDialog({
                   Delete invoice
                 </Button>
               </div>
-              {!isDraft && (
-                <Button onClick={downloadPdf}>
-                  {addPayment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />} Download PDF
-                </Button>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {inv.status !== 'void' && inv.items.length > 0 && (
+                  <Button variant={isDraft ? 'default' : 'outline'} onClick={() => setEmailOpen(true)}>
+                    <Mail className="h-4 w-4" /> Email to client
+                  </Button>
+                )}
+                {!isDraft && (
+                  <Button onClick={downloadPdf}>
+                    {addPayment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />} Download PDF
+                  </Button>
+                )}
+              </div>
             </DialogFooter>
+
+            <EmailInvoiceDialog
+              inv={inv}
+              firmName={activeMembership?.organization.legal_name || activeMembership?.organization.name || 'Your firm'}
+              open={emailOpen}
+              onOpenChange={setEmailOpen}
+            />
 
             {isDraft && inv.items.length === 0 && (
               <p className="text-right text-xs text-muted-foreground">An invoice cannot be sent until it contains at least one billable item.</p>

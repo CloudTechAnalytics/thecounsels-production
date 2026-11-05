@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ArrowLeft, Pencil } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
-import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
   useFundRequests, useFundApprovalRights, useCancelFundRequest, useDeleteFundDraft, useRecallFundRequest,
 } from '@/features/funds/hooks/use-funds'
@@ -39,9 +38,8 @@ export function FundRequestPage() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const { activeOrgId, userId } = useAuth()
-  const { has } = usePermissions()
   const { data: requests, isLoading } = useFundRequests(activeOrgId)
-  const { canActOn, canApproveClaim } = useFundApprovalRights()
+  const { canActOn, canApproveClaim, canFinance } = useFundApprovalRights()
   const cancel = useCancelFundRequest(activeOrgId)
   const deleteDraft = useDeleteFundDraft(activeOrgId)
   const recall = useRecallFundRequest(activeOrgId)
@@ -71,7 +69,7 @@ export function FundRequestPage() {
   }
 
   const isMine = r.user_id === userId
-  const canManage = has('funds.manage')
+  const canManage = canFinance(r)
   const step = nextStep(r, { userId, canActOn, canApproveClaim, canManage })
   const opts = isMine ? requesterOptions(r) : null
   const meta = FUND_STATUS_META[r.status] ?? { label: r.status, variant: 'muted' as const }

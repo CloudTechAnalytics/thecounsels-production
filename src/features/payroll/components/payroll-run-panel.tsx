@@ -12,6 +12,7 @@ import { ExportButton } from '@/shared/components/export-button'
 import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
 import { formatNaira } from '@/shared/lib/format'
+import { useApprovalRights } from '@/features/hr/hooks/use-approval-rules'
 
 const monthOf = (period: string) => format(new Date(period + 'T00:00:00'), 'MMMM yyyy')
 
@@ -26,6 +27,7 @@ function totals(slips: Payslip[]) {
 
 export function PayrollRunPanel({ run, onBack }: { run: PayrollRun; onBack: () => void }) {
   const { activeOrgId, activeMembership, userId } = useAuth()
+  const { can } = useApprovalRights()
   const { data: slips = [], isLoading } = usePayslips(run.id)
   const recalc = useRecalculatePayrollRun(activeOrgId)
   const action = usePayrollRunAction(activeOrgId)
@@ -99,6 +101,8 @@ export function PayrollRunPanel({ run, onBack }: { run: PayrollRun; onBack: () =
               </Button>
               {run.created_by === userId ? (
                 <span className="self-center text-xs text-muted-foreground">You prepared this — another payroll manager must approve it</span>
+              ) : !can('payroll') ? (
+                <span className="self-center text-xs text-muted-foreground">Waiting for your firm’s payroll approver</span>
               ) : (
                 <Button size="sm" onClick={() => doAction('approve', 'Payroll approved — staff can now see their payslips')} loading={action.isPending} disabled={slips.length === 0}>
                   Approve & release payslips

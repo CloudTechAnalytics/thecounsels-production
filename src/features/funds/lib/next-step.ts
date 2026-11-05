@@ -16,7 +16,8 @@ export interface NextStep {
 export interface ViewerContext {
   userId: string | null
   canActOn: (r: FundRequest) => boolean
-  canManage: boolean
+  /** Pays out / verifies / closes — per request when the firm sets approvers by branch (0189). */
+  canManage: boolean | ((r: FundRequest) => boolean)
   /** A reimbursement claim on this request awaits the viewer's decision. */
   canApproveClaim?: (r: FundRequest) => boolean
 }
@@ -30,6 +31,7 @@ export function waitingOn(r: FundRequest): string {
 
 export function nextStep(r: FundRequest, ctx: ViewerContext): NextStep {
   const mine = r.user_id === ctx.userId
+  const canManage = typeof ctx.canManage === 'function' ? ctx.canManage(r) : ctx.canManage
   const who = mine ? 'you' : (r.requester_name ?? 'the employee')
   const money = formatNaira(Number(r.approved_amount ?? r.amount))
   const owed = outstandingBalance(r)
@@ -48,7 +50,7 @@ export function nextStep(r: FundRequest, ctx: ViewerContext): NextStep {
         : { text: `Sent back to ${who} for clarification.`, action: null, tone: 'waiting' }
     case 'approved':
     case 'payment_processing':
-      if (ctx.canManage && !mine) return { text: `Approved — pay out ${money}.`, action: 'pay', actionLabel: 'Pay out', tone: 'you' }
+      if (canManage && !mine) return { text: `Approved — pay out ${money}.`, action: 'pay', actionLabel: 'Pay out', tone: 'you' }
       return { text: mine ? `Approved — waiting for finance to pay you ${money}.` : `Approved — waiting for finance to pay out ${money}.`, action: null, tone: 'waiting' }
     case 'disbursed':
     case 'partially_retired': {
@@ -58,7 +60,7 @@ export function nextStep(r: FundRequest, ctx: ViewerContext): NextStep {
         return { text: mine ? `Your reimbursement claim of ${formatNaira(Number(r.reimbursement_claimed))} is waiting for approval.` : `Reimbursement claim of ${formatNaira(Number(r.reimbursement_claimed))} is waiting for approval.`, action: null, tone: 'waiting' }
       }
       if (Number(r.reimbursement_due) > 0) {
-        if (ctx.canManage && !mine) return { text: `Reimbursement of ${formatNaira(Number(r.reimbursement_due))} approved — pay ${who}.`, action: 'pay_claim', actionLabel: 'Pay reimbursement', tone: 'you' }
+        if (canManage && !mine) return { text: `Reimbursement of ${formatNaira(Number(r.reimbursement_due))} approved — pay ${who}.`, action: 'pay_claim', actionLabel: 'Pay reimbursement', tone: 'you' }
         return { text: mine ? `Your reimbursement of ${formatNaira(Number(r.reimbursement_due))} is approved — finance will pay you.` : `Reimbursement of ${formatNaira(Number(r.reimbursement_due))} approved — waiting for finance to pay.`, action: null, tone: 'waiting' }
       }
       if (owed < 0) {
@@ -72,10 +74,10 @@ export function nextStep(r: FundRequest, ctx: ViewerContext): NextStep {
       return { text: `Waiting for ${who} to account for ${formatNaira(owed)}${late ? ' — overdue' : ''}.`, action: null, tone: late ? 'late' : 'waiting' }
     }
     case 'retirement_submitted':
-      if (ctx.canManage && !mine) return { text: 'Receipts or a refund are waiting for your verification.', action: 'verify', actionLabel: 'Verify', tone: 'you' }
+      if (canManage && !mine) return { text: 'Receipts or a refund are waiting for your verification.', action: 'verify', actionLabel: 'Verify', tone: 'you' }
       return { text: mine ? 'Finance is checking your receipts / refund (someone other than you must verify them).' : 'Waiting for finance to verify receipts / refund.', action: null, tone: 'waiting' }
     case 'retired':
-      if (ctx.canManage && !mine) return { text: 'Fully accounted for — close it to finish.', action: 'close', actionLabel: 'Close', tone: 'you' }
+      if (canManage && !mine) return { text: 'Fully accounted for — close it to finish.', action: 'close', actionLabel: 'Close', tone: 'you' }
       return { text: 'Fully accounted for. Finance will close it.', action: null, tone: 'done' }
     case 'closed':
       return { text: 'Closed — fully reconciled.', action: null, tone: 'done' }

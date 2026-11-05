@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Wallet, Banknote, ReceiptText, CalendarClock, Inbox, HandCoins } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
+import { useApprovalRights } from '@/features/hr/hooks/use-approval-rules'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useFundRequests, useFundApprovalRights } from '@/features/funds/hooks/use-funds'
 import { useAllLeaveRequests, useAllHrRequests, useLeaveTypes, useReviewLeaveRequest } from '@/features/hr/hooks/use-hr'
@@ -97,17 +98,18 @@ function HrRequestQueue() {
 /** Everything awaiting the signed-in user, across fund requests, payouts,
  * retirements, leave and HR requests — one place to clear the queue. */
 export function ApprovalCentrePage() {
-  const { activeOrgId, userId } = useAuth()
+  const { activeOrgId } = useAuth()
   const { has } = usePermissions()
   const { data: requests = [], isLoading } = useFundRequests(activeOrgId)
-  const { canActOn, canApproveClaim } = useFundApprovalRights()
+  const { canActOn, canApproveClaim, canFinance } = useFundApprovalRights()
+  const { can } = useApprovalRights()
   const canManageFunds = has('funds.manage')
 
   const toApprove = requests.filter(canActOn)
-  const toPay = canManageFunds ? requests.filter((r) => (r.status === 'approved' || r.status === 'payment_processing') && r.user_id !== userId) : []
-  const toReview = canManageFunds ? requests.filter((r) => r.status === 'retirement_submitted' && r.user_id !== userId) : []
+  const toPay = canManageFunds ? requests.filter((r) => (r.status === 'approved' || r.status === 'payment_processing') && canFinance(r)) : []
+  const toReview = canManageFunds ? requests.filter((r) => r.status === 'retirement_submitted' && canFinance(r)) : []
   const claimsToApprove = requests.filter(canApproveClaim)
-  const claimsToPay = canManageFunds ? requests.filter((r) => Number(r.reimbursement_due) > 0 && r.user_id !== userId) : []
+  const claimsToPay = canManageFunds ? requests.filter((r) => Number(r.reimbursement_due) > 0 && canFinance(r)) : []
 
 
   return (
@@ -137,8 +139,8 @@ export function ApprovalCentrePage() {
             <RequestList requests={claimsToPay} loading={isLoading} empty="No approved reimbursements to pay." showRequester />
           </Section>
         )}
-        {has('leave.manage') && <LeaveQueue />}
-        {has('hr_requests.manage') && <HrRequestQueue />}
+        {has('leave.manage') && can('leave') && <LeaveQueue />}
+        {has('hr_requests.manage') && can('hr_request') && <HrRequestQueue />}
       </div>
       <div className="mt-8">
         <DelegationsCard />

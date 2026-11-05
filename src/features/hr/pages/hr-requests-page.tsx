@@ -13,6 +13,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
 import { cn } from '@/shared/lib/utils'
+import { useApprovalRights } from '@/features/hr/hooks/use-approval-rules'
 
 const typeLabel = (v: string) => HR_REQUEST_TYPES.find((t) => t.value === v)?.label ?? v
 
@@ -61,6 +62,7 @@ function ManageRequestsTab() {
   const { activeOrgId, userId } = useAuth()
   const { data: requests, isLoading } = useAllHrRequests(activeOrgId)
   const updateStatus = useUpdateHrRequestStatus(activeOrgId)
+  const { can } = useApprovalRights()
 
   const act = async (id: string, status: string) => {
     try {
@@ -88,7 +90,7 @@ function ManageRequestsTab() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Badge variant={meta.variant}>{meta.label}</Badge>
-                  {r.user_id !== userId && actions.map((a) => (
+                  {r.user_id !== userId && can('hr_request') && actions.map((a) => (
                     <Button key={a.status} size="sm" variant={a.status === 'rejected' ? 'outline' : 'default'} onClick={() => act(r.id, a.status)}>
                       {a.label}
                     </Button>

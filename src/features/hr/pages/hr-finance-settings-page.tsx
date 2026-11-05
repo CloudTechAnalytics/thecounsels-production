@@ -6,6 +6,7 @@ import { useEmployeeRegister, useSetDepartmentHead } from '@/features/hr/hooks/u
 import { HrListsSettings } from '@/features/hr/components/hr-lists-settings'
 import { FundRulesCard, DelegationsCard } from '@/features/funds/components/fund-settings'
 import { WorkflowSettings } from '@/features/funds/components/workflow-settings'
+import { ApprovalRulesCard } from '@/features/hr/components/approval-rules-card'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -63,8 +64,12 @@ export function HrFinanceSettingsPage() {
 
   return (
     <div>
-      <PageHeader title="HR & Finance Settings" description="Departments, approval rules, delegation and payroll configuration." />
+      <PageHeader title="HR & Finance Settings" description="Who approves what, departments, fund workflows, delegation and payroll configuration." />
       <div className="max-w-4xl space-y-8">
+        <section className="space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Approvals</p>
+          <ApprovalRulesCard />
+        </section>
         {canPeople && (
           <section className="space-y-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">People</p>

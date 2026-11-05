@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { MoreHorizontal, Eye, Pencil, Undo2, Trash2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
-import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useFundApprovalRights, useCancelFundRequest, useDeleteFundDraft, useRecallFundRequest } from '@/features/funds/hooks/use-funds'
 import { nextStep, requesterOptions, tabForAction, fundRequestPath } from '@/features/funds/lib/next-step'
 import { FundProgress } from '@/features/funds/components/fund-progress'
@@ -39,14 +38,13 @@ export function RequestList({ requests, loading, empty, showRequester }: {
 }) {
   const navigate = useNavigate()
   const { userId } = useAuth()
-  const { has } = usePermissions()
   const { activeOrgId } = useAuth()
-  const { canActOn, canApproveClaim } = useFundApprovalRights()
+  const { canActOn, canApproveClaim, canFinance } = useFundApprovalRights()
   const cancel = useCancelFundRequest(activeOrgId)
   const deleteDraft = useDeleteFundDraft(activeOrgId)
   const recall = useRecallFundRequest(activeOrgId)
   const [confirm, setConfirm] = React.useState<{ kind: 'withdraw' | 'delete'; r: FundRequest } | null>(null)
-  const ctx = { userId, canActOn, canApproveClaim, canManage: has('funds.manage') }
+  const ctx = { userId, canActOn, canApproveClaim, canManage: canFinance }
 
   const edit = async (r: FundRequest) => {
     if (requesterOptions(r).needsRecall) {

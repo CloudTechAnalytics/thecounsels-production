@@ -49,7 +49,7 @@ export function RetirementsPage() {
   const { data: requests = [], isLoading } = useFundRequests(activeOrgId)
   const { data: departments } = useDepartments(activeOrgId)
   const navigate = useNavigate()
-  const { canActOn, canApproveClaim } = useFundApprovalRights()
+  const { canActOn, canApproveClaim, canFinance } = useFundApprovalRights()
   const seesFirm = has('funds.manage') || has('funds.approve')
 
   const paid = React.useMemo(() => requests.filter((r) => PAID_STATUSES.includes(r.status)), [requests])
@@ -234,7 +234,7 @@ export function RetirementsPage() {
                       </td>
                       <td className="px-2 py-2">
                         {(() => {
-                          const step = nextStep(r, { userId, canActOn, canApproveClaim, canManage: has('funds.manage') })
+                          const step = nextStep(r, { userId, canActOn, canApproveClaim, canManage: canFinance })
                           return step.action && step.action !== 'edit'
                             ? <Button size="sm" onClick={() => navigate(fundRequestPath(r.id, tabForAction(r, step.action)))}>{step.actionLabel}</Button>
                             : <Button size="sm" variant="outline" onClick={() => navigate(fundRequestPath(r.id, 'summary'))}>Open</Button>

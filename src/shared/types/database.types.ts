@@ -1317,6 +1317,39 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['approval_workflow_steps']['Insert']>
         Relationships: []
       }
+      approval_rules: {
+        Row: {
+          id: string
+          organization_id: string
+          area: string
+          branch_id: string | null
+          approver_roles: string[]
+          approver_user_ids: string[]
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          area: string
+          branch_id?: string | null
+          approver_roles?: string[]
+          approver_user_ids?: string[]
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          branch_id?: string | null
+          approver_roles?: string[]
+          approver_user_ids?: string[]
+          updated_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       approval_delegations: {
         Row: {
           id: string
@@ -2969,6 +3002,14 @@ export interface Database {
       pay_fund_reimbursement: {
         Args: { p_claim: string; p_paid_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null }
         Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      approval_candidates: {
+        Args: { p_org: string }
+        Returns: { area: string; kind: string; value: string; label: string; detail: string | null }[]
+      }
+      my_approval_rights: {
+        Args: { p_org: string }
+        Returns: { area: string; branch_id: string | null; allowed: boolean }[]
       }
       my_reimbursement_approvals: {
         Args: { p_org: string }

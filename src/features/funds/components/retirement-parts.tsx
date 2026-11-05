@@ -2,7 +2,6 @@ import * as React from 'react'
 import { format } from 'date-fns'
 import { Paperclip, Trash2, AlertTriangle, Undo2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
-import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import {
   useAddRetirementItem, useDeleteRetirementItem, useSubmitRetirement, useReviewItems, useDeclareRefund, useVerifyRefund,
   useRecordRefund, useWithdrawRetirementItem, useWithdrawRefund, useClaimReimbursement, useWaiveReimbursement, useDecideReimbursement,
@@ -647,10 +646,9 @@ export function AuditHistory({ requestId }: { requestId: string }) {
 /** Retirement status, deadline (finance can move it) and, for the employee,
  * how much they still have to account for. Shown above the money tabs. */
 export function RetirementStatusBar({ r }: { r: FundRequest }) {
-  const { activeOrgId, userId } = useAuth()
-  const { has } = usePermissions()
-  const isMine = r.user_id === userId
-  const canVerify = has('funds.manage') && !isMine
+  const { activeOrgId } = useAuth()
+  const { canFinance } = useFundApprovalRights()
+  const canVerify = canFinance(r)
   const setDue = useSetRetirementDueDate(activeOrgId)
   const [due, setDueValue] = React.useState(r.retirement_due_date ?? '')
   React.useEffect(() => setDueValue(r.retirement_due_date ?? ''), [r.retirement_due_date])
@@ -686,10 +684,10 @@ export function RetirementStatusBar({ r }: { r: FundRequest }) {
 
 /** Finance closes a fully reconciled advance. */
 export function CloseRetirementBox({ r }: { r: FundRequest }) {
-  const { activeOrgId, userId } = useAuth()
-  const { has } = usePermissions()
+  const { activeOrgId } = useAuth()
+  const { canFinance } = useFundApprovalRights()
   const close = useCloseRetirement(activeOrgId)
-  if (!has('funds.manage') || r.user_id === userId || r.status !== 'retired') return null
+  if (!canFinance(r) || r.status !== 'retired') return null
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-success/40 bg-success/10 p-3">
       <p className="text-sm">Fully reconciled: every expense verified, every refund confirmed, nothing outstanding.</p>

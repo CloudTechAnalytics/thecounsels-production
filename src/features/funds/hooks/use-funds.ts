@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { fundsService, type DisbursementInput, type FundRequestInput } from '@/features/funds/services/funds.service'
 import { useInvalidateStorageUsage } from '@/shared/hooks/use-storage-quota'
 import type { FundRequest, FundSettings, FundAttachment } from '@/features/funds/types'
+import { useApprovalRights } from '@/features/hr/hooks/use-approval-rules'
 
 export function useFundSettings(organizationId: string | null) {
   return useQuery({
@@ -257,7 +258,7 @@ export function useReviewRetirement(organizationId: string | null) {
  * (my_fund_approvals) because roles, permissions, delegation and the
  * self-approval rule all feed into it — the UI never guesses. */
 export function useFundApprovalRights() {
-  const { activeOrgId } = useAuth()
+  const { activeOrgId, userId } = useAuth()
   const { data } = useQuery({
     queryKey: ['funds', 'my-approvals', activeOrgId],
     enabled: Boolean(activeOrgId),
@@ -273,7 +274,10 @@ export function useFundApprovalRights() {
   const canActOn = React.useCallback((r: Pick<FundRequest, 'id' | 'status'>) => r.status === 'pending' && ids.has(r.id), [ids])
   /** A reimbursement claim on this request is waiting for this user's decision. */
   const canApproveClaim = React.useCallback((r: Pick<FundRequest, 'id'>) => claimIds.has(r.id), [claimIds])
-  return { canActOn, canApproveClaim }
+  /** Pays out, verifies and closes this request — the firm's chosen finance approvers for its branch (0189). */
+  const { can } = useApprovalRights()
+  const canFinance = React.useCallback((r: Pick<FundRequest, 'branch_id' | 'user_id'>) => r.user_id !== userId && can('fund_finance', r.branch_id ?? null), [can, userId])
+  return { canActOn, canApproveClaim, canFinance }
 }
 
 // ---- Workflows & delegation ----

@@ -17,6 +17,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
 import { cn } from '@/shared/lib/utils'
+import { useApprovalRights } from '@/features/hr/hooks/use-approval-rules'
 
 /** Every configured leave type, always — not just ones you've already
  * used — so a firm can see the full policy (Annual/Sick/Maternity/etc.)
@@ -128,6 +129,7 @@ function TeamLeaveTab() {
   const { data: requests, isLoading } = useAllLeaveRequests(activeOrgId)
   const { data: leaveTypes } = useLeaveTypes(activeOrgId)
   const review = useReviewLeaveRequest(activeOrgId)
+  const { can } = useApprovalRights()
   const typeName = (id: string) => leaveTypes?.find((t) => t.id === id)?.name ?? 'Leave'
 
   const act = async (id: string, approve: boolean) => {
@@ -157,7 +159,7 @@ function TeamLeaveTab() {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {r.status === 'pending' && r.user_id !== userId ? (
+                  {r.status === 'pending' && r.user_id !== userId && can('leave') ? (
                     <>
                       <Button size="sm" variant="outline" onClick={() => act(r.id, false)}>Reject</Button>
                       <Button size="sm" onClick={() => act(r.id, true)}>Approve</Button>

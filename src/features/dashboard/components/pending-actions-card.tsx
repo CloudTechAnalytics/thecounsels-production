@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { formatNaira } from '@/shared/lib/format'
+import { useApprovalRights } from '@/features/hr/hooks/use-approval-rules'
 
 interface Action {
   key: string
@@ -35,8 +36,8 @@ export function PendingActionsCard({ overdueInvoices, className }: { overdueInvo
   const { data: funds, isLoading: l1 } = useFundRequests(canFunds ? activeOrgId : null)
   const { data: leave, isLoading: l2 } = useAllLeaveRequests(hr && has('leave.manage') ? activeOrgId : null)
   const { data: hrReqs, isLoading: l3 } = useAllHrRequests(hr && has('hr_requests.manage') ? activeOrgId : null)
-  const { canActOn, canApproveClaim } = useFundApprovalRights()
-  const canManage = has('funds.manage')
+  const { canActOn, canApproveClaim, canFinance } = useFundApprovalRights()
+  const { can } = useApprovalRights()
 
   const actions = React.useMemo<Action[]>(() => {
     const out: Action[] = []
@@ -45,23 +46,23 @@ export function PendingActionsCard({ overdueInvoices, className }: { overdueInvo
       const who = r.requester_name ?? 'Someone'
       if (canActOn(r)) out.push({ key: `a-${r.id}`, icon: Wallet, title: `Fund request — ${r.title}`, detail: `${who} · ${formatNaira(Number(r.approved_amount ?? r.amount))}`, at: r.submitted_at, label: 'Review', to: fundRequestPath(r.id) })
       if (canApproveClaim(r)) out.push({ key: `c-${r.id}`, icon: HandCoins, title: `Reimbursement claim — ${r.request_number}`, detail: `${who} · ${formatNaira(Number(r.reimbursement_claimed))}`, at: r.last_retirement_at, label: 'Review', to: fundRequestPath(r.id, 'refunds') })
-      if (!canManage) continue
+      if (!canFinance(r)) continue
       if (r.status === 'approved' || r.status === 'payment_processing') out.push({ key: `p-${r.id}`, icon: Banknote, title: `Pay out — ${r.title}`, detail: `${who} · ${formatNaira(Number(r.approved_amount ?? r.amount))}`, at: r.updated_at, label: 'Pay out', to: fundRequestPath(r.id) })
       if (r.status === 'retirement_submitted') out.push({ key: `v-${r.id}`, icon: ReceiptText, title: `Expense retirement — ${r.request_number}`, detail: `${who} · ${formatNaira(Number(r.submitted_expenses) + Number(r.pending_refunds))} to check`, at: r.last_retirement_at, label: 'Verify', to: fundRequestPath(r.id, Number(r.submitted_expenses) > 0 ? 'expenses' : 'refunds') })
       if (Number(r.reimbursement_due) > 0) out.push({ key: `d-${r.id}`, icon: HandCoins, title: `Reimbursement to pay — ${r.request_number}`, detail: `${who} · ${formatNaira(Number(r.reimbursement_due))}`, at: r.updated_at, label: 'Pay', to: fundRequestPath(r.id, 'refunds') })
     }
     for (const l of leave ?? []) {
-      if (l.status !== 'pending' || l.user_id === userId) continue
+      if (l.status !== 'pending' || l.user_id === userId || !can('leave')) continue
       out.push({ key: `l-${l.id}`, icon: CalendarClock, title: 'Leave application', detail: `${l.requester_name ?? 'Someone'} · ${l.days} day${Number(l.days) === 1 ? '' : 's'}`, at: l.created_at, label: 'Approve', to: '/hr/approvals' })
     }
     for (const h of hrReqs ?? []) {
-      if (!['submitted', 'in_review'].includes(h.status) || h.user_id === userId) continue
+      if (!['submitted', 'in_review'].includes(h.status) || h.user_id === userId || !can('hr_request')) continue
       out.push({ key: `h-${h.id}`, icon: Inbox, title: `HR request — ${h.subject}`, detail: h.requester_name ?? 'Someone', at: h.created_at, label: 'Handle', to: '/hr/requests' })
     }
     out.sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))
     if (overdueInvoices) out.unshift({ key: 'inv', icon: AlertTriangle, title: `${overdueInvoices} overdue invoice${overdueInvoices === 1 ? '' : 's'}`, detail: 'Past their due date — follow up with clients', at: null, label: 'Open', to: '/billing' })
     return out
-  }, [funds, leave, hrReqs, userId, canActOn, canApproveClaim, canManage, overdueInvoices])
+  }, [funds, leave, hrReqs, userId, canActOn, canApproveClaim, canFinance, can, overdueInvoices])
 
   const loading = (canFunds && l1) || l2 || l3
   const shown = actions.slice(0, 6)

@@ -19,6 +19,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 import { TimeSeriesChart, type TimeSeriesPoint } from '@/shared/components/timeseries-chart'
 import { formatNaira, initialsOf } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
+import { useApprovalRights } from '@/features/hr/hooks/use-approval-rules'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -171,10 +172,10 @@ function useHrActivity() {
   const { data: leaveTypes } = useLeaveTypes(activeOrgId)
   const { data: hr, isLoading: l2 } = useAllHrRequests(has('hr_requests.manage') ? activeOrgId : null)
   const { data: funds, isLoading: l3 } = useFundRequests(has('funds.request') ? activeOrgId : null)
-  const { canActOn } = useFundApprovalRights()
-  const canLeave = has('leave.manage')
-  const canHr = has('hr_requests.manage')
-  const canFundsManage = has('funds.manage')
+  const { canActOn, canFinance } = useFundApprovalRights()
+  const { can } = useApprovalRights()
+  const canLeave = has('leave.manage') && can('leave')
+  const canHr = has('hr_requests.manage') && can('hr_request')
 
   const items = React.useMemo<Activity[]>(() => {
     const typeName = (id: string) => leaveTypes?.find((t) => t.id === id)?.name ?? 'Leave'
@@ -202,11 +203,11 @@ function useHrActivity() {
         id: r.id, ref: r.request_number ?? 'Funds', kind: 'funds', who: r.requester_name ?? 'Someone',
         detail: r.title, amount: formatNaira(Number(r.approved_amount ?? r.amount)),
         stage: fundStage(r.status), createdAt: r.submitted_at ?? r.created_at, href: `/hr/funds/${r.id}`,
-        needsMe: canActOn(r) || (canFundsManage && ['approved', 'payment_processing', 'retirement_submitted'].includes(r.status)),
+        needsMe: canActOn(r) || (canFinance(r) && ['approved', 'payment_processing', 'retirement_submitted'].includes(r.status)),
       })
     }
     return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  }, [leave, leaveTypes, hr, funds, canActOn, canLeave, canHr, canFundsManage, userId])
+  }, [leave, leaveTypes, hr, funds, canActOn, canFinance, canLeave, canHr, userId])
 
   return { items, funds: funds ?? [], loading: l1 || l2 || l3 }
 }

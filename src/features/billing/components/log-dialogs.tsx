@@ -47,7 +47,10 @@ const MAX_RECEIPT_BYTES = 10 * 1024 * 1024
 const NONE = '__none__'
 const today = () => new Date().toISOString().slice(0, 10)
 
-/** currentMatterId keeps an already-linked-but-since-closed matter visible
+/** Client + matter, linked: choosing a client narrows the matters to theirs
+ * (and picks the matter when they only have one); choosing a matter fills in
+ * its client. Only the matter is saved — the client comes from it.
+ * currentMatterId keeps an already-linked-but-since-closed matter visible
  * when editing, without offering closed matters for a fresh pick — a
  * closed matter is read-only, so logging new time/expense against one
  * would always fail. */
@@ -58,14 +61,48 @@ function MatterSelect({ value, onChange, currentMatterId }: { value: string; onC
     () => (allMatters ?? []).filter((m) => !isMatterClosed(m.status) || m.id === currentMatterId),
     [allMatters, currentMatterId],
   )
+  const clients = React.useMemo(() => {
+    const byId = new Map<string, string>()
+    for (const m of matters) if (m.client) byId.set(m.client.id, m.client.display_name)
+    return [...byId.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name))
+  }, [matters])
+  const selected = matters.find((m) => m.id === value)
+  const [clientId, setClientId] = React.useState(selected?.client?.id ?? '')
+  // Keep the client in step when the matter is set from outside (editing, duplicating).
+  React.useEffect(() => { if (selected?.client?.id) setClientId(selected.client.id) }, [selected?.client?.id])
+  const shown = clientId ? matters.filter((m) => m.client?.id === clientId) : matters
+
+  const chooseClient = (c: string) => {
+    const id = c === NONE ? '' : c
+    setClientId(id)
+    if (!id) return
+    const theirs = matters.filter((m) => m.client?.id === id)
+    if (theirs.length === 1) onChange(theirs[0].id)
+    else if (!theirs.some((m) => m.id === value)) onChange(NONE)
+  }
+  const chooseMatter = (m: string) => {
+    onChange(m)
+    const c = matters.find((x) => x.id === m)?.client?.id
+    if (c) setClientId(c)
+  }
+
   return (
-    <Select value={value || NONE} onValueChange={onChange}>
-      <SelectTrigger><SelectValue placeholder="No matter" /></SelectTrigger>
-      <SelectContent>
-        <SelectItem value={NONE}>No matter</SelectItem>
-        {matters?.map((m) => <SelectItem key={m.id} value={m.id}>{m.matter_number} — {m.title}</SelectItem>)}
-      </SelectContent>
-    </Select>
+    <div className="grid gap-2 sm:grid-cols-2">
+      <Select value={clientId || NONE} onValueChange={chooseClient}>
+        <SelectTrigger><SelectValue placeholder="Any client" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NONE}>Any client</SelectItem>
+          {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select value={value || NONE} onValueChange={chooseMatter}>
+        <SelectTrigger><SelectValue placeholder="No matter" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NONE}>No matter</SelectItem>
+          {shown.map((m) => <SelectItem key={m.id} value={m.id}>{m.matter_number} — {m.title}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </div>
   )
 }
 
@@ -160,7 +197,7 @@ export function TimeEntryDialog({
                 name="matterId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Matter</FormLabel>
+                    <FormLabel>Client &amp; matter</FormLabel>
                     <MatterSelect value={field.value ?? ''} onChange={field.onChange} currentMatterId={entry?.matter_id} />
                     <FormMessage />
                   </FormItem>
@@ -391,7 +428,7 @@ export function ExpenseDialog({
 
         <fieldset disabled={invoiced} className="space-y-4 disabled:opacity-60">
           <div className="space-y-1.5">
-            <Label>Matter</Label>
+            <Label>Client &amp; matter</Label>
             <MatterSelect value={matterId} onChange={setMatterId} currentMatterId={expense?.matter_id} />
             {billable && (!matterId || matterId === NONE) && (
               <p className="text-xs text-warning">Billable expenses need a matter so they can reach an invoice.</p>

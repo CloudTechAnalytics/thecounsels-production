@@ -86,7 +86,7 @@ export const fundsService = {
   },
   async saveSettings(
     organizationId: string,
-    patch: Pick<FundSettings, 'require_line_manager' | 'leadership_threshold' | 'retirement_due_days' | 'retirement_due_basis'>,
+    patch: Pick<FundSettings, 'require_line_manager' | 'leadership_threshold' | 'retirement_due_days' | 'retirement_due_basis' | 'escalate_after_hours'>,
     userId: string | null,
   ): Promise<void> {
     const { error } = await supabase

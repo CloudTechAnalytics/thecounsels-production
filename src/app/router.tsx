@@ -73,6 +73,7 @@ import { RetirementsPage } from '@/features/funds/pages/retirements-page'
 import { FundRequestPage } from '@/features/funds/pages/fund-request-page'
 import { FundRequestFormPage } from '@/features/funds/pages/fund-request-form-page'
 import { HrFinanceSettingsPage } from '@/features/hr/pages/hr-finance-settings-page'
+import { TeamStructurePage } from '@/features/hr/pages/team-structure-page'
 import { HrDocumentsPage } from '@/features/hr/pages/hr-documents-page'
 import { AnnouncementsPage } from '@/features/hr/pages/announcements-page'
 import { HrReportsPage } from '@/features/hr/pages/hr-reports-page'
@@ -284,6 +285,7 @@ export const router = createBrowserRouter([
                     children: [
                       { index: true, element: withPermission(<HrOverviewPage />, 'hr.view_reports') },
                       { path: 'employees', element: withPermission(<EmployeesPage />, 'staff.manage') },
+                      { path: 'team-structure', element: withPermission(<TeamStructurePage />, ['staff.manage', 'departments.manage'], 'any') },
                       { path: 'onboarding', element: withPermission(<HrOnboardingPage />, 'onboarding.view_own') },
                       { path: 'leave', element: withPermission(<LeavePage />, 'leave.request') },
                       { path: 'requests', element: withPermission(<HrRequestsPage />, 'hr_requests.submit') },

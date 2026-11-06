@@ -92,6 +92,7 @@ export const DEFAULT_FUND_SETTINGS: Omit<FundSettings, 'organization_id' | 'upda
   retirement_due_basis: 'disbursement',
   leadership_threshold: null,
   retirement_due_days: 14,
+  escalate_after_hours: 48,
 }
 
 /** Statuses where an advance has been paid and isn't fully accounted for yet. */

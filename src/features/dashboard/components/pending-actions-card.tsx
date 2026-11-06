@@ -13,6 +13,7 @@ import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { formatNaira } from '@/shared/lib/format'
 import { useApprovalRights } from '@/features/hr/hooks/use-approval-rules'
+import { useMyReports } from '@/features/hr/hooks/use-my-reports'
 
 interface Action {
   key: string
@@ -32,9 +33,10 @@ export function PendingActionsCard({ overdueInvoices, className }: { overdueInvo
   const { has } = usePermissions()
   const { has: hasFeature } = usePlanFeature(activeOrgId)
   const hr = hasFeature('hr_module')
-  const canFunds = hr && (has('funds.approve') || has('funds.manage'))
+  const { isLineManager, reportUserIds } = useMyReports()
+  const canFunds = hr && (has('funds.approve') || has('funds.manage') || isLineManager)
   const { data: funds, isLoading: l1 } = useFundRequests(canFunds ? activeOrgId : null)
-  const { data: leave, isLoading: l2 } = useAllLeaveRequests(hr && has('leave.manage') ? activeOrgId : null)
+  const { data: leave, isLoading: l2 } = useAllLeaveRequests(hr && (has('leave.manage') || isLineManager) ? activeOrgId : null)
   const { data: hrReqs, isLoading: l3 } = useAllHrRequests(hr && has('hr_requests.manage') ? activeOrgId : null)
   const { canActOn, canApproveClaim, canFinance } = useFundApprovalRights()
   const { can } = useApprovalRights()
@@ -52,7 +54,7 @@ export function PendingActionsCard({ overdueInvoices, className }: { overdueInvo
       if (Number(r.reimbursement_due) > 0) out.push({ key: `d-${r.id}`, icon: HandCoins, title: `Reimbursement to pay — ${r.request_number}`, detail: `${who} · ${formatNaira(Number(r.reimbursement_due))}`, at: r.updated_at, label: 'Pay', to: fundRequestPath(r.id, 'refunds') })
     }
     for (const l of leave ?? []) {
-      if (l.status !== 'pending' || l.user_id === userId || !can('leave')) continue
+      if (l.status !== 'pending' || l.user_id === userId || !(can('leave') || reportUserIds.has(l.user_id))) continue
       out.push({ key: `l-${l.id}`, icon: CalendarClock, title: 'Leave application', detail: `${l.requester_name ?? 'Someone'} · ${l.days} day${Number(l.days) === 1 ? '' : 's'}`, at: l.created_at, label: 'Approve', to: '/hr/approvals' })
     }
     for (const h of hrReqs ?? []) {
@@ -62,7 +64,7 @@ export function PendingActionsCard({ overdueInvoices, className }: { overdueInvo
     out.sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))
     if (overdueInvoices) out.unshift({ key: 'inv', icon: AlertTriangle, title: `${overdueInvoices} overdue invoice${overdueInvoices === 1 ? '' : 's'}`, detail: 'Past their due date — follow up with clients', at: null, label: 'Open', to: '/billing' })
     return out
-  }, [funds, leave, hrReqs, userId, canActOn, canApproveClaim, canFinance, can, overdueInvoices])
+  }, [funds, leave, hrReqs, userId, canActOn, canApproveClaim, canFinance, can, reportUserIds, overdueInvoices])
 
   const loading = (canFunds && l1) || l2 || l3
   const shown = actions.slice(0, 6)

@@ -15,6 +15,7 @@ import { Input } from '@/shared/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { ExportButton } from '@/shared/components/export-button'
 import { cn } from '@/shared/lib/utils'
+import { useMyReports } from '@/features/hr/hooks/use-my-reports'
 
 type Tab = 'mine' | 'approve' | 'all' | 'reports'
 
@@ -69,7 +70,8 @@ export function FundsPage() {
   const navigate = useNavigate()
   const canSeeAll = has('funds.approve') || has('funds.manage')
   const canManage = has('funds.manage')
-  const canApprove = has('funds.approve')
+  const { isLineManager } = useMyReports()
+  const canApprove = has('funds.approve') || isLineManager
 
   const mine = requests.filter((r) => r.user_id === userId)
   const toApprove = requests.filter(canActOn)

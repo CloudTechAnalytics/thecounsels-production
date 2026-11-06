@@ -163,6 +163,11 @@ export function EmployeeDetailDialog({ employee, open, onOpenChange }: { employe
 
   const onSave = async () => {
     if (!v.first_name.trim()) { toast.error('First name is required'); setTab('personal'); return }
+    if (canManage && !v.manager_employee_id && !v.reports_to_no_one) {
+      toast.error('Choose a line manager', { description: 'Or tick “Top of the firm” for someone who reports to no one.' })
+      setTab('employment')
+      return
+    }
     const patch = toPatch(v, Boolean(employee?.user_id))
     try {
       if (isNew) {

@@ -26,6 +26,7 @@ export function FundRulesCard() {
   const [threshold, setThreshold] = React.useState('')
   const [dueDays, setDueDays] = React.useState('14')
   const [dueBasis, setDueBasis] = React.useState('disbursement')
+  const [escalate, setEscalate] = React.useState('48')
 
   React.useEffect(() => {
     if (!settings) return
@@ -33,6 +34,7 @@ export function FundRulesCard() {
     setRequireManager(settings.require_line_manager)
     setThreshold(settings.leadership_threshold != null ? String(settings.leadership_threshold) : '')
     setDueDays(String(settings.retirement_due_days))
+    setEscalate(String(settings.escalate_after_hours ?? 48))
   }, [settings])
 
   const onSave = async () => {
@@ -40,8 +42,10 @@ export function FundRulesCard() {
     const limit = threshold.trim() === '' ? null : Number(threshold)
     if (!Number.isInteger(days) || days < 1 || days > 365) { toast.error('Retirement deadline must be 1–365 days'); return }
     if (limit != null && !(limit > 0)) { toast.error('Partner approval amount must be greater than zero, or left blank'); return }
+    const hours = Number(escalate)
+    if (!Number.isInteger(hours) || hours < 4 || hours > 720) { toast.error('Escalation time must be 4–720 hours'); return }
     try {
-      await save.mutateAsync({ require_line_manager: requireManager, leadership_threshold: limit, retirement_due_days: days, retirement_due_basis: dueBasis })
+      await save.mutateAsync({ require_line_manager: requireManager, leadership_threshold: limit, retirement_due_days: days, retirement_due_basis: dueBasis, escalate_after_hours: hours })
       toast.success('Fund settings saved')
     } catch (err) {
       toast.error('Could not save settings', { description: errorMessage(err) })
@@ -58,14 +62,19 @@ export function FundRulesCard() {
       </div>
       <ToggleSwitch
         checked={requireManager} onChange={setRequireManager} icon={UserCheck}
-        label="Line manager approves first"
-        hint="Requests go to the requester's manager first — only if that manager is an approver (Managing Partner, Partner, Finance or HR manager). Otherwise this step is skipped."
+        label="Line manager endorses first"
+        hint="Requests go to the requester's line manager to endorse (confirm it's genuine work), then to Finance or partners for final approval. Set line managers under HR → Reporting Lines."
       />
       <p className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">Nobody can approve, pay out or review their own request. This can't be switched off.</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label>Partner approval for amounts of (₦)</Label>
           <Input type="number" min={0} placeholder="Leave blank to never require it" value={threshold} onChange={(e) => setThreshold(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Escalate waiting approvals after (hours)</Label>
+          <Input type="number" min={4} max={720} value={escalate} onChange={(e) => setEscalate(e.target.value)} />
+          <p className="text-xs text-muted-foreground">A reminder goes at half this time; then any approver for the branch can act (leave goes to HR).</p>
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">

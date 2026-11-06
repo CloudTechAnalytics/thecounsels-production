@@ -25,6 +25,7 @@ export interface EmployeeFormValues {
   job_title_id: string
   branch_id: string
   manager_employee_id: string
+  reports_to_no_one: boolean
   employment_type: string
   employment_status: string
   start_date: string
@@ -39,7 +40,7 @@ export function toFormValues(e?: EmployeeRecord | null): EmployeeFormValues {
     emergency_contact_name: e?.emergency_contact_name ?? '', emergency_contact_phone: e?.emergency_contact_phone ?? '',
     emergency_contact_relationship: e?.emergency_contact_relationship ?? '',
     department_id: e?.department_id ?? '', job_title_id: e?.job_title_id ?? '', branch_id: e?.branch_id ?? '',
-    manager_employee_id: e?.manager_employee_id ?? '', employment_type: e?.employment_type ?? 'full_time',
+    manager_employee_id: e?.manager_employee_id ?? '', reports_to_no_one: e?.reports_to_no_one ?? false, employment_type: e?.employment_type ?? 'full_time',
     employment_status: e?.employment_status ?? 'active', start_date: e?.start_date ?? '', end_date: e?.end_date ?? '', notes: e?.notes ?? '',
   }
 }
@@ -55,7 +56,7 @@ export function toPatch(v: EmployeeFormValues, linked: boolean): EmployeeInput &
     emergency_contact_name: n(v.emergency_contact_name), emergency_contact_phone: n(v.emergency_contact_phone),
     emergency_contact_relationship: n(v.emergency_contact_relationship),
     department_id: n(v.department_id), job_title_id: n(v.job_title_id), branch_id: n(v.branch_id),
-    manager_employee_id: n(v.manager_employee_id), employment_type: v.employment_type, employment_status: v.employment_status,
+    manager_employee_id: v.reports_to_no_one ? null : n(v.manager_employee_id), reports_to_no_one: v.reports_to_no_one, employment_type: v.employment_type, employment_status: v.employment_status,
     start_date: n(v.start_date), end_date: n(v.end_date), notes: n(v.notes),
   }
 }
@@ -78,7 +79,7 @@ function Pick({ label, value, onChange, options, placeholder, disabled }: {
 }
 
 export function PersonalFields({ v, set, linked, readOnly }: { v: EmployeeFormValues; set: (patch: Partial<EmployeeFormValues>) => void; linked: boolean; readOnly?: boolean }) {
-  const text = (label: string, k: keyof EmployeeFormValues, type = 'text', disabled = false) => (
+  const text = (label: string, k: Exclude<keyof EmployeeFormValues, 'reports_to_no_one'>, type = 'text', disabled = false) => (
     <div className="space-y-1.5">
       <Label>{label}</Label>
       <Input type={type} value={v[k]} onChange={(e) => set({ [k]: e.target.value })} disabled={readOnly || disabled} />
@@ -117,14 +118,27 @@ export function EmploymentFields({ v, set, selfId, readOnly }: { v: EmployeeForm
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Pick label="Department" value={v.department_id} onChange={(x) => set({ department_id: x })} placeholder="No department" disabled={readOnly}
+        <Pick label="Department" value={v.department_id} onChange={(x) => {
+          // New department: suggest its head as line manager if none is chosen yet.
+          const head = (departments ?? []).find((d) => d.id === x)?.head_employee_id
+          set({ department_id: x, ...(head && head !== selfId && !v.manager_employee_id && !v.reports_to_no_one ? { manager_employee_id: head } : {}) })
+        }} placeholder="No department" disabled={readOnly}
           options={(departments ?? []).map((d) => ({ value: d.id, label: d.name }))} />
         <Pick label="Job title" value={v.job_title_id} onChange={(x) => set({ job_title_id: x })} placeholder="No job title" disabled={readOnly}
           options={(titles ?? []).map((t) => ({ value: t.id, label: t.name }))} />
         <Pick label="Branch / work location" value={v.branch_id} onChange={(x) => set({ branch_id: x })} placeholder="No branch" disabled={readOnly}
           options={(branches ?? []).map((b) => ({ value: b.id, label: b.name }))} />
-        <Pick label="Reporting manager" value={v.manager_employee_id} onChange={(x) => set({ manager_employee_id: x })} placeholder="No manager" disabled={readOnly}
-          options={managers.map((m) => ({ value: m.id, label: `${m.fullName}${m.hasLogin ? '' : ' (no login)'}` }))} />
+        <div className="space-y-1.5">
+          <Pick label="Line manager (reports to)" value={v.reports_to_no_one ? '' : v.manager_employee_id} onChange={(x) => set({ manager_employee_id: x, reports_to_no_one: false })}
+            placeholder={v.reports_to_no_one ? 'Reports to no one' : 'Choose a line manager'} disabled={readOnly || v.reports_to_no_one}
+            options={managers.map((m) => ({ value: m.id, label: `${m.fullName}${m.hasLogin ? '' : ' (no login)'}` }))} />
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+            <input type="checkbox" className="h-3.5 w-3.5 accent-primary" checked={v.reports_to_no_one} disabled={readOnly}
+              onChange={(e) => set({ reports_to_no_one: e.target.checked, ...(e.target.checked ? { manager_employee_id: '' } : {}) })} />
+            Top of the firm — reports to no one (e.g. Managing Partner)
+          </label>
+          {!v.reports_to_no_one && <p className="text-xs text-muted-foreground">Approves their leave and endorses their fund requests.</p>}
+        </div>
         <Pick label="Employment type" value={v.employment_type} onChange={(x) => set({ employment_type: x || 'full_time' })} placeholder="Full-time" disabled={readOnly}
           options={EMPLOYMENT_TYPES} />
         <Pick label="Employment status" value={v.employment_status} onChange={(x) => set({ employment_status: x || 'active' })} placeholder="Active" disabled={readOnly}

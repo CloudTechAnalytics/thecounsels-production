@@ -5,7 +5,10 @@ import { Wallet, Banknote, ReceiptText, CalendarClock, Inbox, HandCoins } from '
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useApprovalRights } from '@/features/hr/hooks/use-approval-rules'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
-import { useFundRequests, useFundApprovalRights } from '@/features/funds/hooks/use-funds'
+import { useFundRequests, useFundApprovalRights, useDecideFundRequest } from '@/features/funds/hooks/use-funds'
+import { fundRequestPath } from '@/features/funds/lib/next-step'
+import type { FundRequest } from '@/features/funds/types'
+import { formatNaira } from '@/shared/lib/format'
 import { useAllLeaveRequests, useAllHrRequests, useLeaveTypes, useReviewLeaveRequest } from '@/features/hr/hooks/use-hr'
 import { DelegationsCard } from '@/features/funds/components/fund-settings'
 import { RequestList } from '@/features/funds/components/request-list'
@@ -18,6 +21,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
 import { cn } from '@/shared/lib/utils'
+import { useMyReports } from '@/features/hr/hooks/use-my-reports'
 
 function Section({ title, count, icon: Icon, children }: { title: string; count: number; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
   return (
@@ -32,12 +36,66 @@ function Section({ title, count, icon: Icon, children }: { title: string; count:
   )
 }
 
+/** Fund approvals with tick boxes — approve several in one go (busy partners). */
+function BulkFundApprove({ requests, loading }: { requests: FundRequest[]; loading: boolean }) {
+  const { activeOrgId } = useAuth()
+  const decide = useDecideFundRequest(activeOrgId)
+  const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [busy, setBusy] = React.useState(false)
+  React.useEffect(() => setSelected((s) => new Set([...s].filter((id) => requests.some((r) => r.id === id)))), [requests])
+  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const approveSelected = async () => {
+    setBusy(true)
+    let ok = 0
+    const failed: string[] = []
+    for (const id of selected) {
+      try { await decide.mutateAsync({ id, decision: 'approve' }); ok++ }
+      catch (err) { failed.push(`${requests.find((r) => r.id === id)?.request_number ?? 'A request'}: ${errorMessage(err)}`) }
+    }
+    setBusy(false)
+    setSelected(new Set())
+    if (ok) toast.success(`${ok} request${ok === 1 ? '' : 's'} approved`, { description: 'Each moves to its next step.' })
+    if (failed.length) toast.error(`${failed.length} could not be approved`, { description: failed.join(' · ') })
+  }
+  if (loading) return <div className="space-y-2 p-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+  if (requests.length === 0) return <p className="p-6 text-center text-sm text-muted-foreground">Nothing waiting for your approval.</p>
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+          <input type="checkbox" className="h-4 w-4 accent-primary" checked={selected.size === requests.length}
+            onChange={(e) => setSelected(e.target.checked ? new Set(requests.map((r) => r.id)) : new Set())} />
+          Select all
+        </label>
+        <Button size="sm" disabled={selected.size === 0} loading={busy} onClick={approveSelected}>Approve selected ({selected.size})</Button>
+      </div>
+      <ul className="divide-y divide-border">
+        {requests.map((r) => (
+          <li key={r.id} className="flex items-center gap-3 px-4 py-2.5">
+            <input type="checkbox" className="h-4 w-4 shrink-0 accent-primary" checked={selected.has(r.id)} onChange={() => toggle(r.id)} aria-label={`Select ${r.title}`} />
+            <Link to={fundRequestPath(r.id)} className="min-w-0 flex-1 hover:underline">
+              <span className="block truncate text-sm font-medium">{r.title}</span>
+              <span className="block truncate text-xs text-muted-foreground">
+                {[r.request_number, r.requester_name, r.chain.find((a) => a.status === 'pending')?.step_name].filter(Boolean).join(' · ')}
+              </span>
+            </Link>
+            <span className="shrink-0 text-sm font-semibold tabular-nums">{formatNaira(Number(r.approved_amount ?? r.amount))}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="px-4 py-2 text-xs text-muted-foreground">To approve a lower amount, reject or return one, open it.</p>
+    </div>
+  )
+}
+
 function LeaveQueue() {
   const { activeOrgId, userId } = useAuth()
   const { data = [], isLoading } = useAllLeaveRequests(activeOrgId)
   const { data: types } = useLeaveTypes(activeOrgId)
   const review = useReviewLeaveRequest(activeOrgId)
-  const pending = data.filter((r) => r.status === 'pending' && r.user_id !== userId)
+  const { can } = useApprovalRights()
+  const { reportUserIds } = useMyReports()
+  const pending = data.filter((r) => r.status === 'pending' && r.user_id !== userId && (can('leave') || reportUserIds.has(r.user_id)))
   const act = async (id: string, approve: boolean) => {
     try { await review.mutateAsync({ id, approve }); toast.success(approve ? 'Leave approved' : 'Leave rejected') }
     catch (err) { toast.error('Action failed', { description: errorMessage(err) }) }
@@ -103,6 +161,7 @@ export function ApprovalCentrePage() {
   const { data: requests = [], isLoading } = useFundRequests(activeOrgId)
   const { canActOn, canApproveClaim, canFinance } = useFundApprovalRights()
   const { can } = useApprovalRights()
+  const { isLineManager } = useMyReports()
   const canManageFunds = has('funds.manage')
 
   const toApprove = requests.filter(canActOn)
@@ -117,7 +176,7 @@ export function ApprovalCentrePage() {
       <PageHeader title="Approval Centre" description="Everything waiting for your decision, in one place." />
       <div className="grid gap-6 xl:grid-cols-2">
         <Section title="Fund requests to approve" count={toApprove.length} icon={Wallet}>
-          <RequestList requests={toApprove} loading={isLoading} empty="Nothing waiting for your approval." showRequester />
+          <BulkFundApprove requests={toApprove} loading={isLoading} />
         </Section>
         {canManageFunds && (
           <Section title="Approved — ready to pay out" count={toPay.length} icon={Banknote}>
@@ -139,7 +198,7 @@ export function ApprovalCentrePage() {
             <RequestList requests={claimsToPay} loading={isLoading} empty="No approved reimbursements to pay." showRequester />
           </Section>
         )}
-        {has('leave.manage') && can('leave') && <LeaveQueue />}
+        {((has('leave.manage') && can('leave')) || isLineManager) && <LeaveQueue />}
         {has('hr_requests.manage') && can('hr_request') && <HrRequestQueue />}
       </div>
       <div className="mt-8">

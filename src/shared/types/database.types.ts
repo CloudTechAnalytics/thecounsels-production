@@ -1216,6 +1216,7 @@ export interface Database {
           job_title_id: string | null
           branch_id: string | null
           manager_employee_id: string | null
+          reports_to_no_one: boolean
           employment_type: string
           employment_status: string
           start_date: string | null
@@ -1244,6 +1245,7 @@ export interface Database {
           job_title_id?: string | null
           branch_id?: string | null
           manager_employee_id?: string | null
+          reports_to_no_one?: boolean
           employment_type?: string
           employment_status?: string
           start_date?: string | null
@@ -1473,6 +1475,7 @@ export interface Database {
           organization_id: string
           require_line_manager: boolean
           leadership_threshold: number | null
+          escalate_after_hours: number
           retirement_due_days: number
           retirement_due_basis: string
           updated_by: string | null
@@ -1482,6 +1485,7 @@ export interface Database {
           organization_id: string
           require_line_manager?: boolean
           leadership_threshold?: number | null
+          escalate_after_hours?: number
           retirement_due_days?: number
           retirement_due_basis?: string
           updated_by?: string | null
@@ -3037,6 +3041,18 @@ export interface Database {
       pay_fund_reimbursement: {
         Args: { p_claim: string; p_paid_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null }
         Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      my_direct_reports: {
+        Args: { p_org: string }
+        Returns: { employee_id: string; user_id: string | null; full_name: string }[]
+      }
+      set_line_managers: {
+        Args: { p_org: string; p_employee_ids: string[]; p_manager: string | null }
+        Returns: number
+      }
+      line_manager_user: {
+        Args: { p_org: string; p_user: string }
+        Returns: string | null
       }
       approval_candidates: {
         Args: { p_org: string }

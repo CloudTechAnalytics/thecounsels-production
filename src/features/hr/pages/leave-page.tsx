@@ -18,6 +18,7 @@ import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
 import { cn } from '@/shared/lib/utils'
 import { useApprovalRights } from '@/features/hr/hooks/use-approval-rules'
+import { useMyReports } from '@/features/hr/hooks/use-my-reports'
 
 /** Every configured leave type, always — not just ones you've already
  * used — so a firm can see the full policy (Annual/Sick/Maternity/etc.)
@@ -130,6 +131,7 @@ function TeamLeaveTab() {
   const { data: leaveTypes } = useLeaveTypes(activeOrgId)
   const review = useReviewLeaveRequest(activeOrgId)
   const { can } = useApprovalRights()
+  const { reportUserIds } = useMyReports()
   const typeName = (id: string) => leaveTypes?.find((t) => t.id === id)?.name ?? 'Leave'
 
   const act = async (id: string, approve: boolean) => {
@@ -159,7 +161,7 @@ function TeamLeaveTab() {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {r.status === 'pending' && r.user_id !== userId && can('leave') ? (
+                  {r.status === 'pending' && r.user_id !== userId && (can('leave') || reportUserIds.has(r.user_id)) ? (
                     <>
                       <Button size="sm" variant="outline" onClick={() => act(r.id, false)}>Reject</Button>
                       <Button size="sm" onClick={() => act(r.id, true)}>Approve</Button>
@@ -188,7 +190,9 @@ function TeamLeaveTab() {
 
 export function LeavePage() {
   const { has } = usePermissions()
-  const canManage = has('leave.manage')
+  const { isLineManager } = useMyReports()
+  // HR sees the firm's (branch's) leave; a line manager sees their own team's.
+  const canManage = has('leave.manage') || isLineManager
   const [tab, setTab] = React.useState<'mine' | 'team'>('mine')
 
   return (
@@ -205,7 +209,7 @@ export function LeavePage() {
                 tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              {t === 'mine' ? 'My Leave' : 'Team Leave'}
+              {t === 'mine' ? 'My Leave' : has('leave.manage') ? 'Team Leave' : 'My Team'}
             </button>
           ))}
         </div>
@@ -213,7 +217,7 @@ export function LeavePage() {
       {tab === 'mine' || !canManage ? <MyLeaveTab /> : <TeamLeaveTab />}
       {!canManage && (
         <p className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <CalendarClock className="h-3.5 w-3.5" /> Only HR and leadership can review the team's leave requests.
+          <CalendarClock className="h-3.5 w-3.5" /> Your line manager approves your leave.
         </p>
       )}
     </div>

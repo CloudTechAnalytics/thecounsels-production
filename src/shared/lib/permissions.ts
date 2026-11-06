@@ -88,6 +88,7 @@ export const PERMISSION_KEYS = [
   'payroll.manage',
   'payroll.view_own',
   'inventory.manage',
+  'power.manage',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]

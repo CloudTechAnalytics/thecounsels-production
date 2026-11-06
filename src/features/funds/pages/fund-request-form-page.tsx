@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useFundRequests } from '@/features/funds/hooks/use-funds'
@@ -10,6 +10,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 /** /hr/funds/new and /hr/funds/:id/edit — the request form on its own page. */
 export function FundRequestFormPage() {
   const { id } = useParams<{ id: string }>()
+  const [params] = useSearchParams()
   const navigate = useNavigate()
   const { activeOrgId, userId } = useAuth()
   const { data: requests, isLoading } = useFundRequests(activeOrgId)
@@ -42,6 +43,7 @@ export function FundRequestFormPage() {
       <Card className="p-6">
         <FundRequestForm
           request={request}
+          initial={id ? undefined : { title: params.get('title') ?? undefined, category: params.get('category') ?? undefined }}
           onDone={(rec) => navigate(`/hr/funds/${rec.id}`)}
           onCancel={() => navigate(back)}
         />

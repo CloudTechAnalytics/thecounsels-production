@@ -49,7 +49,7 @@ function ClientSelect({ value, onChange }: { value: string; onChange: (v: string
 }
 
 /** New request, or editing a draft / a returned or recalled request — laid out on a page. */
-export function FundRequestForm({ request, onDone, onCancel }: { request?: FundRequest | null; onDone: (rec: FundRequestRow) => void; onCancel: () => void }) {
+export function FundRequestForm({ request, initial, onDone, onCancel }: { request?: FundRequest | null; initial?: { title?: string; category?: string }; onDone: (rec: FundRequestRow) => void; onCancel: () => void }) {
   const { activeOrgId } = useAuth()
   const { has } = usePermissions()
   const { data: settings } = useFundSettings(activeOrgId)
@@ -82,8 +82,8 @@ export function FundRequestForm({ request, onDone, onCancel }: { request?: FundR
   const [submitting, setSubmitting] = React.useState<'draft' | 'submit' | null>(null)
 
   React.useEffect(() => {
-    setTitle(request?.title ?? '')
-    setCategory(request?.category ?? FUND_CATEGORIES[0].value)
+    setTitle(request?.title ?? initial?.title ?? '')
+    setCategory(request?.category ?? initial?.category ?? FUND_CATEGORIES[0].value)
     setAmount(request ? String(request.amount) : '')
     setNeededBy(request?.needed_by ?? '')
     setMatterId(request?.matter_id ?? '')

@@ -36,11 +36,12 @@ export const FUND_CATEGORIES = [
   { value: 'court_filing', label: 'Filing fees' },
   { value: 'client_expense', label: 'Client-related expenses' },
   { value: 'office_supplies', label: 'Office expenses' },
+  { value: 'utilities', label: 'Power, fuel & utilities' },
   { value: 'travel', label: 'Travel expenses' },
   { value: 'other', label: 'Other expenses' },
 ]
 // Categories from before the list was aligned with the spec — still shown correctly on old requests.
-const LEGACY_CATEGORY_LABELS: Record<string, string> = { utilities: 'Utilities & bills', training: 'Training', staff_welfare: 'Staff welfare' }
+const LEGACY_CATEGORY_LABELS: Record<string, string> = { training: 'Training', staff_welfare: 'Staff welfare' }
 
 export const fundCategoryLabel = (value: string) =>
   FUND_CATEGORIES.find((c) => c.value === value)?.label ?? LEGACY_CATEGORY_LABELS[value] ?? value

@@ -1319,6 +1319,93 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['approval_workflow_steps']['Insert']>
         Relationships: []
       }
+      power_sources: {
+        Row: {
+          id: string
+          organization_id: string
+          branch_id: string | null
+          kind: 'grid' | 'generator' | 'solar' | 'inverter'
+          name: string
+          meter_no: string | null
+          capacity: string | null
+          fuel_type: 'diesel' | 'petrol' | 'gas' | null
+          tank_litres: number | null
+          service_interval_hours: number | null
+          hour_meter: number | null
+          last_service_on: string | null
+          last_service_hours: number | null
+          service_reminded_at: string | null
+          active: boolean
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          branch_id?: string | null
+          kind: 'grid' | 'generator' | 'solar' | 'inverter'
+          name: string
+          meter_no?: string | null
+          capacity?: string | null
+          fuel_type?: 'diesel' | 'petrol' | 'gas' | null
+          tank_litres?: number | null
+          service_interval_hours?: number | null
+          hour_meter?: number | null
+          last_service_on?: string | null
+          last_service_hours?: number | null
+          active?: boolean
+          notes?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          kind?: 'grid' | 'generator' | 'solar' | 'inverter'
+          name?: string
+          meter_no?: string | null
+          capacity?: string | null
+          fuel_type?: 'diesel' | 'petrol' | 'gas' | null
+          tank_litres?: number | null
+          service_interval_hours?: number | null
+          hour_meter?: number | null
+          last_service_on?: string | null
+          last_service_hours?: number | null
+          active?: boolean
+          notes?: string | null
+        }
+        Relationships: []
+      }
+      power_logs: {
+        Row: {
+          id: string
+          organization_id: string
+          source_id: string
+          branch_id: string | null
+          kind: 'token' | 'bill' | 'fuel' | 'runtime' | 'service' | 'outage' | 'reading'
+          log_date: string
+          amount: number | null
+          quantity: number | null
+          meter_reading: number | null
+          vendor: string | null
+          reference: string | null
+          note: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          organization_id: string
+          source_id: string
+          kind: 'token' | 'bill' | 'fuel' | 'runtime' | 'service' | 'outage' | 'reading'
+          log_date?: string
+          amount?: number | null
+          quantity?: number | null
+          meter_reading?: number | null
+          vendor?: string | null
+          reference?: string | null
+          note?: string | null
+        }
+        Update: Record<string, never>
+        Relationships: []
+      }
       inventory_items: {
         Row: {
           id: string

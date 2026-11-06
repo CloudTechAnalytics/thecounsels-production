@@ -44,6 +44,7 @@ export function resolveNotificationHref(n: Pick<NotificationRow, 'entity_type' |
   if (n.entity_type === 'fund_request' && n.entity_id) return `/hr/funds/${n.entity_id}`
   if (n.entity_type === 'inventory_item' && n.entity_id) return `/hr/inventory/${n.entity_id}`
   if (n.entity_type === 'inventory_request') return '/hr/inventory?tab=requests'
+  if (n.entity_type === 'power_source') return '/hr/power'
   if (n.entity_type === 'payroll_run') return '/hr/payslips'
   // Support-session request/grant/deny (0133) — the banner that actually
   // handles this is global (organization-layout.tsx), so any page works;

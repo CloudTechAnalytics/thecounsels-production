@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { LayoutGrid, UserSquare2, CalendarClock, FolderLock, Inbox, Megaphone, FileBarChart, ClipboardCheck, Wallet, Banknote, ReceiptText, ListChecks, Settings2, Scale, type LucideIcon, Network, Package } from 'lucide-react'
+import { LayoutGrid, UserSquare2, CalendarClock, FolderLock, Inbox, Megaphone, FileBarChart, ClipboardCheck, Wallet, Banknote, ReceiptText, ListChecks, Settings2, Scale, type LucideIcon, Network, Package, Zap } from 'lucide-react'
 import type { PermissionKey } from '@/shared/lib/permissions'
 import { LeaveNavBadge } from '@/features/hr/components/leave-nav-badge'
 import { AnnouncementsNavBadge } from '@/features/hr/components/announcements-nav-badge'
@@ -56,6 +56,7 @@ export const HR_NAVIGATION: HrNavSection[] = [
     heading: 'Office',
     items: [
       { label: 'Inventory', to: '/hr/inventory', icon: Package, permission: 'leave.request' },
+      { label: 'Electricity & Power', to: '/hr/power', icon: Zap, permission: 'power.manage' },
     ],
   },
   {

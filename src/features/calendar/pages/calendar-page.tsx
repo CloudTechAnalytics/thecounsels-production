@@ -111,10 +111,11 @@ export function CalendarPage() {
     setPresetDate(undefined)
     setFormOpen(true)
   }
-  // Tasks aren't editable from the calendar (no due-date-only edit surface
-  // here) — clicking one takes you to the Tasks page instead, same as
-  // clicking a notification about one would.
-  const openTask = () => navigate('/tasks')
+  // Tasks aren't edited on the calendar — clicking one opens that task's own
+  // page, not the whole task list.
+  const openTask = (id: string) => navigate(`/tasks/${id}`)
+  // A busy day shows three items; "+N more" expands that day to all of them.
+  const [expandedDay, setExpandedDay] = React.useState<string | null>(null)
   const openAppointment = (a: AppointmentRow) => {
     if (a.matter && isMatterClosed(a.matter.status)) {
       toast.info('This appointment is on a closed matter and can no longer be edited.')
@@ -237,14 +238,14 @@ export function CalendarPage() {
                     {format(day, 'd')}
                   </span>
                   <div className="mt-1 space-y-1">
-                    {items.slice(0, 3).map((item) => (
+                    {(expandedDay === key ? items : items.slice(0, 3)).map((item) => (
                       <div
                         key={`${item.kind}-${item.id}`}
                         onClick={(e) => {
                           e.stopPropagation()
                           if (item.kind === 'hearing') openHearing(item.data)
                           else if (item.kind === 'appointment') openAppointment(item.data)
-                          else openTask()
+                          else openTask(item.id)
                         }}
                         className={cn(
                           'flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] font-medium',
@@ -265,7 +266,15 @@ export function CalendarPage() {
                         <span className="truncate">{item.time ? `${item.time} ` : ''}{item.title}</span>
                       </div>
                     ))}
-                    {items.length > 3 && <p className="px-1 text-[11px] text-muted-foreground">+{items.length - 3} more</p>}
+                    {items.length > 3 && (
+                      <p
+                        role="button"
+                        onClick={(e) => { e.stopPropagation(); setExpandedDay(expandedDay === key ? null : key) }}
+                        className="rounded px-1 text-[11px] font-medium text-primary hover:bg-primary/10"
+                      >
+                        {expandedDay === key ? 'Show less' : `+${items.length - 3} more`}
+                      </p>
+                    )}
                   </div>
                 </button>
               )
@@ -288,7 +297,7 @@ export function CalendarPage() {
                 <Card
                   key={`${item.kind}-${item.id}`}
                   className="flex cursor-pointer items-center gap-4 p-3 hover:border-primary/40"
-                  onClick={() => (isHearing ? openHearing(item.data) : isAppointment ? openAppointment(item.data) : openTask())}
+                  onClick={() => (isHearing ? openHearing(item.data) : isAppointment ? openAppointment(item.data) : openTask(item.id))}
                 >
                   <div
                     className={cn(

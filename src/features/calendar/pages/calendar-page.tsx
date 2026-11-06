@@ -28,6 +28,7 @@ import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
 import { toast } from '@/shared/components/ui/sonner'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip'
 import { cn } from '@/shared/lib/utils'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -220,7 +221,7 @@ export function CalendarPage() {
               const key = format(day, 'yyyy-MM-dd')
               const items = byDay.get(key) ?? []
               const inMonth = isSameMonth(day, cursor)
-              return (
+              const cell = (
                 <button
                   key={key}
                   onClick={() => openNewOn(day)}
@@ -277,6 +278,34 @@ export function CalendarPage() {
                     )}
                   </div>
                 </button>
+              )
+              if (items.length === 0) return cell
+              // Hovering a busy day previews everything on it.
+              return (
+                <Tooltip key={key} delayDuration={250}>
+                  <TooltipTrigger asChild>{cell}</TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs p-3">
+                    <p className="mb-1.5 text-xs font-semibold">{format(day, 'EEEE d MMMM')}</p>
+                    <ul className="space-y-1">
+                      {items.map((item) => (
+                        <li key={`${item.kind}-${item.id}`} className="flex gap-2 text-xs">
+                          <span className="w-10 shrink-0 tabular-nums text-muted-foreground">{item.time || 'Due'}</span>
+                          <span className="min-w-0">
+                            <span className="font-medium">{item.title}</span>
+                            <span className="block text-[11px] text-muted-foreground">
+                              {item.kind === 'hearing'
+                                ? ['Hearing', item.data.court, item.data.matter?.matter_number].filter(Boolean).join(' · ')
+                                : item.kind === 'appointment'
+                                  ? ['Appointment', item.data.location].filter(Boolean).join(' · ')
+                                  : ['Task', item.data.matter?.matter_number].filter(Boolean).join(' · ')}
+                            </span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-1.5 text-[11px] text-muted-foreground">Click an item to open it.</p>
+                  </TooltipContent>
+                </Tooltip>
               )
             })}
           </div>

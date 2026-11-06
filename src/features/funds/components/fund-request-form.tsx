@@ -21,10 +21,8 @@ export const ATTACHMENT_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/pn
   'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
 
-function MatterSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const { activeOrgId } = useAuth()
-  const { data: allMatters } = useMatters(activeOrgId, {})
-  const matters = React.useMemo(() => (allMatters ?? []).filter((m) => !isMatterClosed(m.status) || m.id === value), [allMatters, value])
+/** Matters to pick from — only the chosen client's, when a client is chosen. */
+function MatterSelect({ value, onChange, matters }: { value: string; onChange: (v: string) => void; matters: { id: string; matter_number: string | null; title: string }[] }) {
   return (
     <Select value={value || NONE} onValueChange={(v) => onChange(v === NONE ? '' : v)}>
       <SelectTrigger><SelectValue placeholder="No matter" /></SelectTrigger>
@@ -62,6 +60,23 @@ export function FundRequestForm({ request, onDone, onCancel }: { request?: FundR
   const [neededBy, setNeededBy] = React.useState('')
   const [matterId, setMatterId] = React.useState('')
   const [clientId, setClientId] = React.useState('')
+  const { data: allMatters } = useMatters(activeOrgId, {})
+  const openMatters = React.useMemo(() => (allMatters ?? []).filter((m) => !isMatterClosed(m.status) || m.id === matterId), [allMatters, matterId])
+  // Picking a client narrows the matters to theirs (and picks it when there's only one);
+  // picking a matter fills in its client.
+  const matterOptions = React.useMemo(() => (clientId ? openMatters.filter((m) => m.client_id === clientId) : openMatters), [openMatters, clientId])
+  const chooseClient = (c: string) => {
+    setClientId(c)
+    if (!c) return
+    const theirs = openMatters.filter((m) => m.client_id === c)
+    if (theirs.length === 1) setMatterId(theirs[0].id)
+    else if (!theirs.some((m) => m.id === matterId)) setMatterId('')
+  }
+  const chooseMatter = (m: string) => {
+    setMatterId(m)
+    const client = openMatters.find((x) => x.id === m)?.client_id
+    if (client) setClientId(client)
+  }
   const [purpose, setPurpose] = React.useState('')
   const [files, setFiles] = React.useState<File[]>([])
   const [submitting, setSubmitting] = React.useState<'draft' | 'submit' | null>(null)
@@ -148,13 +163,14 @@ export function FundRequestForm({ request, onDone, onCancel }: { request?: FundR
             {has('clients.view') && (
               <div className="space-y-1.5">
                 <Label>Client (optional)</Label>
-                <ClientSelect value={clientId} onChange={setClientId} />
+                <ClientSelect value={clientId} onChange={chooseClient} />
               </div>
             )}
             {has('matters.view') && (
               <div className="space-y-1.5">
                 <Label>Matter (optional)</Label>
-                <MatterSelect value={matterId} onChange={setMatterId} />
+                <MatterSelect value={matterId} onChange={chooseMatter} matters={matterOptions} />
+                {clientId && matterOptions.length === 0 && <p className="text-xs text-muted-foreground">This client has no open matters.</p>}
               </div>
             )}
           </div>

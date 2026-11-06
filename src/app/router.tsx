@@ -74,6 +74,9 @@ import { FundRequestPage } from '@/features/funds/pages/fund-request-page'
 import { FundRequestFormPage } from '@/features/funds/pages/fund-request-form-page'
 import { HrFinanceSettingsPage } from '@/features/hr/pages/hr-finance-settings-page'
 import { TeamStructurePage } from '@/features/hr/pages/team-structure-page'
+import { InventoryPage } from '@/features/inventory/pages/inventory-page'
+import { InventoryItemPage } from '@/features/inventory/pages/inventory-item-page'
+import { InventoryItemFormPage } from '@/features/inventory/pages/inventory-item-form-page'
 import { HrDocumentsPage } from '@/features/hr/pages/hr-documents-page'
 import { CircularsPage } from '@/features/hr/pages/circulars-page'
 import { CircularNewPage } from '@/features/hr/pages/circular-new-page'
@@ -304,6 +307,10 @@ export const router = createBrowserRouter([
                       { path: 'announcements', element: withPermission(<CircularsPage />, 'hr_announcements.view') },
                       { path: 'announcements/new', element: withPermission(<CircularNewPage />, 'hr_announcements.manage') },
                       { path: 'announcements/:id', element: withPermission(<CircularDetailPage />, 'hr_announcements.view') },
+                      { path: 'inventory', element: withPermission(<InventoryPage />, 'leave.request') },
+                      { path: 'inventory/new', element: withPermission(<InventoryItemFormPage />, 'inventory.manage') },
+                      { path: 'inventory/:id', element: withPermission(<InventoryItemPage />, 'leave.request') },
+                      { path: 'inventory/:id/edit', element: withPermission(<InventoryItemFormPage />, 'inventory.manage') },
                       { path: 'reports', element: withPermission(<HrReportsPage />, 'hr.view_reports') },
                     ],
                   },

@@ -1319,6 +1319,117 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['approval_workflow_steps']['Insert']>
         Relationships: []
       }
+      inventory_items: {
+        Row: {
+          id: string
+          organization_id: string
+          branch_id: string | null
+          kind: 'asset' | 'supply'
+          name: string
+          category: string | null
+          tag_no: string | null
+          serial_no: string | null
+          description: string | null
+          unit: string | null
+          quantity: number
+          reorder_level: number | null
+          unit_cost: number | null
+          purchase_date: string | null
+          purchase_cost: number | null
+          supplier: string | null
+          warranty_until: string | null
+          condition: string | null
+          status: 'in_store' | 'assigned' | 'repair' | 'disposed' | 'lost'
+          assigned_employee_id: string | null
+          assigned_at: string | null
+          assignment_acknowledged_at: string | null
+          location: string | null
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          branch_id?: string | null
+          kind: 'asset' | 'supply'
+          name: string
+          category?: string | null
+          tag_no?: string | null
+          serial_no?: string | null
+          description?: string | null
+          unit?: string | null
+          reorder_level?: number | null
+          unit_cost?: number | null
+          purchase_date?: string | null
+          purchase_cost?: number | null
+          supplier?: string | null
+          warranty_until?: string | null
+          condition?: string | null
+          location?: string | null
+          notes?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          name?: string
+          category?: string | null
+          tag_no?: string | null
+          serial_no?: string | null
+          description?: string | null
+          unit?: string | null
+          reorder_level?: number | null
+          unit_cost?: number | null
+          purchase_date?: string | null
+          purchase_cost?: number | null
+          supplier?: string | null
+          warranty_until?: string | null
+          condition?: string | null
+          location?: string | null
+          notes?: string | null
+        }
+        Relationships: []
+      }
+      inventory_movements: {
+        Row: {
+          id: string
+          organization_id: string
+          item_id: string
+          kind: string
+          quantity: number | null
+          balance_after: number | null
+          employee_id: string | null
+          request_id: string | null
+          unit_cost: number | null
+          note: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: { organization_id: string; item_id: string; kind: string }
+        Update: Record<string, never>
+        Relationships: []
+      }
+      inventory_requests: {
+        Row: {
+          id: string
+          organization_id: string
+          branch_id: string | null
+          user_id: string
+          item_id: string | null
+          item_name: string
+          quantity: number
+          reason: string | null
+          status: 'pending' | 'approved' | 'rejected' | 'issued' | 'cancelled'
+          decided_by: string | null
+          decided_at: string | null
+          decision_note: string | null
+          issued_by: string | null
+          issued_at: string | null
+          created_at: string
+        }
+        Insert: { organization_id: string; user_id: string; item_name: string }
+        Update: Record<string, never>
+        Relationships: []
+      }
       hr_announcement_recipients: {
         Row: {
           announcement_id: string
@@ -3066,6 +3177,24 @@ export interface Database {
         Args: { p_claim: string; p_paid_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null }
         Returns: Database['public']['Tables']['fund_requests']['Row']
       }
+      inventory_move: {
+        Args: { p_item: string; p_kind: string; p_quantity?: number | null; p_employee?: string | null; p_note?: string | null; p_unit_cost?: number | null; p_condition?: string | null }
+        Returns: Database['public']['Tables']['inventory_items']['Row']
+      }
+      acknowledge_asset: { Args: { p_item: string }; Returns: undefined }
+      request_inventory: {
+        Args: { p_org: string; p_item: string | null; p_item_name: string | null; p_quantity: number; p_reason?: string | null }
+        Returns: Database['public']['Tables']['inventory_requests']['Row']
+      }
+      decide_inventory_request: {
+        Args: { p_id: string; p_approve: boolean; p_note?: string | null }
+        Returns: Database['public']['Tables']['inventory_requests']['Row']
+      }
+      issue_inventory_request: {
+        Args: { p_id: string; p_item?: string | null }
+        Returns: Database['public']['Tables']['inventory_requests']['Row']
+      }
+      cancel_inventory_request: { Args: { p_id: string }; Returns: undefined }
       send_circular: {
         Args: {
           p_org: string; p_title: string; p_body: string; p_audience_type: string

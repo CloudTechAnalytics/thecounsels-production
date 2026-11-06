@@ -6,7 +6,7 @@ import { supabase } from '@/shared/lib/supabase'
 import type { Database } from '@/shared/types/database.types'
 
 export type ApprovalRule = Database['public']['Tables']['approval_rules']['Row']
-export type ApprovalArea = 'leave' | 'hr_request' | 'payroll' | 'salary' | 'fund_finance' | 'reimbursement'
+export type ApprovalArea = 'leave' | 'hr_request' | 'payroll' | 'salary' | 'fund_finance' | 'reimbursement' | 'inventory'
 export interface ApprovalCandidate { area: string; kind: string; value: string; label: string; detail: string | null }
 
 /** The areas a firm can assign approvers for, with the permission that
@@ -18,6 +18,7 @@ export const APPROVAL_AREAS: { area: ApprovalArea; label: string; description: s
   { area: 'hr_request', label: 'HR requests', description: 'Handles letters, records updates and other HR requests.', permission: 'hr_requests.manage' },
   { area: 'payroll', label: 'Payroll approval', description: 'Approves the monthly payroll another payroll manager prepared.', permission: 'payroll.manage' },
   { area: 'salary', label: 'Salary changes', description: 'Sets and changes staff salaries and bank details.', permission: 'payroll.manage' },
+  { area: 'inventory', label: 'Inventory requests', description: 'Approves staff requests for office items (their line manager can too).', permission: 'inventory.manage' },
 ]
 
 const keys = {

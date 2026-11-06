@@ -1319,6 +1319,12 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['approval_workflow_steps']['Insert']>
         Relationships: []
       }
+      organization_feature_overrides: {
+        Row: { organization_id: string; feature: string; enabled: boolean; note: string | null; set_by: string | null; set_at: string }
+        Insert: { organization_id: string; feature: string; enabled: boolean }
+        Update: Record<string, never>
+        Relationships: []
+      }
       appraisal_cycles: {
         Row: {
           id: string
@@ -3400,6 +3406,7 @@ export interface Database {
         Args: { p_claim: string; p_paid_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null }
         Returns: Database['public']['Tables']['fund_requests']['Row']
       }
+      set_org_feature: { Args: { p_org: string; p_feature: string; p_enabled: boolean | null; p_note?: string | null }; Returns: undefined }
       launch_appraisal_cycle: { Args: { p_cycle: string }; Returns: number }
       close_appraisal_cycle: { Args: { p_cycle: string }; Returns: undefined }
       remind_appraisals: { Args: { p_cycle: string }; Returns: number }

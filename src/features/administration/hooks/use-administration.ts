@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/shared/lib/supabase'
 import { administrationService } from '@/features/administration/services/administration.service'
 import { planHasFeature, type PlanFeatureKey } from '@/features/administration/lib/plan-features'
 import type { BillingCycle } from '@/shared/types/database.types'
@@ -91,10 +92,32 @@ export function useSubscription(organizationId: string | null) {
  * key, so this doesn't add a second fetch). */
 export function usePlanFeature(organizationId: string | null) {
   const { data: subscription, isLoading } = useSubscription(organizationId)
-  return {
-    has: (key: PlanFeatureKey) => planHasFeature(subscription?.plan?.features, key),
-    isLoading,
+  const { data: overrides, isLoading: overridesLoading } = useFeatureOverrides(organizationId)
+  // A platform admin's per-firm override (0202) wins over the plan — same
+  // rule as org_has_feature() on the server.
+  const overrideOf = (key: PlanFeatureKey): boolean | null => {
+    const o = overrides?.find((x) => x.feature === key)
+    return o ? o.enabled : null
   }
+  return {
+    has: (key: PlanFeatureKey) => overrideOf(key) ?? planHasFeature(subscription?.plan?.features, key),
+    /** true / false when a platform admin has forced it for this firm, null when it follows the plan. */
+    overrideOf,
+    isLoading: isLoading || overridesLoading,
+  }
+}
+
+/** Per-firm feature overrides set in the Platform Console (0202). */
+export function useFeatureOverrides(organizationId: string | null) {
+  return useQuery({
+    queryKey: ['administration', 'feature-overrides', organizationId ?? 'none'],
+    enabled: Boolean(organizationId),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('organization_feature_overrides').select('*').eq('organization_id', organizationId!)
+      if (error) throw error
+      return data ?? []
+    },
+  })
 }
 
 function useInvalidateSubscription(organizationId: string | null) {

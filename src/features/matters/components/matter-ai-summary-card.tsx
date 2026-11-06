@@ -2,8 +2,7 @@ import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { Sparkles, RotateCcw, Lock, MessageCircle } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
-import { useSubscription } from '@/features/administration/hooks/use-administration'
-import { planHasFeature } from '@/features/administration/lib/plan-features'
+import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { useSummarizeMatter } from '@/features/matters/hooks/use-matter-ai'
 import type { MatterRow } from '@/features/matters/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -14,14 +13,14 @@ import { RichText } from '@/shared/components/rich-text'
 
 export function MatterAiSummaryCard({ matter, onNavigateTab }: { matter: MatterRow; onNavigateTab: (tab: 'ai-chat') => void }) {
   const { activeOrgId } = useAuth()
-  const { data: subscription } = useSubscription(activeOrgId)
+  const { has: hasFeature } = usePlanFeature(activeOrgId)
   const summarize = useSummarizeMatter(matter.id)
 
   // This only controls what's *shown*; the real enforcement is
   // server-side in the summarize-matter Edge Function, which checks the
   // org's actual plan independently and would reject the request
   // regardless of what this renders.
-  const enabled = planHasFeature(subscription?.plan?.features, 'ai_summarization')
+  const enabled = hasFeature('ai_summarization')
 
   const generate = async () => {
     try {

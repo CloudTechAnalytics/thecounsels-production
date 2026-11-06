@@ -107,6 +107,7 @@ import { BillingPage as PlatformBillingPage } from '@/features/platform/pages/bi
 import { AnalyticsPage } from '@/features/platform/pages/analytics-page'
 import { RevenueAnalyticsPage } from '@/features/platform/pages/revenue-analytics-page'
 import { OrganizationUsersPage } from '@/features/platform/pages/organization-users-page'
+import { OrganizationFeaturesPage } from '@/features/platform/pages/organization-features-page'
 import { AuditLogsPage } from '@/features/platform/pages/audit-logs-page'
 import { ErrorLogsPage } from '@/features/platform/pages/error-logs-page'
 import { PlatformUsersPage } from '@/features/platform/pages/platform-users-page'
@@ -233,6 +234,7 @@ export const router = createBrowserRouter([
                 children: [
                   { index: true, element: <PlatformDashboardPage /> },
                   { path: 'organizations', element: <OrganizationsPage /> },
+                  { path: 'organizations/:id/features', element: <OrganizationFeaturesPage /> },
                   { path: 'organization-users', element: <OrganizationUsersPage /> },
                   { path: 'subscriptions', element: <SubscriptionsPage /> },
                   { path: 'billing', element: <PlatformBillingPage /> },

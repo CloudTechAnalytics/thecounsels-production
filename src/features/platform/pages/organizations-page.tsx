@@ -17,6 +17,7 @@ import {
   Undo2,
   Eraser,
   Search,
+  SlidersHorizontal,
 } from 'lucide-react'
 import {
   usePlatformOrganizations,
@@ -29,6 +30,7 @@ import {
 import { CreateOrganizationDialog } from '@/features/platform/components/create-organization-dialog'
 import { EditOrganizationDialog } from '@/features/platform/components/edit-organization-dialog'
 import { ViewOrganizationDialog } from '@/features/platform/components/view-organization-dialog'
+import { useAllFeatureOverrides } from '@/features/platform/pages/organization-features-page'
 import { SupportSessionDialog } from '@/features/platform/components/support-session-dialog'
 import type { OrgRow } from '@/features/platform/types'
 import { PageHeader } from '@/shared/components/page-header'
@@ -109,6 +111,7 @@ function ActiveRowActions({ org }: { org: OrgRow }) {
           <DropdownMenuLabel>{org.name}</DropdownMenuLabel>
           <DropdownMenuItem onClick={() => setViewOpen(true)}><Eye /> View</DropdownMenuItem>
           <DropdownMenuItem onClick={() => setEditOpen(true)}><Pencil /> Edit</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate(`/platform/organizations/${org.id}/features`)}><SlidersHorizontal /> Manage features</DropdownMenuItem>
           {suspended ? (
             <DropdownMenuItem onClick={toggle}><RotateCcw /> Activate</DropdownMenuItem>
           ) : (
@@ -248,6 +251,8 @@ export function OrganizationsPage() {
   const [trash, setTrash] = React.useState(false)
   const [search, setSearch] = React.useState('')
   const { data, isLoading, isError, error } = usePlatformOrganizations(trash)
+  const { data: overrides = [] } = useAllFeatureOverrides()
+  const customCount = React.useMemo(() => { const m = new Map<string, number>(); for (const o of overrides) m.set(o.organization_id, (m.get(o.organization_id) ?? 0) + 1); return m }, [overrides])
 
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -334,7 +339,14 @@ export function OrganizationsPage() {
                             {org.logo_url ? <img src={org.logo_url} alt="" className="h-full w-full object-cover" /> : initialsOf(org.name, 'OR')}
                           </span>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{org.name}</p>
+                            <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+                              {org.name}
+                              {(customCount.get(org.id) ?? 0) > 0 && (
+                                <Badge variant="warning" className="px-1.5 py-0 text-[10px] font-normal" title="Features switched on or off for this firm only">
+                                  {customCount.get(org.id)} custom
+                                </Badge>
+                              )}
+                            </p>
                             <p className="truncate text-xs text-muted-foreground">
                               {org.industry ? `${org.industry} · ` : ''}/{org.slug}
                             </p>

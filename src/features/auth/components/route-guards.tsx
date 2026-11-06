@@ -156,10 +156,24 @@ const PLAN_FEATURE_COPY: Record<PlanFeatureKey, { label: string; plan: string }>
  * copy and a link to Firm Settings' Plan & Billing tab. */
 export function RequirePlanFeature({ feature, children }: { feature: PlanFeatureKey; children: ReactNode }) {
   const { activeOrgId } = useAuth()
-  const { has, isLoading } = usePlanFeature(activeOrgId)
+  const { has, overrideOf, isLoading } = usePlanFeature(activeOrgId)
   const copy = PLAN_FEATURE_COPY[feature]
 
   if (isLoading) return <LoadingScreen />
+
+  if (!has(feature) && overrideOf(feature) === false) {
+    return (
+      <div className="flex h-[60vh] flex-col items-center justify-center text-center">
+        <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+          <Lock className="h-6 w-6" />
+        </span>
+        <p className="font-display text-2xl font-semibold">{copy.label} isn’t enabled for your firm</p>
+        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+          It has been switched off for your account. Contact The Counsel support if you’d like it turned on.
+        </p>
+      </div>
+    )
+  }
 
   if (!has(feature)) {
     return (

@@ -13,6 +13,12 @@ export type PlanFeatureKey = 'messaging' | 'whatsapp_reminders' | 'hr_module' | 
   | 'inventory' | 'power_management' | 'surveys' | 'appraisals'
   | 'circulars' | 'fund_requests' | 'payroll'
 
+/** Every gated feature, in the order the Platform Console lists them. */
+export const ALL_PLAN_FEATURES: PlanFeatureKey[] = [
+  'ai_summarization', 'messaging', 'whatsapp_reminders', 'appointments', 'hr_module',
+  'circulars', 'surveys', 'fund_requests', 'payroll', 'inventory', 'power_management', 'appraisals',
+]
+
 export function planHasFeature(features: unknown, key: PlanFeatureKey): boolean {
   return Boolean(features && typeof features === 'object' && (features as Record<string, unknown>)[key] === true)
 }

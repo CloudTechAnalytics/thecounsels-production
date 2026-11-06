@@ -1,4 +1,7 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { SlidersHorizontal } from 'lucide-react'
+import { Button } from '@/shared/components/ui/button'
 import { format } from 'date-fns'
 import type { OrgRow } from '@/features/platform/types'
 import { Badge } from '@/shared/components/ui/badge'
@@ -65,6 +68,10 @@ export function ViewOrganizationDialog({
             <Row label="Storage limit" value={org.storage_limit_bytes ? formatStorage(org.storage_limit_bytes) : 'Not configured'} />
             <Row label="Created" value={format(new Date(org.created_at), 'PP')} />
             <Row label="Last login" value={org.last_login_at ? format(new Date(org.last_login_at), 'PPp') : 'Never'} />
+            <Separator className="my-2" />
+            <Button asChild variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
+              <Link to={`/platform/organizations/${org.id}/features`}><SlidersHorizontal className="h-4 w-4" /> Manage features</Link>
+            </Button>
           </div>
         )}
       </DialogContent>

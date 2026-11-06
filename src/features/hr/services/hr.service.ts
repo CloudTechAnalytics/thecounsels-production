@@ -226,21 +226,15 @@ export const hrService = {
   /** Every configured leave type for the year, not just ones already
    * touched by an approved request — a type with zero usage still needs
    * to show its full Limit/Balance, not disappear from the picture. */
-  async myLeaveSummary(organizationId: string, userId: string): Promise<LeaveSummaryRow[]> {
-    const year = new Date().getFullYear()
-    const [{ data: types, error: typesErr }, { data: balances, error: balErr }] = await Promise.all([
-      supabase.from('leave_types').select('id, name, default_entitlement_days').eq('organization_id', organizationId).order('name'),
-      supabase.from('leave_balances').select('leave_type_id, entitlement_days, used_days').eq('organization_id', organizationId).eq('user_id', userId).eq('year', year),
-    ])
-    if (typesErr) throw typesErr
-    if (balErr) throw balErr
-    const balanceByType = new Map((balances ?? []).map((b) => [b.leave_type_id, b]))
-    return (types ?? []).map((t) => {
-      const b = balanceByType.get(t.id)
-      const limit = b?.entitlement_days ?? t.default_entitlement_days
-      const taken = b?.used_days ?? 0
-      return { leaveTypeId: t.id, name: t.name, limit, taken, balance: limit - taken }
-    })
+  async myLeaveSummary(organizationId: string, _userId: string): Promise<LeaveSummaryRow[]> {
+    // Working days, accrual and pending requests are worked out on the
+    // server (0204), the same way request_leave() checks them.
+    const { data, error } = await supabase.rpc('my_leave_summary', { p_org: organizationId })
+    if (error) throw error
+    return (data ?? []).map((r) => ({
+      leaveTypeId: r.leave_type_id, name: r.name, limit: Number(r.entitlement), accrued: Number(r.accrued), taken: Number(r.used),
+      pending: Number(r.pending), balance: Number(r.available), accrues: r.accrues, countsWorkingDays: r.counts_working_days,
+    }))
   },
   async requestLeave(organizationId: string, leaveTypeId: string, start: string, end: string, reason?: string): Promise<void> {
     const { error } = await supabase.rpc('request_leave', {

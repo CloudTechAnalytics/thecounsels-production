@@ -21,9 +21,16 @@ export interface OnboardingItem {
 export interface LeaveSummaryRow {
   leaveTypeId: string
   name: string
+  /** Days a year. */
   limit: number
+  /** Earned so far (equals limit unless the type accrues monthly). */
+  accrued: number
   taken: number
+  pending: number
+  /** What can still be requested: accrued − taken − pending. */
   balance: number
+  accrues: boolean
+  countsWorkingDays: boolean
 }
 
 export interface OnboardingProgress {

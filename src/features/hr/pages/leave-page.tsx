@@ -40,9 +40,11 @@ function LeaveSummaryTable() {
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="pb-2 font-medium">Leave type</th>
-                <th className="pb-2 text-right font-medium">Limit</th>
+                <th className="pb-2 text-right font-medium">Per year</th>
+                <th className="pb-2 text-right font-medium">Earned</th>
                 <th className="pb-2 text-right font-medium">Taken</th>
-                <th className="pb-2 text-right font-medium">Balance</th>
+                <th className="pb-2 text-right font-medium">Pending</th>
+                <th className="pb-2 text-right font-medium">Available</th>
               </tr>
             </thead>
             <tbody>
@@ -50,7 +52,9 @@ function LeaveSummaryTable() {
                 <tr key={s.leaveTypeId} className="border-b border-border/60 last:border-0">
                   <td className="py-2 pr-2">{s.name}</td>
                   <td className="py-2 text-right tabular-nums text-muted-foreground">{s.limit}</td>
+                  <td className="py-2 text-right tabular-nums text-muted-foreground" title={s.accrues ? 'Earned monthly through the year' : undefined}>{s.accrues ? s.accrued : '—'}</td>
                   <td className="py-2 text-right tabular-nums text-muted-foreground">{s.taken}</td>
+                  <td className="py-2 text-right tabular-nums text-muted-foreground">{s.pending || '—'}</td>
                   <td className="py-2 text-right tabular-nums font-medium">{s.balance}</td>
                 </tr>
               ))}

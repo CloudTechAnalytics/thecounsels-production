@@ -1129,6 +1129,8 @@ export interface Database {
           default_entitlement_days: number
           requires_approval: boolean
           created_at: string
+          counts_working_days: boolean
+          accrues: boolean
         }
         Insert: {
           id?: string
@@ -1317,6 +1319,18 @@ export interface Database {
           approver_user_id?: string | null
         }
         Update: Partial<Database['public']['Tables']['approval_workflow_steps']['Insert']>
+        Relationships: []
+      }
+      leave_settings: {
+        Row: { organization_id: string; working_days: number[]; updated_at: string }
+        Insert: { organization_id: string; working_days?: number[]; updated_at?: string }
+        Update: { working_days?: number[]; updated_at?: string }
+        Relationships: []
+      }
+      public_holidays: {
+        Row: { id: string; organization_id: string; branch_id: string | null; holiday_date: string; name: string; created_at: string }
+        Insert: { organization_id: string; branch_id?: string | null; holiday_date: string; name: string }
+        Update: { branch_id?: string | null; holiday_date?: string; name?: string }
         Relationships: []
       }
       organization_feature_overrides: {
@@ -3411,6 +3425,11 @@ export interface Database {
         Returns: Database['public']['Tables']['fund_requests']['Row']
       }
       recommend_hr_request: { Args: { p_id: string; p_support: boolean; p_note?: string | null }; Returns: Database['public']['Tables']['hr_requests']['Row'] }
+      leave_preview: { Args: { p_org: string; p_type: string; p_start: string; p_end: string }; Returns: Json }
+      my_leave_summary: {
+        Args: { p_org: string }
+        Returns: { leave_type_id: string; name: string; entitlement: number; accrued: number; used: number; pending: number; available: number; accrues: boolean; counts_working_days: boolean }[]
+      }
       set_org_feature: { Args: { p_org: string; p_feature: string; p_enabled: boolean | null; p_note?: string | null }; Returns: undefined }
       launch_appraisal_cycle: { Args: { p_cycle: string }; Returns: number }
       close_appraisal_cycle: { Args: { p_cycle: string }; Returns: undefined }

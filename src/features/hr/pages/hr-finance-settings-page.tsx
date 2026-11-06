@@ -8,6 +8,7 @@ import { HrListsSettings } from '@/features/hr/components/hr-lists-settings'
 import { FundRulesCard, DelegationsCard } from '@/features/funds/components/fund-settings'
 import { WorkflowSettings } from '@/features/funds/components/workflow-settings'
 import { ApprovalRulesCard } from '@/features/hr/components/approval-rules-card'
+import { LeaveRulesCard } from '@/features/hr/components/leave-rules-card'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -79,6 +80,7 @@ export function HrFinanceSettingsPage() {
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">People</p>
             <DepartmentHeadsCard />
             {has('departments.manage') && <HrListsSettings />}
+            {(has('leave.manage') || has('departments.manage')) && <LeaveRulesCard />}
           </section>
         )}
         {canFunds && (

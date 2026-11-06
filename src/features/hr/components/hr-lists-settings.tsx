@@ -1,3 +1,5 @@
+import { useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/shared/lib/supabase'
 import * as React from 'react'
 import { Plus, X } from 'lucide-react'
 import {
@@ -80,6 +82,12 @@ function LeaveTypesCard() {
   const [newName, setNewName] = React.useState('')
   const [newDays, setNewDays] = React.useState('')
 
+  const qc = useQueryClient()
+  const setRule = async (id: string, patch: { counts_working_days?: boolean; accrues?: boolean }) => {
+    const { error } = await supabase.from('leave_types').update(patch).eq('id', id)
+    if (error) toast.error('Could not save', { description: errorMessage(error) })
+    else qc.invalidateQueries({ queryKey: ['hr'] })
+  }
   const saveLimit = async (id: string, current: number) => {
     const raw = drafts[id]
     if (raw === undefined) return
@@ -105,13 +113,15 @@ function LeaveTypesCard() {
   return (
     <Card className="p-5">
       <p className="font-display text-sm font-semibold">Leave types</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">Limit is days per year — set to 0 until you decide otherwise, nothing assumed.</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">Days per year. “Working days only” skips weekends and public holidays (turn off for leave counted in calendar days, e.g. maternity). “Accrues monthly” earns 1/12 of the days each month.</p>
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="pb-2 font-medium">Leave type</th>
-              <th className="w-24 pb-2 font-medium">Limit</th>
+              <th className="w-24 pb-2 font-medium">Days / year</th>
+              <th className="pb-2 font-medium" title="Weekends and public holidays aren't charged">Working days only</th>
+              <th className="pb-2 font-medium" title="Earned 1/12 each month">Accrues monthly</th>
             </tr>
           </thead>
           <tbody>
@@ -129,6 +139,8 @@ function LeaveTypesCard() {
                     onKeyDown={(e) => e.key === 'Enter' && saveLimit(t.id, t.default_entitlement_days)}
                   />
                 </td>
+                <td className="py-1.5"><input type="checkbox" className="h-4 w-4 accent-primary" checked={t.counts_working_days} onChange={(e) => setRule(t.id, { counts_working_days: e.target.checked })} /></td>
+                <td className="py-1.5"><input type="checkbox" className="h-4 w-4 accent-primary" checked={t.accrues} onChange={(e) => setRule(t.id, { accrues: e.target.checked })} /></td>
               </tr>
             ))}
           </tbody>

@@ -1,4 +1,6 @@
 import * as React from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/shared/lib/supabase'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useLeaveTypes, useRequestLeave, useMyLeaveSummary } from '@/features/hr/hooks/use-hr'
 import { Button } from '@/shared/components/ui/button'
@@ -10,15 +12,26 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
 
-/** Days requested, inclusive of both ends — same calculation the
- * request_leave() RPC uses server-side, so what's shown here always
- * matches what actually gets submitted/enforced. */
-function daysBetween(start: string, end: string): number | null {
-  if (!start || !end) return null
-  const s = new Date(start + 'T00:00:00')
-  const e = new Date(end + 'T00:00:00')
-  if (e < s) return null
-  return Math.round((e.getTime() - s.getTime()) / 86_400_000) + 1
+interface LeavePreview {
+  days: number; calendar_days: number; counts_working_days: boolean; accrues: boolean
+  holidays: { date: string; name: string }[]
+  entitlement: number; accrued: number; used: number; pending: number; available: number
+  error?: string
+}
+
+/** What a period would cost, worked out by the server exactly as
+ * request_leave() will: working days only (unless the type counts calendar
+ * days), public holidays skipped, accrual and pending requests counted. */
+function useLeavePreview(org: string | null, type: string, start: string, end: string) {
+  return useQuery({
+    queryKey: ['hr', 'leave-preview', org, type, start, end],
+    enabled: Boolean(org && type && start && end && end >= start),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('leave_preview', { p_org: org!, p_type: type, p_start: start, p_end: end })
+      if (error) throw error
+      return data as unknown as LeavePreview
+    },
+  })
 }
 
 export function LeaveRequestDialog() {
@@ -36,9 +49,12 @@ export function LeaveRequestDialog() {
     if (open && leaveTypes && leaveTypes.length > 0 && !leaveTypeId) setLeaveTypeId(leaveTypes[0].id)
   }, [open, leaveTypes, leaveTypeId])
 
-  const days = daysBetween(start, end)
+  const { data: preview } = useLeavePreview(activeOrgId, leaveTypeId, start, end)
+  const days = preview && !preview.error ? Number(preview.days) : null
   const balance = summary?.find((s) => s.leaveTypeId === leaveTypeId)
-  const exceedsBalance = days != null && balance != null && days > balance.balance
+  const available = preview && !preview.error ? Number(preview.available) : balance?.balance
+  const exceedsBalance = days != null && available != null && days > available
+  const nothingToTake = days === 0
 
   const submit = async () => {
     if (!leaveTypeId || !start || !end) {
@@ -78,7 +94,9 @@ export function LeaveRequestDialog() {
               <p className="text-xs text-muted-foreground">No leave types configured yet — ask HR to set one up.</p>
             ) : balance ? (
               <p className="text-xs text-muted-foreground">
-                {balance.balance} of {balance.limit} day{balance.limit === 1 ? '' : 's'} remaining this year
+                {balance.balance} day{balance.balance === 1 ? '' : 's'} available
+                {balance.accrues ? ` · ${balance.accrued} of ${balance.limit} earned so far this year` : ` of ${balance.limit} this year`}
+                {balance.pending ? ` · ${balance.pending} pending` : ''}
               </p>
             ) : null}
           </div>
@@ -92,11 +110,20 @@ export function LeaveRequestDialog() {
               <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
             </div>
           </div>
-          {days != null && (
-            <p className={exceedsBalance ? 'text-sm font-medium text-destructive' : 'text-sm text-muted-foreground'}>
-              {days} day{days === 1 ? '' : 's'} requested
-              {exceedsBalance && balance ? ` — exceeds your remaining balance of ${balance.balance}` : ''}
-            </p>
+          {preview?.error && <p className="text-sm text-destructive">{preview.error}</p>}
+          {days != null && preview && (
+            <div className={exceedsBalance || nothingToTake ? 'text-sm font-medium text-destructive' : 'text-sm text-muted-foreground'}>
+              <p>
+                {days} {preview.counts_working_days ? 'working ' : ''}day{days === 1 ? '' : 's'} will be taken
+                {preview.counts_working_days && preview.calendar_days > days && (
+                  <span className="font-normal"> ({preview.calendar_days - days} weekend{preview.holidays.length ? ' / holiday' : ''} day{preview.calendar_days - days === 1 ? '' : 's'} not counted)</span>
+                )}
+                {nothingToTake ? ' — those dates are all non-working days or holidays' : exceedsBalance ? ` — only ${available} available` : ` · ${available} available`}
+              </p>
+              {preview.counts_working_days && preview.holidays.length > 0 && (
+                <p className="text-xs font-normal text-muted-foreground">Public holiday{preview.holidays.length === 1 ? '' : 's'}: {preview.holidays.map((h) => h.name).join(', ')}</p>
+              )}
+            </div>
           )}
           <div className="space-y-1.5">
             <Label>Reason (optional)</Label>
@@ -105,7 +132,7 @@ export function LeaveRequestDialog() {
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={submit} loading={request.isPending} disabled={exceedsBalance}>Submit request</Button>
+          <Button onClick={submit} loading={request.isPending} disabled={exceedsBalance || nothingToTake}>Submit request</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

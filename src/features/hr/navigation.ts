@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { LayoutGrid, UserSquare2, CalendarClock, FolderLock, Inbox, Megaphone, FileBarChart, ClipboardCheck, Wallet, Banknote, ReceiptText, ListChecks, Settings2, Scale, type LucideIcon, Network, Package, Zap, ClipboardList } from 'lucide-react'
+import { LayoutGrid, UserSquare2, CalendarClock, FolderLock, Inbox, Megaphone, FileBarChart, ClipboardCheck, Wallet, Banknote, ReceiptText, ListChecks, Settings2, Scale, type LucideIcon, Network, Package, Zap, ClipboardList, Star } from 'lucide-react'
 import type { PermissionKey } from '@/shared/lib/permissions'
 import { LeaveNavBadge } from '@/features/hr/components/leave-nav-badge'
 import { AnnouncementsNavBadge } from '@/features/hr/components/announcements-nav-badge'
@@ -38,6 +38,7 @@ export const HR_NAVIGATION: HrNavSection[] = [
       { label: 'Reporting Lines', to: '/hr/team-structure', icon: Network, permission: ['staff.manage', 'departments.manage'] },
       { label: 'Onboarding', to: '/hr/onboarding', icon: ClipboardCheck, permission: 'onboarding.view_own' },
       { label: 'Leave Management', to: '/hr/leave', icon: CalendarClock, permission: 'leave.request', badge: LeaveNavBadge },
+      { label: 'Appraisals', to: '/hr/appraisals', icon: Star, permission: 'leave.request' },
       { label: 'Documents', to: '/hr/documents', icon: FolderLock, permission: 'hr_documents.view_own' },
       { label: 'HR Requests', to: '/hr/requests', icon: Inbox, permission: 'hr_requests.submit' },
       { label: 'Circulars', to: '/hr/announcements', icon: Megaphone, permission: 'hr_announcements.view', badge: AnnouncementsNavBadge },

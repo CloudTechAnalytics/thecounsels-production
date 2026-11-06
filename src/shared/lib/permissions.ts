@@ -90,6 +90,7 @@ export const PERMISSION_KEYS = [
   'inventory.manage',
   'power.manage',
   'surveys.manage',
+  'appraisals.manage',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]

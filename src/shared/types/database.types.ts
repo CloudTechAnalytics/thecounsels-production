@@ -1319,6 +1319,72 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['approval_workflow_steps']['Insert']>
         Relationships: []
       }
+      appraisal_cycles: {
+        Row: {
+          id: string
+          organization_id: string
+          name: string
+          period_start: string
+          period_end: string
+          self_due: string | null
+          manager_due: string | null
+          audience_type: 'organization' | 'branch' | 'department'
+          audience_branch_id: string | null
+          audience_department_id: string | null
+          competencies: Json
+          status: 'draft' | 'open' | 'closed'
+          launched_at: string | null
+          closed_at: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          name: string
+          period_start: string
+          period_end: string
+          self_due?: string | null
+          manager_due?: string | null
+          audience_type?: 'organization' | 'branch' | 'department'
+          audience_branch_id?: string | null
+          audience_department_id?: string | null
+          competencies?: Json
+        }
+        Update: {
+          name?: string
+          period_start?: string
+          period_end?: string
+          self_due?: string | null
+          manager_due?: string | null
+          audience_type?: 'organization' | 'branch' | 'department'
+          audience_branch_id?: string | null
+          audience_department_id?: string | null
+          competencies?: Json
+        }
+        Relationships: []
+      }
+      appraisals: {
+        Row: {
+          id: string
+          organization_id: string
+          cycle_id: string
+          employee_id: string
+          user_id: string
+          branch_id: string | null
+          manager_user_id: string | null
+          status: 'self_review' | 'manager_review' | 'sign_off' | 'acknowledge' | 'completed'
+          self_submitted_at: string | null
+          manager_submitted_at: string | null
+          signed_off_at: string | null
+          acknowledged_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: { organization_id: string; cycle_id: string; employee_id: string; user_id: string }
+        Update: Record<string, never>
+        Relationships: []
+      }
       employee_line_managers: {
         Row: { organization_id: string; employee_id: string; manager_employee_id: string; created_by: string | null; created_at: string }
         Insert: { organization_id: string; employee_id: string; manager_employee_id: string }
@@ -3333,6 +3399,35 @@ export interface Database {
       pay_fund_reimbursement: {
         Args: { p_claim: string; p_paid_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null }
         Returns: Database['public']['Tables']['fund_requests']['Row']
+      }
+      launch_appraisal_cycle: { Args: { p_cycle: string }; Returns: number }
+      close_appraisal_cycle: { Args: { p_cycle: string }; Returns: undefined }
+      remind_appraisals: { Args: { p_cycle: string }; Returns: number }
+      get_appraisal: { Args: { p_id: string }; Returns: Json }
+      save_self_appraisal: {
+        Args: { p_id: string; p_scores: Json; p_goals: Json | null; p_summary: string | null; p_overall: number | null; p_submit: boolean }
+        Returns: Database['public']['Tables']['appraisals']['Row']
+      }
+      save_manager_review: {
+        Args: { p_id: string; p_scores: Json; p_goals: Json | null; p_summary: string | null; p_overall: number | null; p_recommendation: string | null; p_submit: boolean }
+        Returns: Database['public']['Tables']['appraisals']['Row']
+      }
+      add_appraisal_input: { Args: { p_id: string; p_rating: number | null; p_comment: string }; Returns: undefined }
+      sign_off_appraisal: {
+        Args: { p_id: string; p_final: number | null; p_recommendation: string | null; p_comment: string | null; p_return?: boolean }
+        Returns: Database['public']['Tables']['appraisals']['Row']
+      }
+      acknowledge_appraisal: {
+        Args: { p_id: string; p_agrees: boolean; p_comment: string | null; p_with_signature?: boolean }
+        Returns: Database['public']['Tables']['appraisals']['Row']
+      }
+      appraisal_cycle_progress: {
+        Args: { p_cycle: string }
+        Returns: {
+          id: string; employee_id: string; user_id: string; employee_name: string; branch_id: string | null; department: string | null
+          manager_name: string | null; status: string; final_rating: number | null; employee_agrees: boolean | null
+          self_submitted_at: string | null; manager_submitted_at: string | null
+        }[]
       }
       save_survey: {
         Args: {

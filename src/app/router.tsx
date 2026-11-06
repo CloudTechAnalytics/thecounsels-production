@@ -79,6 +79,10 @@ import { InventoryItemPage } from '@/features/inventory/pages/inventory-item-pag
 import { InventoryItemFormPage } from '@/features/inventory/pages/inventory-item-form-page'
 import { PowerPage } from '@/features/power/pages/power-page'
 import { SurveysPage } from '@/features/surveys/pages/surveys-page'
+import { AppraisalsPage } from '@/features/appraisals/pages/appraisals-page'
+import { AppraisalPage } from '@/features/appraisals/pages/appraisal-page'
+import { AppraisalCycleFormPage } from '@/features/appraisals/pages/appraisal-cycle-form-page'
+import { AppraisalCyclePage } from '@/features/appraisals/pages/appraisal-cycle-page'
 import { SurveyBuilderPage } from '@/features/surveys/pages/survey-builder-page'
 import { SurveyPage } from '@/features/surveys/pages/survey-page'
 import { PowerSourceFormPage } from '@/features/power/pages/power-source-form-page'
@@ -323,6 +327,11 @@ export const router = createBrowserRouter([
                       { path: 'surveys/new', element: withPermission(<SurveyBuilderPage />, 'surveys.manage') },
                       { path: 'surveys/:id', element: withPermission(<SurveyPage />, 'leave.request') },
                       { path: 'surveys/:id/edit', element: withPermission(<SurveyBuilderPage />, 'surveys.manage') },
+                      { path: 'appraisals', element: withPermission(<AppraisalsPage />, 'leave.request') },
+                      { path: 'appraisals/cycles/new', element: withPermission(<AppraisalCycleFormPage />, 'appraisals.manage') },
+                      { path: 'appraisals/cycles/:id', element: withPermission(<AppraisalCyclePage />, 'appraisals.manage') },
+                      { path: 'appraisals/cycles/:id/edit', element: withPermission(<AppraisalCycleFormPage />, 'appraisals.manage') },
+                      { path: 'appraisals/:id', element: withPermission(<AppraisalPage />, 'leave.request') },
                       { path: 'reports', element: withPermission(<HrReportsPage />, 'hr.view_reports') },
                     ],
                   },

@@ -200,15 +200,17 @@ export const hrService = {
   /** Unread HR announcement notifications for the calling user — RLS on
    * notifications already scopes to user_id = auth.uid(), so this is
    * naturally "my unread announcements", no explicit user filter needed. */
+  /** Circulars sent to me that I still need to open (or acknowledge, when asked). */
   async unreadAnnouncementCount(organizationId: string): Promise<number> {
-    const { count, error } = await supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) return 0
+    const { data, error } = await supabase
+      .from('hr_announcement_recipients')
+      .select('read_at, acknowledged_at, announcement:hr_announcements!inner(requires_ack)')
       .eq('organization_id', organizationId)
-      .eq('entity_type', 'hr_announcement')
-      .eq('is_read', false)
+      .eq('user_id', auth.user.id)
     if (error) throw error
-    return count ?? 0
+    return (data ?? []).filter((r) => !r.read_at || ((r.announcement as unknown as { requires_ack: boolean }).requires_ack && !r.acknowledged_at)).length
   },
   async myLeaveBalances(organizationId: string, userId: string): Promise<LeaveBalanceRow[]> {
     const year = new Date().getFullYear()

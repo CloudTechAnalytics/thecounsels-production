@@ -1319,6 +1319,20 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['approval_workflow_steps']['Insert']>
         Relationships: []
       }
+      hr_announcement_recipients: {
+        Row: {
+          announcement_id: string
+          organization_id: string
+          user_id: string
+          read_at: string | null
+          acknowledged_at: string | null
+          ack_with_signature: boolean
+          reminded_at: string | null
+        }
+        Insert: { announcement_id: string; organization_id: string; user_id: string }
+        Update: { read_at?: string | null; acknowledged_at?: string | null }
+        Relationships: []
+      }
       user_signatures: {
         Row: { user_id: string; image: string; updated_at: string }
         Insert: { user_id: string; image: string; updated_at?: string }
@@ -1964,6 +1978,16 @@ export interface Database {
           audience_role_key: RoleKey | null
           created_by: string | null
           created_at: string
+          reference_no: string | null
+          category: string | null
+          requires_ack: boolean
+          ack_due: string | null
+          pinned: boolean
+          attachment_path: string | null
+          attachment_name: string | null
+          audience_branch_id: string | null
+          recipient_count: number
+          updated_at: string | null
         }
         Insert: {
           id?: string
@@ -3042,6 +3066,18 @@ export interface Database {
         Args: { p_claim: string; p_paid_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null }
         Returns: Database['public']['Tables']['fund_requests']['Row']
       }
+      send_circular: {
+        Args: {
+          p_org: string; p_title: string; p_body: string; p_audience_type: string
+          p_department_id?: string | null; p_user_ids?: string[] | null; p_branch_id?: string | null; p_role_key?: RoleKey | null
+          p_requires_ack?: boolean; p_ack_due?: string | null; p_pinned?: boolean; p_category?: string | null
+          p_attachment_path?: string | null; p_attachment_name?: string | null
+        }
+        Returns: Database['public']['Tables']['hr_announcements']['Row']
+      }
+      mark_circular_read: { Args: { p_id: string }; Returns: undefined }
+      acknowledge_circular: { Args: { p_id: string; p_with_signature?: boolean }; Returns: undefined }
+      remind_circular: { Args: { p_id: string }; Returns: number }
       my_direct_reports: {
         Args: { p_org: string }
         Returns: { employee_id: string; user_id: string | null; full_name: string }[]

@@ -75,7 +75,9 @@ import { FundRequestFormPage } from '@/features/funds/pages/fund-request-form-pa
 import { HrFinanceSettingsPage } from '@/features/hr/pages/hr-finance-settings-page'
 import { TeamStructurePage } from '@/features/hr/pages/team-structure-page'
 import { HrDocumentsPage } from '@/features/hr/pages/hr-documents-page'
-import { AnnouncementsPage } from '@/features/hr/pages/announcements-page'
+import { CircularsPage } from '@/features/hr/pages/circulars-page'
+import { CircularNewPage } from '@/features/hr/pages/circular-new-page'
+import { CircularDetailPage } from '@/features/hr/pages/circular-detail-page'
 import { HrReportsPage } from '@/features/hr/pages/hr-reports-page'
 import { HearingsPage } from '@/features/hearings/pages/hearings-page'
 import { AppointmentsPage } from '@/features/appointments/pages/appointments-page'
@@ -299,7 +301,9 @@ export const router = createBrowserRouter([
                       { path: 'approvals', element: withPermission(<ApprovalCentrePage />, ['funds.approve', 'funds.manage', 'leave.manage', 'hr_requests.manage'], 'any') },
                       { path: 'settings', element: withPermission(<HrFinanceSettingsPage />, ['funds.approve', 'funds.manage', 'departments.manage', 'staff.manage', 'payroll.manage'], 'any') },
                       { path: 'documents', element: withPermission(<HrDocumentsPage />, 'hr_documents.view_own') },
-                      { path: 'announcements', element: withPermission(<AnnouncementsPage />, 'hr_announcements.view') },
+                      { path: 'announcements', element: withPermission(<CircularsPage />, 'hr_announcements.view') },
+                      { path: 'announcements/new', element: withPermission(<CircularNewPage />, 'hr_announcements.manage') },
+                      { path: 'announcements/:id', element: withPermission(<CircularDetailPage />, 'hr_announcements.view') },
                       { path: 'reports', element: withPermission(<HrReportsPage />, 'hr.view_reports') },
                     ],
                   },

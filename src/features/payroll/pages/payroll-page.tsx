@@ -205,7 +205,7 @@ function SettingsTab() {
     }
   }
 
-  if (isLoading) return <Skeleton className="h-96 w-full max-w-3xl" />
+  if (isLoading) return <Skeleton className="h-96 w-full" />
 
   const field = (label: string, k: Exclude<keyof PayrollRates, 'tax_bands'>, suffix: string) => (
     <div className="space-y-1.5">
@@ -218,7 +218,7 @@ function SettingsTab() {
   )
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       <Card className="space-y-5 p-6">
         <div>
           <p className="font-display text-base font-semibold">Statutory rates</p>

@@ -423,7 +423,7 @@ export function AppraisalPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="w-full">
       <Button variant="ghost" size="sm" className="mb-2" onClick={() => navigate('/hr/appraisals')}><ArrowLeft className="h-4 w-4" /> Appraisals</Button>
       <PageHeader
         title={role === 'self' ? `My appraisal — ${d.cycle.name}` : `${a.employee_name} — ${d.cycle.name}`}

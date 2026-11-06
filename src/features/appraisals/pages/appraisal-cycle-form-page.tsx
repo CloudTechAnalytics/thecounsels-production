@@ -83,7 +83,7 @@ export function AppraisalCycleFormPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full">
       <Button variant="ghost" size="sm" className="mb-2" onClick={() => navigate('/hr/appraisals')}><ArrowLeft className="h-4 w-4" /> Appraisals</Button>
       <PageHeader title={id ? 'Edit appraisal cycle' : 'New appraisal cycle'} description="Who is reviewed, for which period, on what — then launch it." />
       <div className="space-y-5">

@@ -83,7 +83,7 @@ export function PowerSourceFormPage() {
   if (id && isLoading) return <Skeleton className="h-96 w-full" />
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full">
       <Button variant="ghost" size="sm" className="mb-2" onClick={() => navigate('/hr/power')}><ArrowLeft className="h-4 w-4" /> Electricity & Power</Button>
       <PageHeader title={id ? `Edit ${existing?.name ?? 'source'}` : 'Add a power source'} description="A meter, generator, solar or inverter system at one of your offices." />
       <form onSubmit={submit}>

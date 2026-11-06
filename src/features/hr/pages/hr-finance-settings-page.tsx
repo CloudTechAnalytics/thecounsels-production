@@ -69,7 +69,7 @@ export function HrFinanceSettingsPage() {
   return (
     <div>
       <PageHeader title="HR & Finance Settings" description="Who approves what, departments, fund workflows, delegation and payroll configuration." />
-      <div className="max-w-4xl space-y-8">
+      <div className="w-full space-y-8">
         <section className="space-y-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Approvals</p>
           <ApprovalRulesCard />

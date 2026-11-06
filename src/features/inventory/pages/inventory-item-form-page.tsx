@@ -87,7 +87,7 @@ export function InventoryItemFormPage() {
   if (id && isLoading) return <Skeleton className="h-96 w-full" />
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full">
       <Button variant="ghost" size="sm" className="mb-2" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /> Back</Button>
       <PageHeader
         title={id ? `Edit ${existing?.name ?? 'item'}` : isAsset ? 'Add an asset' : 'Add a supply'}

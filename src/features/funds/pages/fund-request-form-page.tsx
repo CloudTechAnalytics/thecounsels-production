@@ -17,7 +17,7 @@ export function FundRequestFormPage() {
   const request = id ? requests?.find((r) => r.id === id) ?? null : null
   const back = id ? `/hr/funds/${id}` : '/hr/funds'
 
-  if (id && isLoading) return <Skeleton className="mx-auto h-96 max-w-3xl" />
+  if (id && isLoading) return <Skeleton className="h-96 w-full" />
   if (id && (!request || request.user_id !== userId || !['draft', 'returned'].includes(request.status))) {
     return (
       <Card className="mx-auto max-w-3xl p-10 text-center">

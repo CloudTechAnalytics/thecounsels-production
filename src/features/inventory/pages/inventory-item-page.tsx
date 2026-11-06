@@ -166,7 +166,7 @@ export function InventoryItemPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="w-full">
       <Button variant="ghost" size="sm" className="mb-2" onClick={() => navigate(`/hr/inventory?tab=${isAsset ? 'assets' : 'supplies'}`)}><ArrowLeft className="h-4 w-4" /> Inventory</Button>
       <PageHeader
         title={item.name}

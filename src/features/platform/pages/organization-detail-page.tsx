@@ -119,7 +119,7 @@ export function OrganizationDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="w-full">
       <Button variant="ghost" size="sm" className="mb-3" onClick={() => navigate('/platform/organizations')}><ArrowLeft className="h-4 w-4" /> Organizations</Button>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">

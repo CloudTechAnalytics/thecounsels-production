@@ -163,7 +163,7 @@ export function SurveyBuilderPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full">
       <Button variant="ghost" size="sm" className="mb-2" onClick={() => navigate('/hr/surveys')}><ArrowLeft className="h-4 w-4" /> Surveys</Button>
       <PageHeader title={id ? 'Edit draft survey' : 'New survey'} description="Write the questions, choose who answers, then send." />
 

@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { PayrollExtrasTab } from '@/features/payroll/components/payroll-extras-tab'
 import { useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Plus, Trash2 } from 'lucide-react'
@@ -24,7 +25,7 @@ import { formatNaira } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/utils'
 import { useApprovalRights } from '@/features/hr/hooks/use-approval-rules'
 
-type Tab = 'runs' | 'salaries' | 'settings'
+type Tab = 'runs' | 'salaries' | 'extras' | 'settings'
 
 function NewRunDialog({ onCreated }: { onCreated: (runId: string) => void }) {
   const { activeOrgId } = useAuth()
@@ -289,7 +290,7 @@ function SettingsTab() {
 
 export function PayrollPage() {
   const [params] = useSearchParams()
-  const [tab, setTab] = React.useState<Tab>(() => (params.get('tab') === 'settings' ? 'settings' : params.get('tab') === 'salaries' ? 'salaries' : 'runs'))
+  const [tab, setTab] = React.useState<Tab>(() => (params.get('tab') === 'settings' ? 'settings' : params.get('tab') === 'salaries' ? 'salaries' : params.get('tab') === 'extras' ? 'extras' : 'runs'))
   const { activeMembership } = useAuth()
   const firmWide = !activeMembership || activeMembership.access_scope === 'organization'
   return (
@@ -301,7 +302,7 @@ export function PayrollPage() {
         </p>
       )}
       <div className="mb-4 flex w-fit rounded-lg border border-border p-0.5">
-        {([['runs', 'Payroll runs'], ['salaries', 'Salaries'], ['settings', 'Settings']] as const).map(([k, label]) => (
+        {([['runs', 'Payroll runs'], ['salaries', 'Salaries'], ['extras', 'Bonuses & loans'], ['settings', 'Settings']] as const).map(([k, label]) => (
           <button
             key={k}
             onClick={() => setTab(k)}
@@ -313,6 +314,7 @@ export function PayrollPage() {
       </div>
       {tab === 'runs' && <RunsTab />}
       {tab === 'salaries' && <SalariesTab />}
+      {tab === 'extras' && <PayrollExtrasTab />}
       {tab === 'settings' && <SettingsTab />}
     </div>
   )

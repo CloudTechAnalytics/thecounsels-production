@@ -60,6 +60,16 @@ export interface SalaryInput {
   other_deductions: number
 }
 
+/** One-offs for this month only (0205). */
+export interface PayslipExtras {
+  /** Bonus, overtime, taxable allowances. */
+  taxable_earnings: number
+  /** Allowances paid without tax (e.g. reimbursed costs). */
+  non_taxable_earnings: number
+  /** One-off deductions plus loan / advance repayments. */
+  deductions: number
+}
+
 export interface BandLine {
   from: number
   to: number | null
@@ -107,23 +117,30 @@ export function annualTax(taxable: number, bands: TaxBand[]): { total: number; l
   return { total: r2(total), lines }
 }
 
-export function computePayslip(s: SalaryInput, rates: PayrollRates): PayrollResult {
-  const gross = r2(s.basic + s.housing + s.transport + s.other_allowances)
+export function computePayslip(s: SalaryInput, rates: PayrollRates, extras?: PayslipExtras): PayrollResult {
+  const regular = r2(s.basic + s.housing + s.transport + s.other_allowances)
+  const x = extras ?? { taxable_earnings: 0, non_taxable_earnings: 0, deductions: 0 }
+  const gross = r2(regular + x.taxable_earnings + x.non_taxable_earnings)
   const pensionable = s.basic + s.housing + s.transport
   const pension_employee = s.pension_enabled ? r2((pensionable * rates.pension_employee_rate) / 100) : 0
   const pension_employer = s.pension_enabled ? r2((pensionable * rates.pension_employer_rate) / 100) : 0
   const nhf = s.nhf_enabled ? r2((s.basic * rates.nhf_rate) / 100) : 0
 
-  const annual_gross = gross * 12
+  const annual_gross = regular * 12
   const annual_pension = pension_employee * 12
   const annual_nhf = nhf * 12
   const rent_relief = Math.min((s.annual_rent * rates.rent_relief_rate) / 100, rates.rent_relief_cap)
   const annual_taxable = Math.max(0, annual_gross - annual_pension - annual_nhf - rent_relief)
-  const exempt = gross <= rates.minimum_wage_monthly
+  const exempt = regular <= rates.minimum_wage_monthly
   const { total, lines } = exempt ? { total: 0, lines: [] } : annualTax(annual_taxable, rates.tax_bands)
-  const paye = r2(total / 12)
+  // A one-off is taxed on the margin: the extra annual tax it causes, all in
+  // this month — not as if it were paid every month.
+  const oneOffTax = x.taxable_earnings > 0 && !exempt
+    ? annualTax(annual_taxable + x.taxable_earnings, rates.tax_bands).total - total
+    : 0
+  const paye = r2(total / 12 + oneOffTax)
 
-  const other_deductions = r2(s.other_deductions)
+  const other_deductions = r2(s.other_deductions + x.deductions)
   const net = r2(gross - pension_employee - nhf - paye - other_deductions)
 
   return {

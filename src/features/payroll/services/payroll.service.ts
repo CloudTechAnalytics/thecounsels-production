@@ -75,11 +75,42 @@ export const payrollService = {
 
   /** (Re)builds a draft run's payslips from today's salary records and rates. */
   async generatePayslips(organizationId: string, runId: string): Promise<number> {
-    const [rates, people] = await Promise.all([this.getRates(organizationId), this.listPayrollEmployees(organizationId)])
+    const { data: run, error: runErr } = await supabase.from('payroll_runs').select('period').eq('id', runId).single()
+    if (runErr) throw runErr
+    const period = run.period as string
+    const [rates, people, { data: adjustments, error: aErr }, { data: loans, error: lErr }, { data: repaid, error: rErr }] = await Promise.all([
+      this.getRates(organizationId),
+      this.listPayrollEmployees(organizationId),
+      supabase.from('payroll_adjustments').select('*').eq('organization_id', organizationId).eq('period', period),
+      supabase.from('staff_loans').select('*').eq('organization_id', organizationId).eq('status', 'active').lte('start_period', period),
+      supabase.from('loan_repayments').select('loan_id, amount, run_id').eq('organization_id', organizationId).neq('run_id', runId),
+    ])
+    if (aErr) throw aErr
+    if (lErr) throw lErr
+    if (rErr) throw rErr
+    const repaidByLoan = new Map<string, number>()
+    for (const r of repaid ?? []) repaidByLoan.set(r.loan_id, (repaidByLoan.get(r.loan_id) ?? 0) + Number(r.amount))
+    const repayments: { organization_id: string; loan_id: string; run_id: string; amount: number }[] = []
+
     const rows = people
       .filter((p) => p.salary?.on_payroll)
       .map(({ employee, salary }) => {
         const s = salary!
+        const mine = (adjustments ?? []).filter((x) => x.employee_id === employee.id)
+        const earn = mine.filter((x) => x.kind !== 'deduction')
+        const taxable = earn.filter((x) => x.taxable).reduce((t, x) => t + Number(x.amount), 0)
+        const nonTaxable = earn.filter((x) => !x.taxable).reduce((t, x) => t + Number(x.amount), 0)
+        const oneOffDeductions = mine.filter((x) => x.kind === 'deduction').reduce((t, x) => t + Number(x.amount), 0)
+        const lines: { kind: string; label: string; amount: number; taxable?: boolean }[] = mine.map((x) => ({ kind: x.kind, label: x.label, amount: Number(x.amount), taxable: x.taxable }))
+        let loanTotal = 0
+        for (const l of (loans ?? []).filter((x) => x.employee_id === employee.id)) {
+          const outstanding = Number(l.principal) - (repaidByLoan.get(l.id) ?? 0)
+          const take = Math.min(Number(l.monthly_installment), Math.max(outstanding, 0))
+          if (take <= 0) continue
+          loanTotal += take
+          repayments.push({ organization_id: organizationId, loan_id: l.id, run_id: runId, amount: Math.round(take * 100) / 100 })
+          lines.push({ kind: 'loan', label: `${l.kind === 'salary_advance' ? 'Salary advance' : 'Loan'} repayment (${Math.round((outstanding - take) * 100) / 100 > 0 ? `balance after: ${(outstanding - take).toLocaleString()}` : 'final'})`, amount: Math.round(take * 100) / 100 })
+        }
         const calc = computePayslip({
           basic: Number(s.basic),
           housing: Number(s.housing),
@@ -89,7 +120,7 @@ export const payrollService = {
           pension_enabled: s.pension_enabled,
           nhf_enabled: s.nhf_enabled,
           other_deductions: Number(s.other_deductions),
-        }, rates)
+        }, rates, { taxable_earnings: taxable, non_taxable_earnings: nonTaxable, deductions: oneOffDeductions + loanTotal })
         return {
           organization_id: organizationId,
           run_id: runId,
@@ -108,6 +139,10 @@ export const payrollService = {
           housing: Number(s.housing),
           transport: Number(s.transport),
           other_allowances: Number(s.other_allowances),
+          bonus: Math.round(taxable * 100) / 100,
+          non_taxable_earnings: Math.round(nonTaxable * 100) / 100,
+          loan_deduction: Math.round(loanTotal * 100) / 100,
+          extra_lines: lines as unknown as Json,
           gross: calc.gross,
           pension_employee: calc.pension_employee,
           pension_employer: calc.pension_employer,
@@ -123,8 +158,16 @@ export const payrollService = {
 
     const { error: delErr } = await supabase.from('payslips').delete().eq('run_id', runId)
     if (delErr) throw delErr
+    const { error: delRepErr } = await supabase.from('loan_repayments').delete().eq('run_id', runId)
+    if (delRepErr) throw delRepErr
     if (rows.length > 0) {
       const { error } = await supabase.from('payslips').insert(rows)
+      if (error) throw error
+    }
+    const paidIds = new Set(rows.map((r) => r.employee_id))
+    const keep = repayments.filter((r) => (loans ?? []).some((l) => l.id === r.loan_id && paidIds.has(l.employee_id)))
+    if (keep.length > 0) {
+      const { error } = await supabase.from('loan_repayments').insert(keep)
       if (error) throw error
     }
     return rows.length

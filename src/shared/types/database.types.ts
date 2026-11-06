@@ -1321,6 +1321,24 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['approval_workflow_steps']['Insert']>
         Relationships: []
       }
+      payroll_adjustments: {
+        Row: { id: string; organization_id: string; employee_id: string; period: string; kind: 'bonus' | 'overtime' | 'allowance' | 'deduction'; label: string; amount: number; taxable: boolean; created_by: string | null; created_at: string }
+        Insert: { organization_id: string; employee_id: string; period: string; kind: 'bonus' | 'overtime' | 'allowance' | 'deduction'; label: string; amount: number; taxable?: boolean }
+        Update: Record<string, never>
+        Relationships: []
+      }
+      staff_loans: {
+        Row: { id: string; organization_id: string; employee_id: string; kind: 'loan' | 'salary_advance'; principal: number; monthly_installment: number; start_period: string; reason: string | null; status: 'active' | 'cancelled'; created_by: string | null; created_at: string }
+        Insert: { organization_id: string; employee_id: string; kind?: 'loan' | 'salary_advance'; principal: number; monthly_installment: number; start_period: string; reason?: string | null }
+        Update: { status?: 'active' | 'cancelled'; monthly_installment?: number }
+        Relationships: []
+      }
+      loan_repayments: {
+        Row: { id: string; organization_id: string; loan_id: string; run_id: string; amount: number; created_at: string }
+        Insert: { organization_id: string; loan_id: string; run_id: string; amount: number }
+        Update: Record<string, never>
+        Relationships: []
+      }
       leave_settings: {
         Row: { organization_id: string; working_days: number[]; updated_at: string }
         Insert: { organization_id: string; working_days?: number[]; updated_at?: string }
@@ -2125,6 +2143,10 @@ export interface Database {
           net: number
           tax_detail: Json
           created_at: string
+          bonus: number
+          non_taxable_earnings: number
+          loan_deduction: number
+          extra_lines: Json
         }
         Insert: {
           id?: string
@@ -2154,6 +2176,10 @@ export interface Database {
           other_deductions_note?: string | null
           net?: number
           tax_detail?: Json
+          bonus?: number
+          non_taxable_earnings?: number
+          loan_deduction?: number
+          extra_lines?: Json
         }
         Update: Partial<Database['public']['Tables']['payslips']['Insert']>
         Relationships: []

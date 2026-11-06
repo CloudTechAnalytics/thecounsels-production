@@ -10,6 +10,8 @@ const line = (label: string, amount: number, note?: string | null) =>
 export function printPayslip(p: Payslip, period: string, firm: PrintFirm): void {
   const month = format(new Date(period + 'T00:00:00'), 'MMMM yyyy')
   const deductions = Number(p.pension_employee) + Number(p.nhf) + Number(p.paye) + Number(p.other_deductions)
+  const extras = (Array.isArray(p.extra_lines) ? p.extra_lines : []) as { kind: string; label: string; amount: number; taxable?: boolean }[]
+  const salaryOther = Math.round((Number(p.other_deductions) - extras.filter((x) => x.kind === 'deduction' || x.kind === 'loan').reduce((t, x) => t + Number(x.amount), 0)) * 100) / 100
   const gross = Number(p.gross)
   const net = Number(p.net)
   const netShare = gross > 0 ? Math.round((net / gross) * 100) : 0
@@ -39,6 +41,7 @@ export function printPayslip(p: Payslip, period: string, firm: PrintFirm): void 
           ${line('Housing allowance', Number(p.housing))}
           ${line('Transport allowance', Number(p.transport))}
           ${line('Other allowances', Number(p.other_allowances))}
+          ${extras.filter((x) => x.kind !== 'deduction' && x.kind !== 'loan').map((x) => line(x.label, x.amount, x.taxable === false ? 'not taxed' : null)).join('')}
         </tbody>
         <tfoot><tr><td>Gross pay</td><td class="r">${formatNaira(gross)}</td></tr></tfoot>
       </table>
@@ -48,7 +51,8 @@ export function printPayslip(p: Payslip, period: string, firm: PrintFirm): void 
           ${line('PAYE tax', Number(p.paye))}
           ${line('Pension (employee 8%)', Number(p.pension_employee))}
           ${line('National Housing Fund', Number(p.nhf))}
-          ${line('Other deductions', Number(p.other_deductions), p.other_deductions_note)}
+          ${line('Other deductions', salaryOther, p.other_deductions_note)}
+          ${extras.filter((x) => x.kind === 'deduction' || x.kind === 'loan').map((x) => line(x.label, x.amount)).join('')}
           ${deductions ? '' : '<tr><td class="muted">No deductions</td><td></td></tr>'}
         </tbody>
         <tfoot><tr><td>Total deductions</td><td class="r">${formatNaira(deductions)}</td></tr></tfoot>

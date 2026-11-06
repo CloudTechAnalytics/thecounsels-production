@@ -2157,6 +2157,10 @@ export interface Database {
           handled_at: string | null
           resolution_note: string | null
           created_at: string
+          manager_user_id: string | null
+          manager_support: boolean | null
+          manager_note: string | null
+          manager_at: string | null
         }
         Insert: {
           id?: string
@@ -3406,6 +3410,7 @@ export interface Database {
         Args: { p_claim: string; p_paid_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null }
         Returns: Database['public']['Tables']['fund_requests']['Row']
       }
+      recommend_hr_request: { Args: { p_id: string; p_support: boolean; p_note?: string | null }; Returns: Database['public']['Tables']['hr_requests']['Row'] }
       set_org_feature: { Args: { p_org: string; p_feature: string; p_enabled: boolean | null; p_note?: string | null }; Returns: undefined }
       launch_appraisal_cycle: { Args: { p_cycle: string }; Returns: number }
       close_appraisal_cycle: { Args: { p_cycle: string }; Returns: undefined }

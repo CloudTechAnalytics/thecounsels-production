@@ -1,9 +1,12 @@
 import * as React from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ArrowLeft, Check, Minus, SlidersHorizontal, Pencil, Users, CreditCard, ScrollText } from 'lucide-react'
-import { EditOrganizationDialog } from '@/features/platform/components/edit-organization-dialog'
+import { useUpdateOrganization } from '@/features/platform/hooks/use-platform'
+import { Label } from '@/shared/components/ui/label'
+import type { OrgRow } from '@/features/platform/types'
+import { SubscriptionStatusBadge, subscriptionStatus } from '@/features/platform/components/subscription-status-badge'
 import { CYCLE_LABEL, monthlyEquivalent } from '@/shared/lib/billing-cycle'
 import { usePlatformOrganizations } from '@/features/platform/hooks/use-platform'
 import { PLAN_FEATURES } from '@/features/platform/types'
@@ -81,6 +84,47 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
+/** The Firm card in edit mode — saves the firm's profile in place. */
+function FirmEditor({ org, onDone }: { org: OrgRow; onDone: () => void }) {
+  const update = useUpdateOrganization()
+  const [f, setF] = React.useState({
+    name: org.name ?? '', legal_name: org.legal_name ?? '', industry: org.industry ?? '',
+    website: org.website ?? '', phone: org.phone ?? '', billing_email: org.billing_email ?? '',
+  })
+  const field = (k: keyof typeof f, label: string, type = 'text', placeholder?: string) => (
+    <div className="space-y-1">
+      <Label className="text-xs">{label}</Label>
+      <Input type={type} value={f[k]} placeholder={placeholder} onChange={(e) => setF((x) => ({ ...x, [k]: e.target.value }))} />
+    </div>
+  )
+  const save = async () => {
+    if (!f.name.trim()) { toast.error('Name is required'); return }
+    try {
+      await update.mutateAsync({ id: org.id, patch: {
+        name: f.name.trim(), legal_name: f.legal_name.trim() || null, industry: f.industry.trim() || null,
+        website: f.website.trim() || null, phone: f.phone.trim() || null, billing_email: f.billing_email.trim() || null,
+      } })
+      toast.success('Organization updated')
+      onDone()
+    } catch (err) { toast.error('Could not update', { description: errorMessage(err) }) }
+  }
+  return (
+    <div className="space-y-3">
+      {field('name', 'Firm name')}
+      {field('legal_name', 'Legal name')}
+      {field('industry', 'Industry', 'text', 'e.g. Full Service Law Firm')}
+      {field('website', 'Website', 'url', 'https://')}
+      {field('phone', 'Phone', 'tel')}
+      {field('billing_email', 'Billing email', 'email')}
+      <p className="text-xs text-muted-foreground">The workspace link (/{org.slug}) can’t be changed.</p>
+      <div className="flex justify-end gap-2 pt-1">
+        <Button size="sm" variant="ghost" onClick={onDone}>Cancel</Button>
+        <Button size="sm" onClick={save} loading={update.isPending}>Save</Button>
+      </div>
+    </div>
+  )
+}
+
 /** One firm in the Platform Console: its details, subscription and usage,
  * and the per-firm feature switches — a full page, not a pop-up. */
 export function OrganizationDetailPage() {
@@ -91,7 +135,9 @@ export function OrganizationDetailPage() {
   const setFeature = useSetFeature()
   const [note, setNote] = React.useState('')
   const [busyKey, setBusyKey] = React.useState<string | null>(null)
-  const [editOpen, setEditOpen] = React.useState(false)
+  const [params, setParams] = useSearchParams()
+  const editing = params.get('edit') === '1'
+  const setEditing = (on: boolean) => setParams(on ? { edit: '1' } : {}, { replace: true })
 
   const wantsFeatures = window.location.pathname.endsWith('/features')
   React.useEffect(() => {
@@ -132,29 +178,37 @@ export function OrganizationDetailPage() {
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span>/{org.slug}</span>
               <Badge variant="outline">{planName}</Badge>
-              {sub && <Badge variant="outline" className="capitalize">{sub.status}</Badge>}
-              {org.status !== 'active' && <Badge variant="destructive" className="capitalize">{org.status}</Badge>}
+              <SubscriptionStatusBadge org={org} />
               {custom > 0 && <Badge variant="warning" className="font-normal">{custom} custom feature{custom === 1 ? '' : 's'}</Badge>}
             </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setEditOpen(true)}><Pencil className="h-4 w-4" /> Edit</Button>
+          <Button variant={editing ? 'default' : 'outline'} onClick={() => setEditing(!editing)}><Pencil className="h-4 w-4" /> {editing ? 'Editing…' : 'Edit'}</Button>
           <Button variant="outline" onClick={() => navigate('/platform/organization-users')}><Users className="h-4 w-4" /> Users</Button>
           <Button variant="outline" onClick={() => navigate('/platform/subscriptions')}><CreditCard className="h-4 w-4" /> Subscription</Button>
           <Button variant="outline" onClick={() => navigate('/platform/audit')}><ScrollText className="h-4 w-4" /> Audit logs</Button>
         </div>
       </div>
 
+      {subscriptionStatus(org).locked && (
+        <Card className="mb-5 border-destructive/40 bg-destructive/5 p-4 text-sm">
+          <strong>{org.name}’s members can’t use the workspace right now</strong> — {subscriptionStatus(org).label.toLowerCase()}.
+          {sub?.trial_ends_at && sub.status === 'expired' && ` Their trial ended on ${format(new Date(sub.trial_ends_at), 'd MMM yyyy')}.`} Change the subscription under Subscriptions to restore access.
+        </Card>
+      )}
+
       <div className="mb-8 grid gap-4 md:grid-cols-3">
-        <Card className="p-5">
+        <Card className={cn('p-5', editing && 'border-primary/50 md:row-span-2')}>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Firm</p>
+          {editing ? <FirmEditor org={org} onDone={() => setEditing(false)} /> : <>
           <Row label="Industry" value={org.industry} />
           <Row label="Legal name" value={org.legal_name} />
           <Row label="Website" value={org.website} />
           <Row label="Phone" value={org.phone} />
           <Row label="Billing email" value={org.billing_email} />
           <Row label="Owner" value={org.owner?.full_name ?? org.owner?.email} />
+          </>}
         </Card>
         <Card className="p-5">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Subscription</p>
@@ -225,7 +279,6 @@ export function OrganizationDetailPage() {
         Turning a feature off hides it for everyone in the firm and blocks new activity on the server; nothing they already created is deleted.
         Every change is recorded in Audit Logs.
       </p>
-      <EditOrganizationDialog org={org} open={editOpen} onOpenChange={setEditOpen} />
     </div>
   )
 }

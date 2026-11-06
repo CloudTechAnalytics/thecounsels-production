@@ -28,8 +28,8 @@ import {
   useResetDemoOrganization,
 } from '@/features/platform/hooks/use-platform'
 import { CreateOrganizationDialog } from '@/features/platform/components/create-organization-dialog'
-import { EditOrganizationDialog } from '@/features/platform/components/edit-organization-dialog'
 import { useAllFeatureOverrides } from '@/features/platform/pages/organization-detail-page'
+import { SubscriptionStatusBadge } from '@/features/platform/components/subscription-status-badge'
 import { SupportSessionDialog } from '@/features/platform/components/support-session-dialog'
 import type { OrgRow } from '@/features/platform/types'
 import { PageHeader } from '@/shared/components/page-header'
@@ -37,7 +37,7 @@ import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { Card } from '@/shared/components/ui/card'
 import { Input } from '@/shared/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
-import { Badge, type BadgeProps } from '@/shared/components/ui/badge'
+import { Badge } from '@/shared/components/ui/badge'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
@@ -49,7 +49,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
-import { initialsOf, titleCase, formatStorage, daysUntil } from '@/shared/lib/format'
+import { initialsOf, titleCase, formatStorage } from '@/shared/lib/format'
 import { errorMessage } from '@/shared/lib/errors'
 import { toast } from '@/shared/components/ui/sonner'
 
@@ -62,20 +62,6 @@ function storageSummary(usedBytes: number, limitBytes: number): string {
   return `${formatStorage(usedBytes)} / ${formatStorage(limitBytes)} (${pct}%)`
 }
 
-const STATUS_VARIANT: Record<string, BadgeProps['variant']> = {
-  active: 'success',
-  trial: 'warning',
-  suspended: 'destructive',
-  cancelled: 'muted',
-}
-
-function TrialBadge({ org }: { org: OrgRow }) {
-  if (org.subscription?.status !== 'trialing') return null
-  const d = daysUntil(org.subscription.trial_ends_at)
-  if (d == null) return <Badge variant="warning">Trial</Badge>
-  return <Badge variant={d <= 3 ? 'destructive' : 'warning'}>{d < 0 ? 'Expired' : `${d}d trial`}</Badge>
-}
-
 function ActiveRowActions({ org }: { org: OrgRow }) {
   const navigate = useNavigate()
   const setStatus = useSetOrganizationStatus()
@@ -83,7 +69,6 @@ function ActiveRowActions({ org }: { org: OrgRow }) {
   const resetDemo = useResetDemoOrganization()
   const [confirmDelete, setConfirmDelete] = React.useState(false)
   const [confirmReset, setConfirmReset] = React.useState(false)
-  const [editOpen, setEditOpen] = React.useState(false)
   const [supportOpen, setSupportOpen] = React.useState(false)
   const suspended = org.status === 'suspended'
   const isDemo = org.organization_type === 'demo'
@@ -109,7 +94,7 @@ function ActiveRowActions({ org }: { org: OrgRow }) {
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>{org.name}</DropdownMenuLabel>
           <DropdownMenuItem onClick={() => navigate(`/platform/organizations/${org.id}`)}><Eye /> View details</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setEditOpen(true)}><Pencil /> Edit</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate(`/platform/organizations/${org.id}?edit=1`)}><Pencil /> Edit</DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate(`/platform/organizations/${org.id}/features`)}><SlidersHorizontal /> Manage features</DropdownMenuItem>
           {suspended ? (
             <DropdownMenuItem onClick={toggle}><RotateCcw /> Activate</DropdownMenuItem>
@@ -182,7 +167,6 @@ function ActiveRowActions({ org }: { org: OrgRow }) {
         }}
       />
 
-      <EditOrganizationDialog org={org} open={editOpen} onOpenChange={setEditOpen} />
       <SupportSessionDialog org={{ id: org.id, name: org.name }} open={supportOpen} onOpenChange={setSupportOpen} />
     </>
   )
@@ -375,10 +359,7 @@ export function OrganizationsPage() {
                           {org.organization_type !== 'customer' ? (
                             <Badge variant="muted" className="capitalize">{org.organization_type}</Badge>
                           ) : (
-                            <>
-                              <Badge variant={STATUS_VARIANT[org.status] ?? 'muted'}>{org.status}</Badge>
-                              <TrialBadge org={org} />
-                            </>
+                            <SubscriptionStatusBadge org={org} />
                           )}
                         </div>
                       </TableCell>
@@ -422,10 +403,7 @@ export function OrganizationsPage() {
                     {org.organization_type !== 'customer' ? (
                       <Badge variant="muted" className="capitalize">{org.organization_type}</Badge>
                     ) : (
-                      <>
-                        <Badge variant={STATUS_VARIANT[org.status] ?? 'muted'}>{org.status}</Badge>
-                        <TrialBadge org={org} />
-                      </>
+                      <SubscriptionStatusBadge org={org} />
                     )}
                     {org.organization_type === 'customer' && (
                       <Badge variant="outline">{org.subscription?.plan?.name ?? titleCase(org.plan)}</Badge>

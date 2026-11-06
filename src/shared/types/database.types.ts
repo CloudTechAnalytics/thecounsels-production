@@ -1319,6 +1319,70 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['approval_workflow_steps']['Insert']>
         Relationships: []
       }
+      surveys: {
+        Row: {
+          id: string
+          organization_id: string
+          title: string
+          description: string | null
+          anonymous: boolean
+          status: 'draft' | 'open' | 'closed'
+          audience_type: string
+          audience_department_id: string | null
+          audience_branch_id: string | null
+          audience_role_key: RoleKey | null
+          audience_user_ids: string[]
+          closes_on: string | null
+          recipient_count: number
+          response_count: number
+          sent_at: string | null
+          closed_at: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: { organization_id: string; title: string }
+        Update: Record<string, never>
+        Relationships: []
+      }
+      survey_questions: {
+        Row: {
+          id: string
+          survey_id: string
+          position: number
+          kind: 'single' | 'multi' | 'rating' | 'yesno' | 'text'
+          prompt: string
+          options: string[]
+          required: boolean
+        }
+        Insert: { survey_id: string; position: number; kind: string; prompt: string }
+        Update: Record<string, never>
+        Relationships: []
+      }
+      survey_recipients: {
+        Row: {
+          survey_id: string
+          organization_id: string
+          user_id: string
+          responded_at: string | null
+          reminded_at: string | null
+        }
+        Insert: { survey_id: string; organization_id: string; user_id: string }
+        Update: Record<string, never>
+        Relationships: []
+      }
+      survey_responses: {
+        Row: { id: string; survey_id: string; user_id: string | null; submitted_at: string }
+        Insert: { survey_id: string }
+        Update: Record<string, never>
+        Relationships: []
+      }
+      survey_answers: {
+        Row: { response_id: string; question_id: string; choices: string[] | null; rating: number | null; text_value: string | null }
+        Insert: { response_id: string; question_id: string }
+        Update: Record<string, never>
+        Relationships: []
+      }
       power_sources: {
         Row: {
           id: string
@@ -3264,6 +3328,19 @@ export interface Database {
         Args: { p_claim: string; p_paid_on?: string | null; p_method?: string | null; p_reference?: string | null; p_notes?: string | null }
         Returns: Database['public']['Tables']['fund_requests']['Row']
       }
+      save_survey: {
+        Args: {
+          p_org: string; p_id: string | null; p_title: string; p_description: string | null; p_anonymous: boolean; p_closes_on: string | null
+          p_audience_type: string; p_department_id: string | null; p_branch_id: string | null; p_role_key: RoleKey | null; p_user_ids: string[] | null
+          p_questions: Json
+        }
+        Returns: string
+      }
+      send_survey: { Args: { p_id: string }; Returns: Database['public']['Tables']['surveys']['Row'] }
+      submit_survey: { Args: { p_id: string; p_answers: Json }; Returns: undefined }
+      remind_survey: { Args: { p_id: string }; Returns: number }
+      close_survey: { Args: { p_id: string }; Returns: undefined }
+      survey_results: { Args: { p_id: string }; Returns: Json }
       inventory_move: {
         Args: { p_item: string; p_kind: string; p_quantity?: number | null; p_employee?: string | null; p_note?: string | null; p_unit_cost?: number | null; p_condition?: string | null }
         Returns: Database['public']['Tables']['inventory_items']['Row']

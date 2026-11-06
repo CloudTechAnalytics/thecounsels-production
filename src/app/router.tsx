@@ -78,6 +78,9 @@ import { InventoryPage } from '@/features/inventory/pages/inventory-page'
 import { InventoryItemPage } from '@/features/inventory/pages/inventory-item-page'
 import { InventoryItemFormPage } from '@/features/inventory/pages/inventory-item-form-page'
 import { PowerPage } from '@/features/power/pages/power-page'
+import { SurveysPage } from '@/features/surveys/pages/surveys-page'
+import { SurveyBuilderPage } from '@/features/surveys/pages/survey-builder-page'
+import { SurveyPage } from '@/features/surveys/pages/survey-page'
 import { PowerSourceFormPage } from '@/features/power/pages/power-source-form-page'
 import { HrDocumentsPage } from '@/features/hr/pages/hr-documents-page'
 import { CircularsPage } from '@/features/hr/pages/circulars-page'
@@ -316,6 +319,10 @@ export const router = createBrowserRouter([
                       { path: 'power', element: withPermission(<PowerPage />, 'power.manage') },
                       { path: 'power/sources/new', element: withPermission(<PowerSourceFormPage />, 'power.manage') },
                       { path: 'power/sources/:id/edit', element: withPermission(<PowerSourceFormPage />, 'power.manage') },
+                      { path: 'surveys', element: withPermission(<SurveysPage />, 'leave.request') },
+                      { path: 'surveys/new', element: withPermission(<SurveyBuilderPage />, 'surveys.manage') },
+                      { path: 'surveys/:id', element: withPermission(<SurveyPage />, 'leave.request') },
+                      { path: 'surveys/:id/edit', element: withPermission(<SurveyBuilderPage />, 'surveys.manage') },
                       { path: 'reports', element: withPermission(<HrReportsPage />, 'hr.view_reports') },
                     ],
                   },

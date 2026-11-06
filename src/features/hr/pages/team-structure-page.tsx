@@ -7,6 +7,7 @@ import { useEmployeeRegister } from '@/features/hr/hooks/use-employees'
 import { useDepartments } from '@/features/hr/hooks/use-hr'
 import { useBranches } from '@/features/branches/hooks/use-branches'
 import type { EmployeeRecord } from '@/features/hr/services/employees.service'
+import { AdditionalManagers } from '@/features/hr/components/additional-managers'
 import { supabase } from '@/shared/lib/supabase'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
@@ -93,6 +94,11 @@ export function TeamStructurePage() {
     return m
   }, [staff, byId])
   const missing = staff.filter((e) => !e.manager_employee_id && !e.reports_to_no_one)
+  const alsoReports = React.useMemo(() => {
+    const m = new Map<string, number>()
+    for (const e of staff) for (const id of e.additionalManagerIds ?? []) m.set(id, (m.get(id) ?? 0) + 1)
+    return m
+  }, [staff])
   const roots = staff.filter((e) => !e.manager_employee_id || !byId.has(e.manager_employee_id))
 
   const rows = staff.filter((e) =>
@@ -258,8 +264,9 @@ export function TeamStructurePage() {
                           ) : (
                             <span className={cn(gap && 'text-warning')}>{e.managerName ?? 'Not set'}</span>
                           )}
+                          {!e.reports_to_no_one && <AdditionalManagers employee={e} staff={staff} canEdit={canEdit} compact />}
                         </td>
-                        <td className="px-4 py-2 text-right tabular-nums">{team || '—'}</td>
+                        <td className="px-4 py-2 text-right tabular-nums">{team + (alsoReports.get(e.id) ?? 0) || '—'}</td>
                       </tr>
                     )
                   })}

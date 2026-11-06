@@ -14,6 +14,9 @@ export interface EmployeeRecord extends EmployeeRow {
   branchName: string | null
   managerName: string | null
   managerUserId: string | null
+  /** Other line managers besides the primary one (employee_line_managers). */
+  additionalManagerIds: string[]
+  additionalManagerNames: string[]
   hasLogin: boolean
   roleName: string | null
   roleKey: string | null
@@ -30,12 +33,13 @@ export const fullNameOf = (e: Pick<EmployeeRow, 'first_name' | 'last_name'>) => 
 
 export const employeesService = {
   async listRegister(organizationId: string): Promise<EmployeeRecord[]> {
-    const [{ data: rows, error }, members, { data: departments }, { data: titles }, { data: branches }] = await Promise.all([
+    const [{ data: rows, error }, members, { data: departments }, { data: titles }, { data: branches }, { data: extraLines }] = await Promise.all([
       supabase.from('employees').select('*').eq('organization_id', organizationId).order('employee_number'),
       administrationService.listMembers(organizationId).catch(() => []),
       supabase.from('departments').select('id, name').eq('organization_id', organizationId),
       supabase.from('job_titles').select('id, name').eq('organization_id', organizationId),
       supabase.from('branches').select('id, name').eq('organization_id', organizationId),
+      supabase.from('employee_line_managers').select('employee_id, manager_employee_id, created_at').eq('organization_id', organizationId).order('created_at'),
     ])
     if (error) throw error
     const list = rows ?? []
@@ -44,8 +48,11 @@ export const employeesService = {
     const dept = new Map((departments ?? []).map((d) => [d.id, d.name]))
     const title = new Map((titles ?? []).map((t) => [t.id, t.name]))
     const branch = new Map((branches ?? []).map((b) => [b.id, b.name]))
+    const extra = new Map<string, string[]>()
+    for (const l of extraLines ?? []) extra.set(l.employee_id, [...(extra.get(l.employee_id) ?? []), l.manager_employee_id])
     return list.map((e) => {
       const m = e.user_id ? memberByUser.get(e.user_id) : undefined
+      const extraIds = (extra.get(e.id) ?? []).filter((id) => byId.has(id))
       const mgr = e.manager_employee_id ? byId.get(e.manager_employee_id) : undefined
       return {
         ...e,
@@ -55,6 +62,8 @@ export const employeesService = {
         branchName: e.branch_id ? branch.get(e.branch_id) ?? null : null,
         managerName: mgr ? fullNameOf(mgr) : null,
         managerUserId: mgr?.user_id ?? null,
+        additionalManagerIds: extraIds,
+        additionalManagerNames: extraIds.map((id) => fullNameOf(byId.get(id)!)),
         hasLogin: Boolean(e.user_id),
         roleName: m?.role?.name ?? null,
         roleKey: m?.role?.key ?? null,

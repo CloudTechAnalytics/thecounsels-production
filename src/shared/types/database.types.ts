@@ -1319,6 +1319,12 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['approval_workflow_steps']['Insert']>
         Relationships: []
       }
+      employee_line_managers: {
+        Row: { organization_id: string; employee_id: string; manager_employee_id: string; created_by: string | null; created_at: string }
+        Insert: { organization_id: string; employee_id: string; manager_employee_id: string }
+        Update: Record<string, never>
+        Relationships: []
+      }
       surveys: {
         Row: {
           id: string
@@ -3373,7 +3379,11 @@ export interface Database {
       remind_circular: { Args: { p_id: string }; Returns: number }
       my_direct_reports: {
         Args: { p_org: string }
-        Returns: { employee_id: string; user_id: string | null; full_name: string }[]
+        Returns: { employee_id: string; user_id: string | null; full_name: string; is_primary: boolean }[]
+      }
+      set_additional_line_managers: {
+        Args: { p_org: string; p_employee: string; p_manager_ids: string[] }
+        Returns: number
       }
       set_line_managers: {
         Args: { p_org: string; p_employee_ids: string[]; p_manager: string | null }

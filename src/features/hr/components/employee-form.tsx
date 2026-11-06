@@ -2,6 +2,7 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { useDepartments, useJobTitles } from '@/features/hr/hooks/use-hr'
 import { useBranches } from '@/features/branches/hooks/use-branches'
 import { useEmployeeRegister } from '@/features/hr/hooks/use-employees'
+import { AdditionalManagers } from '@/features/hr/components/additional-managers'
 import { EMPLOYMENT_STATUSES, EMPLOYMENT_STATUS_META, EMPLOYMENT_TYPES } from '@/features/hr/types'
 import type { EmployeeInput, EmployeeRecord } from '@/features/hr/services/employees.service'
 import { Input } from '@/shared/components/ui/input'
@@ -138,6 +139,11 @@ export function EmploymentFields({ v, set, selfId, readOnly }: { v: EmployeeForm
             Top of the firm — reports to no one (e.g. Managing Partner)
           </label>
           {!v.reports_to_no_one && <p className="text-xs text-muted-foreground">Approves their leave and endorses their fund requests.</p>}
+          {!v.reports_to_no_one && (() => {
+            const self = selfId ? (register ?? []).find((e) => e.id === selfId) : undefined
+            if (!self) return selfId ? null : <p className="text-xs text-muted-foreground">Works for more than one partner? Add other line managers after saving.</p>
+            return <AdditionalManagers employee={self} staff={register ?? []} canEdit={!readOnly} />
+          })()}
         </div>
         <Pick label="Employment type" value={v.employment_type} onChange={(x) => set({ employment_type: x || 'full_time' })} placeholder="Full-time" disabled={readOnly}
           options={EMPLOYMENT_TYPES} />

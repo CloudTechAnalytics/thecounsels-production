@@ -146,6 +146,9 @@ const PLAN_FEATURE_COPY: Record<PlanFeatureKey, { label: string; plan: string }>
   power_management: { label: 'Electricity & Power', plan: 'Business' },
   surveys: { label: 'Surveys', plan: 'Business' },
   appraisals: { label: 'Appraisals', plan: 'Business' },
+  circulars: { label: 'Circulars', plan: 'Business' },
+  fund_requests: { label: 'Fund requests & expense retirement', plan: 'Business' },
+  payroll: { label: 'Payroll & payslips', plan: 'Business' },
 }
 
 /** Guard a route by subscription plan; same in-place "restricted" panel

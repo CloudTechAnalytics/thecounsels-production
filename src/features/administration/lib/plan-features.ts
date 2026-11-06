@@ -11,6 +11,7 @@
 export type PlanFeatureKey = 'messaging' | 'whatsapp_reminders' | 'hr_module' | 'ai_summarization' | 'appointments'
   // Business plan and above (0200).
   | 'inventory' | 'power_management' | 'surveys' | 'appraisals'
+  | 'circulars' | 'fund_requests' | 'payroll'
 
 export function planHasFeature(features: unknown, key: PlanFeatureKey): boolean {
   return Boolean(features && typeof features === 'object' && (features as Record<string, unknown>)[key] === true)

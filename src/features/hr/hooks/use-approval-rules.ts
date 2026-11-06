@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { supabase } from '@/shared/lib/supabase'
 import type { Database } from '@/shared/types/database.types'
+import type { PlanFeatureKey } from '@/features/administration/lib/plan-features'
 
 export type ApprovalRule = Database['public']['Tables']['approval_rules']['Row']
 export type ApprovalArea = 'leave' | 'hr_request' | 'payroll' | 'salary' | 'fund_finance' | 'reimbursement' | 'inventory'
@@ -11,14 +12,14 @@ export interface ApprovalCandidate { area: string; kind: string; value: string; 
 
 /** The areas a firm can assign approvers for, with the permission that
  * qualifies someone (approval_area_permission in 0189). */
-export const APPROVAL_AREAS: { area: ApprovalArea; label: string; description: string; permission: string }[] = [
-  { area: 'fund_finance', label: 'Fund payouts & verification', description: 'Pays out approved advances, verifies receipts and refunds, pays reimbursements and closes advances.', permission: 'funds.manage' },
-  { area: 'reimbursement', label: 'Reimbursement claims', description: 'Approves claims when staff spent more than their advance.', permission: 'funds.approve' },
+export const APPROVAL_AREAS: { area: ApprovalArea; label: string; description: string; permission: string; feature?: PlanFeatureKey }[] = [
+  { area: 'fund_finance', label: 'Fund payouts & verification', description: 'Pays out approved advances, verifies receipts and refunds, pays reimbursements and closes advances.', permission: 'funds.manage', feature: 'fund_requests' },
+  { area: 'reimbursement', label: 'Reimbursement claims', description: 'Approves claims when staff spent more than their advance.', permission: 'funds.approve', feature: 'fund_requests' },
   { area: 'leave', label: 'Leave', description: 'Approves or rejects leave applications.', permission: 'leave.manage' },
   { area: 'hr_request', label: 'HR requests', description: 'Handles letters, records updates and other HR requests.', permission: 'hr_requests.manage' },
-  { area: 'payroll', label: 'Payroll approval', description: 'Approves the monthly payroll another payroll manager prepared.', permission: 'payroll.manage' },
-  { area: 'salary', label: 'Salary changes', description: 'Sets and changes staff salaries and bank details.', permission: 'payroll.manage' },
-  { area: 'inventory', label: 'Inventory requests', description: 'Approves staff requests for office items (their line manager can too).', permission: 'inventory.manage' },
+  { area: 'payroll', label: 'Payroll approval', description: 'Approves the monthly payroll another payroll manager prepared.', permission: 'payroll.manage', feature: 'payroll' },
+  { area: 'salary', label: 'Salary changes', description: 'Sets and changes staff salaries and bank details.', permission: 'payroll.manage', feature: 'payroll' },
+  { area: 'inventory', label: 'Inventory requests', description: 'Approves staff requests for office items (their line manager can too).', permission: 'inventory.manage', feature: 'inventory' },
 ]
 
 const keys = {

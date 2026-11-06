@@ -117,4 +117,7 @@ export const PLAN_FEATURES: { key: string; label: string }[] = [
   { key: 'power_management', label: 'Electricity & Power' },
   { key: 'surveys', label: 'Surveys & questionnaires' },
   { key: 'appraisals', label: 'Performance appraisals' },
+  { key: 'circulars', label: 'Circulars (read & acknowledge tracking)' },
+  { key: 'fund_requests', label: 'Fund requests, expense retirement & Approval Centre' },
+  { key: 'payroll', label: 'Payroll & payslips' },
 ]

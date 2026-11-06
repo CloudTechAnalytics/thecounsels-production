@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Paperclip } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
+import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { useCreateEmployee, useUpdateEmployee, useDeleteEmployee } from '@/features/hr/hooks/use-employees'
 import { useAllLeaveRequests, useEmployeeHrDocuments, useLeaveTypes } from '@/features/hr/hooks/use-hr'
 import { useFundRequests } from '@/features/funds/hooks/use-funds'
@@ -150,6 +151,7 @@ export function EmployeeDetailDialog({ employee, open, onOpenChange }: { employe
   const update = useUpdateEmployee(activeOrgId)
   const remove = useDeleteEmployee(activeOrgId)
   const [tab, setTab] = React.useState<Tab>('personal')
+  const { has: hasFeature } = usePlanFeature(activeOrgId)
   const [v, setV] = React.useState<EmployeeFormValues>(toFormValues())
   const [confirmDelete, setConfirmDelete] = React.useState(false)
   const set = (patch: Partial<EmployeeFormValues>) => setV((x) => ({ ...x, ...patch }))
@@ -186,9 +188,9 @@ export function EmployeeDetailDialog({ employee, open, onOpenChange }: { employe
   const tabs: { key: Tab; label: string; show: boolean }[] = [
     { key: 'personal', label: 'Personal', show: true },
     { key: 'employment', label: 'Employment', show: true },
-    { key: 'funds', label: 'Fund requests', show: !isNew },
+    { key: 'funds', label: 'Fund requests', show: !isNew && hasFeature('fund_requests') },
     { key: 'leave', label: 'Leave', show: !isNew },
-    { key: 'payroll', label: 'Payroll', show: !isNew },
+    { key: 'payroll', label: 'Payroll', show: !isNew && hasFeature('payroll') },
     { key: 'documents', label: 'Documents', show: !isNew },
   ]
   const status = employee ? EMPLOYMENT_STATUS_META[employee.employment_status] ?? EMPLOYMENT_STATUS_META.active : null

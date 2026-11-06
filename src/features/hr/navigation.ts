@@ -31,7 +31,7 @@ export const HR_NAVIGATION: HrNavSection[] = [
   {
     items: [
       { label: 'HR Dashboard', to: '/hr', icon: LayoutGrid, permission: 'hr.view_reports', end: true },
-      { label: 'Approval Centre', to: '/hr/approvals', icon: ListChecks, permission: ['funds.approve', 'funds.manage', 'leave.manage', 'hr_requests.manage'] },
+      { label: 'Approval Centre', to: '/hr/approvals', icon: ListChecks, permission: ['funds.approve', 'funds.manage', 'leave.manage', 'hr_requests.manage'], planFeature: 'fund_requests' },
     ],
   },
   {
@@ -44,17 +44,17 @@ export const HR_NAVIGATION: HrNavSection[] = [
       { label: 'Appraisals', to: '/hr/appraisals', icon: Star, permission: 'leave.request', planFeature: 'appraisals' },
       { label: 'Documents', to: '/hr/documents', icon: FolderLock, permission: 'hr_documents.view_own' },
       { label: 'HR Requests', to: '/hr/requests', icon: Inbox, permission: 'hr_requests.submit' },
-      { label: 'Circulars', to: '/hr/announcements', icon: Megaphone, permission: 'hr_announcements.view', badge: AnnouncementsNavBadge },
+      { label: 'Circulars', to: '/hr/announcements', icon: Megaphone, permission: 'hr_announcements.view', badge: AnnouncementsNavBadge, planFeature: 'circulars' },
       { label: 'Surveys', to: '/hr/surveys', icon: ClipboardList, permission: 'leave.request', planFeature: 'surveys' },
     ],
   },
   {
     heading: 'Finance',
     items: [
-      { label: 'Fund Requests', to: '/hr/funds', icon: Wallet, permission: 'funds.request' },
-      { label: 'Expense Retirement', to: '/hr/retirements', icon: Scale, permission: 'funds.request' },
-      { label: 'Payroll', to: '/hr/payroll', icon: Banknote, permission: 'payroll.manage' },
-      { label: 'Payslips', to: '/hr/payslips', icon: ReceiptText, permission: 'payroll.view_own' },
+      { label: 'Fund Requests', to: '/hr/funds', icon: Wallet, permission: 'funds.request', planFeature: 'fund_requests' },
+      { label: 'Expense Retirement', to: '/hr/retirements', icon: Scale, permission: 'funds.request', planFeature: 'fund_requests' },
+      { label: 'Payroll', to: '/hr/payroll', icon: Banknote, permission: 'payroll.manage', planFeature: 'payroll' },
+      { label: 'Payslips', to: '/hr/payslips', icon: ReceiptText, permission: 'payroll.view_own', planFeature: 'payroll' },
     ],
   },
   {

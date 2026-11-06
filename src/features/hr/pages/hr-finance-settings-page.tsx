@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
+import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { useDepartments } from '@/features/hr/hooks/use-hr'
 import { useEmployeeRegister, useSetDepartmentHead } from '@/features/hr/hooks/use-employees'
 import { HrListsSettings } from '@/features/hr/components/hr-lists-settings'
@@ -59,7 +60,10 @@ function DepartmentHeadsCard() {
 
 export function HrFinanceSettingsPage() {
   const { has } = usePermissions()
-  const canFunds = has('funds.manage')
+  const { activeOrgId } = useAuth()
+  const { has: hasFeature } = usePlanFeature(activeOrgId)
+  const funds = hasFeature('fund_requests')
+  const canFunds = funds && has('funds.manage')
   const canPeople = has('departments.manage') || has('staff.manage')
 
   return (
@@ -84,11 +88,13 @@ export function HrFinanceSettingsPage() {
             <FundRulesCard />
           </section>
         )}
-        <section className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Delegation</p>
-          <DelegationsCard />
-        </section>
-        {has('payroll.manage') && (
+        {funds && (
+          <section className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Delegation</p>
+            <DelegationsCard />
+          </section>
+        )}
+        {hasFeature('payroll') && has('payroll.manage') && (
           <section className="space-y-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payroll</p>
             <Card className="flex flex-wrap items-center justify-between gap-3 p-6">

@@ -149,7 +149,7 @@ export function ApprovalRulesCard() {
       </div>
       {isLoading ? <Skeleton className="h-48 w-full" /> : (
         <ul className="divide-y divide-border">
-          {APPROVAL_AREAS.filter((a) => a.area !== 'inventory' || hasFeature('inventory')).map((a) => {
+          {APPROVAL_AREAS.filter((a) => !a.feature || hasFeature(a.feature)).map((a) => {
             const areaRules = rules.filter((r) => r.area === a.area)
             const firmRule = areaRules.find((r) => r.branch_id === null)
             const branchRules = areaRules.filter((r) => r.branch_id !== null)

@@ -124,7 +124,7 @@ export function DashboardPage() {
   const { has } = usePermissions()
   const { has: hasFeature } = usePlanFeature(activeOrgId)
   const canFinancials = has('reports.financial')
-  const hrFunds = hasFeature('hr_module') && (has('funds.approve') || has('funds.manage'))
+  const hrFunds = hasFeature('hr_module') && hasFeature('fund_requests') && (has('funds.approve') || has('funds.manage'))
   const dateRange = useDateRange()
   const branchScope = useBranchScope()
 
@@ -222,7 +222,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {hasFeature('hr_module') && <CircularsNotice />}
+      {hasFeature('hr_module') && hasFeature('circulars') && <CircularsNotice />}
       {hasFeature('hr_module') && hasFeature('surveys') && <SurveysNotice />}
 
       {/* What needs doing, what's coming, what the data says */}

@@ -8,6 +8,7 @@ import { Users, UserCheck, CalendarClock, Inbox, Wallet, ChevronLeft, ChevronRig
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useEmployees, useAllLeaveRequests, useAllHrRequests, useLeaveTypes } from '@/features/hr/hooks/use-hr'
 import { useFundRequests, useFundApprovalRights } from '@/features/funds/hooks/use-funds'
+import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { OPEN_ADVANCE_STATUSES, outstandingBalance } from '@/features/funds/types'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { HR_REQUEST_TYPES } from '@/features/hr/types'
@@ -171,7 +172,8 @@ function useHrActivity() {
   const { data: leave, isLoading: l1 } = useAllLeaveRequests(activeOrgId)
   const { data: leaveTypes } = useLeaveTypes(activeOrgId)
   const { data: hr, isLoading: l2 } = useAllHrRequests(has('hr_requests.manage') ? activeOrgId : null)
-  const { data: funds, isLoading: l3 } = useFundRequests(has('funds.request') ? activeOrgId : null)
+  const { has: hasFeature } = usePlanFeature(activeOrgId)
+  const { data: funds, isLoading: l3 } = useFundRequests(has('funds.request') && hasFeature('fund_requests') ? activeOrgId : null)
   const { canActOn, canFinance } = useFundApprovalRights()
   const { can } = useApprovalRights()
   const canLeave = has('leave.manage') && can('leave')
@@ -493,7 +495,8 @@ export function HrOverviewPage() {
   const pendingFunds = items.filter((i) => i.kind === 'funds' && i.needsMe).length
   const canManageLeave = has('leave.manage')
   const canSeeApprovals = canManageLeave || canManageRequests || pendingFunds > 0
-  const canSeeFunds = has('funds.approve') || has('funds.manage')
+  const { has: hasPlanFeature } = usePlanFeature(activeOrgId)
+  const canSeeFunds = hasPlanFeature('fund_requests') && (has('funds.approve') || has('funds.manage'))
   const unretired = funds.filter((f) => OPEN_ADVANCE_STATUSES.includes(f.status) && outstandingBalance(f) > 0)
 
   return (

@@ -34,7 +34,8 @@ export function PendingActionsCard({ overdueInvoices, className }: { overdueInvo
   const { has: hasFeature } = usePlanFeature(activeOrgId)
   const hr = hasFeature('hr_module')
   const { isLineManager, reportUserIds } = useMyReports()
-  const canFunds = hr && (has('funds.approve') || has('funds.manage') || isLineManager)
+  const hasCentre = hasFeature('fund_requests')
+  const canFunds = hr && hasCentre && (has('funds.approve') || has('funds.manage') || isLineManager)
   const { data: funds, isLoading: l1 } = useFundRequests(canFunds ? activeOrgId : null)
   const { data: leave, isLoading: l2 } = useAllLeaveRequests(hr && (has('leave.manage') || isLineManager) ? activeOrgId : null)
   const { data: hrReqs, isLoading: l3 } = useAllHrRequests(hr && has('hr_requests.manage') ? activeOrgId : null)
@@ -55,7 +56,7 @@ export function PendingActionsCard({ overdueInvoices, className }: { overdueInvo
     }
     for (const l of leave ?? []) {
       if (l.status !== 'pending' || l.user_id === userId || !(can('leave') || reportUserIds.has(l.user_id))) continue
-      out.push({ key: `l-${l.id}`, icon: CalendarClock, title: 'Leave application', detail: `${l.requester_name ?? 'Someone'} · ${l.days} day${Number(l.days) === 1 ? '' : 's'}`, at: l.created_at, label: 'Approve', to: '/hr/approvals' })
+      out.push({ key: `l-${l.id}`, icon: CalendarClock, title: 'Leave application', detail: `${l.requester_name ?? 'Someone'} · ${l.days} day${Number(l.days) === 1 ? '' : 's'}`, at: l.created_at, label: 'Approve', to: hasCentre ? '/hr/approvals' : '/hr/leave' })
     }
     for (const h of hrReqs ?? []) {
       if (!['submitted', 'in_review'].includes(h.status) || h.user_id === userId || !can('hr_request')) continue
@@ -64,7 +65,7 @@ export function PendingActionsCard({ overdueInvoices, className }: { overdueInvo
     out.sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))
     if (overdueInvoices) out.unshift({ key: 'inv', icon: AlertTriangle, title: `${overdueInvoices} overdue invoice${overdueInvoices === 1 ? '' : 's'}`, detail: 'Past their due date — follow up with clients', at: null, label: 'Open', to: '/billing' })
     return out
-  }, [funds, leave, hrReqs, userId, canActOn, canApproveClaim, canFinance, can, reportUserIds, overdueInvoices])
+  }, [funds, leave, hrReqs, userId, canActOn, canApproveClaim, canFinance, can, reportUserIds, overdueInvoices, hasCentre])
 
   const loading = (canFunds && l1) || l2 || l3
   const shown = actions.slice(0, 6)
@@ -76,7 +77,7 @@ export function PendingActionsCard({ overdueInvoices, className }: { overdueInvo
           <CardTitle className="flex items-center gap-2 text-lg"><ClipboardList className="h-4 w-4 text-primary" /> Pending actions</CardTitle>
           <p className="mt-0.5 text-sm text-muted-foreground">{actions.length ? `${actions.length} waiting for you` : 'Waiting for your decision'}</p>
         </div>
-        {hr && <Link to="/hr/approvals" className="text-xs text-primary hover:underline">View all</Link>}
+        {hr && <Link to={hasCentre ? '/hr/approvals' : '/hr/leave'} className="text-xs text-primary hover:underline">View all</Link>}
       </CardHeader>
       <CardContent>
         {loading ? (

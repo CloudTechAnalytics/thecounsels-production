@@ -29,8 +29,7 @@ import {
 } from '@/features/platform/hooks/use-platform'
 import { CreateOrganizationDialog } from '@/features/platform/components/create-organization-dialog'
 import { EditOrganizationDialog } from '@/features/platform/components/edit-organization-dialog'
-import { ViewOrganizationDialog } from '@/features/platform/components/view-organization-dialog'
-import { useAllFeatureOverrides } from '@/features/platform/pages/organization-features-page'
+import { useAllFeatureOverrides } from '@/features/platform/pages/organization-detail-page'
 import { SupportSessionDialog } from '@/features/platform/components/support-session-dialog'
 import type { OrgRow } from '@/features/platform/types'
 import { PageHeader } from '@/shared/components/page-header'
@@ -39,6 +38,7 @@ import { Card } from '@/shared/components/ui/card'
 import { Input } from '@/shared/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Badge, type BadgeProps } from '@/shared/components/ui/badge'
+import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import {
@@ -83,7 +83,6 @@ function ActiveRowActions({ org }: { org: OrgRow }) {
   const resetDemo = useResetDemoOrganization()
   const [confirmDelete, setConfirmDelete] = React.useState(false)
   const [confirmReset, setConfirmReset] = React.useState(false)
-  const [viewOpen, setViewOpen] = React.useState(false)
   const [editOpen, setEditOpen] = React.useState(false)
   const [supportOpen, setSupportOpen] = React.useState(false)
   const suspended = org.status === 'suspended'
@@ -109,7 +108,7 @@ function ActiveRowActions({ org }: { org: OrgRow }) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>{org.name}</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => setViewOpen(true)}><Eye /> View</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate(`/platform/organizations/${org.id}`)}><Eye /> View details</DropdownMenuItem>
           <DropdownMenuItem onClick={() => setEditOpen(true)}><Pencil /> Edit</DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate(`/platform/organizations/${org.id}/features`)}><SlidersHorizontal /> Manage features</DropdownMenuItem>
           {suspended ? (
@@ -183,7 +182,6 @@ function ActiveRowActions({ org }: { org: OrgRow }) {
         }}
       />
 
-      <ViewOrganizationDialog org={org} open={viewOpen} onOpenChange={setViewOpen} />
       <EditOrganizationDialog org={org} open={editOpen} onOpenChange={setEditOpen} />
       <SupportSessionDialog org={{ id: org.id, name: org.name }} open={supportOpen} onOpenChange={setSupportOpen} />
     </>
@@ -252,6 +250,8 @@ export function OrganizationsPage() {
   const [search, setSearch] = React.useState('')
   const { data, isLoading, isError, error } = usePlatformOrganizations(trash)
   const { data: overrides = [] } = useAllFeatureOverrides()
+  const navigate = useNavigate()
+  const openOrg = (id: string) => { if (!trash) navigate(`/platform/organizations/${id}`) }
   const customCount = React.useMemo(() => { const m = new Map<string, number>(); for (const o of overrides) m.set(o.organization_id, (m.get(o.organization_id) ?? 0) + 1); return m }, [overrides])
 
   const filtered = React.useMemo(() => {
@@ -332,7 +332,7 @@ export function OrganizationsPage() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((org) => (
-                    <TableRow key={org.id}>
+                    <TableRow key={org.id} onClick={() => openOrg(org.id)} className={cn(!trash && 'cursor-pointer')}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-primary/12 text-xs font-semibold text-primary">
@@ -388,7 +388,7 @@ export function OrganizationsPage() {
                         {org.subscription?.current_period_end ? format(new Date(org.subscription.current_period_end), 'MMM d, yyyy') : '—'}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{format(new Date(org.created_at), 'MMM d, yyyy')}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         {trash ? <TrashRowActions org={org} /> : <ActiveRowActions org={org} />}
                       </TableCell>
                     </TableRow>
@@ -402,7 +402,7 @@ export function OrganizationsPage() {
                out vertically instead of in columns. */}
             <ul className="divide-y divide-border xl:hidden">
               {filtered.map((org) => (
-                <li key={org.id} className="p-4">
+                <li key={org.id} className={cn('p-4', !trash && 'cursor-pointer hover:bg-muted/40')} onClick={() => openOrg(org.id)}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-3">
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/12 text-xs font-semibold text-primary">
@@ -415,7 +415,7 @@ export function OrganizationsPage() {
                         </p>
                       </div>
                     </div>
-                    {trash ? <TrashRowActions org={org} /> : <ActiveRowActions org={org} />}
+                    <div onClick={(e) => e.stopPropagation()}>{trash ? <TrashRowActions org={org} /> : <ActiveRowActions org={org} />}</div>
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center gap-1.5">

@@ -3,12 +3,17 @@ import { Users2, ArrowLeft } from 'lucide-react'
 import { HR_NAVIGATION, type HrNavItem } from '@/features/hr/navigation'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
+import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { useBackToWorkspaceTarget } from '@/shared/hooks/use-back-to-workspace-target'
 import { cn } from '@/shared/lib/utils'
 
 function useVisible() {
   const { has } = usePermissions()
-  return (item: HrNavItem) => !item.permission || (Array.isArray(item.permission) ? item.permission.some((p) => has(p)) : has(item.permission))
+  const { activeOrgId } = useAuth()
+  const { has: hasFeature } = usePlanFeature(activeOrgId)
+  return (item: HrNavItem) =>
+    (!item.planFeature || hasFeature(item.planFeature))
+    && (!item.permission || (Array.isArray(item.permission) ? item.permission.some((p) => has(p)) : has(item.permission)))
 }
 
 /** Entirely separate from the firm's practice sidebar — its own header,

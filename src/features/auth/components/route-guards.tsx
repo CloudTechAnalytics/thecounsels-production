@@ -142,6 +142,10 @@ const PLAN_FEATURE_COPY: Record<PlanFeatureKey, { label: string; plan: string }>
   hr_module: { label: 'HR & People Management', plan: 'Professional' },
   ai_summarization: { label: 'AI matter summaries & chat', plan: 'Professional' },
   appointments: { label: 'Appointments', plan: 'Professional' },
+  inventory: { label: 'Inventory', plan: 'Business' },
+  power_management: { label: 'Electricity & Power', plan: 'Business' },
+  surveys: { label: 'Surveys', plan: 'Business' },
+  appraisals: { label: 'Appraisals', plan: 'Business' },
 }
 
 /** Guard a route by subscription plan; same in-place "restricted" panel

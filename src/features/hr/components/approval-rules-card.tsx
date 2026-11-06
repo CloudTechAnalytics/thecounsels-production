@@ -2,6 +2,7 @@ import * as React from 'react'
 import { ShieldCheck, Pencil, RotateCcw } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useBranches } from '@/features/branches/hooks/use-branches'
+import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import {
   APPROVAL_AREAS, useApprovalCandidates, useApprovalRules, useResetApprovalRule, useSaveApprovalRule,
   type ApprovalArea, type ApprovalCandidate, type ApprovalRule,
@@ -125,6 +126,7 @@ function AreaEditor({ area, rules, candidates, branches, onDone }: {
  * per area (0189); everyone with settings access can see the current setup. */
 export function ApprovalRulesCard() {
   const { activeOrgId, activeMembership } = useAuth()
+  const { has: hasFeature } = usePlanFeature(activeOrgId)
   const { data: rules = [], isLoading } = useApprovalRules(activeOrgId)
   const { data: candidates = [] } = useApprovalCandidates(activeOrgId)
   const { data: branches = [] } = useBranches(activeOrgId)
@@ -147,7 +149,7 @@ export function ApprovalRulesCard() {
       </div>
       {isLoading ? <Skeleton className="h-48 w-full" /> : (
         <ul className="divide-y divide-border">
-          {APPROVAL_AREAS.map((a) => {
+          {APPROVAL_AREAS.filter((a) => a.area !== 'inventory' || hasFeature('inventory')).map((a) => {
             const areaRules = rules.filter((r) => r.area === a.area)
             const firmRule = areaRules.find((r) => r.branch_id === null)
             const branchRules = areaRules.filter((r) => r.branch_id !== null)

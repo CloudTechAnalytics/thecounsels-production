@@ -113,4 +113,8 @@ export const PLAN_FEATURES: { key: string; label: string }[] = [
   { key: 'hr_module', label: 'HR & People Management' },
   { key: 'ai_summarization', label: 'AI matter summaries & chat' },
   { key: 'appointments', label: 'Appointments' },
+  { key: 'inventory', label: 'Inventory (assets & supplies)' },
+  { key: 'power_management', label: 'Electricity & Power' },
+  { key: 'surveys', label: 'Surveys & questionnaires' },
+  { key: 'appraisals', label: 'Performance appraisals' },
 ]

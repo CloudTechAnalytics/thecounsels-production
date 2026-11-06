@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import { LayoutGrid, UserSquare2, CalendarClock, FolderLock, Inbox, Megaphone, FileBarChart, ClipboardCheck, Wallet, Banknote, ReceiptText, ListChecks, Settings2, Scale, type LucideIcon, Network, Package, Zap, ClipboardList, Star } from 'lucide-react'
 import type { PermissionKey } from '@/shared/lib/permissions'
+import type { PlanFeatureKey } from '@/features/administration/lib/plan-features'
 import { LeaveNavBadge } from '@/features/hr/components/leave-nav-badge'
 import { AnnouncementsNavBadge } from '@/features/hr/components/announcements-nav-badge'
 
@@ -11,6 +12,8 @@ export interface HrNavItem {
   /** One key, or several where holding any one of them is enough. */
   permission?: PermissionKey | PermissionKey[]
   end?: boolean
+  /** Hidden unless the firm's plan includes this feature. */
+  planFeature?: PlanFeatureKey
   /** Rendered inline after the label, e.g. an unread-count pill. */
   badge?: ComponentType
 }
@@ -38,11 +41,11 @@ export const HR_NAVIGATION: HrNavSection[] = [
       { label: 'Reporting Lines', to: '/hr/team-structure', icon: Network, permission: ['staff.manage', 'departments.manage'] },
       { label: 'Onboarding', to: '/hr/onboarding', icon: ClipboardCheck, permission: 'onboarding.view_own' },
       { label: 'Leave Management', to: '/hr/leave', icon: CalendarClock, permission: 'leave.request', badge: LeaveNavBadge },
-      { label: 'Appraisals', to: '/hr/appraisals', icon: Star, permission: 'leave.request' },
+      { label: 'Appraisals', to: '/hr/appraisals', icon: Star, permission: 'leave.request', planFeature: 'appraisals' },
       { label: 'Documents', to: '/hr/documents', icon: FolderLock, permission: 'hr_documents.view_own' },
       { label: 'HR Requests', to: '/hr/requests', icon: Inbox, permission: 'hr_requests.submit' },
       { label: 'Circulars', to: '/hr/announcements', icon: Megaphone, permission: 'hr_announcements.view', badge: AnnouncementsNavBadge },
-      { label: 'Surveys', to: '/hr/surveys', icon: ClipboardList, permission: 'leave.request' },
+      { label: 'Surveys', to: '/hr/surveys', icon: ClipboardList, permission: 'leave.request', planFeature: 'surveys' },
     ],
   },
   {
@@ -57,8 +60,8 @@ export const HR_NAVIGATION: HrNavSection[] = [
   {
     heading: 'Office',
     items: [
-      { label: 'Inventory', to: '/hr/inventory', icon: Package, permission: 'leave.request' },
-      { label: 'Electricity & Power', to: '/hr/power', icon: Zap, permission: 'power.manage' },
+      { label: 'Inventory', to: '/hr/inventory', icon: Package, permission: 'leave.request', planFeature: 'inventory' },
+      { label: 'Electricity & Power', to: '/hr/power', icon: Zap, permission: 'power.manage', planFeature: 'power_management' },
     ],
   },
   {

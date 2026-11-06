@@ -223,7 +223,7 @@ export function DashboardPage() {
       </div>
 
       {hasFeature('hr_module') && <CircularsNotice />}
-      {hasFeature('hr_module') && <SurveysNotice />}
+      {hasFeature('hr_module') && hasFeature('surveys') && <SurveysNotice />}
 
       {/* What needs doing, what's coming, what the data says */}
       <div className="mt-6 grid gap-6 lg:grid-cols-3">

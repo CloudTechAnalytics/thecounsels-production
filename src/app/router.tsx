@@ -60,7 +60,6 @@ import { TemplatesPage as DocumentTemplatesPage } from '@/features/documents/pag
 import { TemplateEditorPage } from '@/features/documents/pages/template-editor-page'
 import { UseTemplatePage } from '@/features/documents/pages/use-template-page'
 import { HrLayout } from '@/features/hr/components/hr-layout'
-import { HrOverviewPage } from '@/features/hr/pages/hr-overview-page'
 import { EmployeesPage } from '@/features/hr/pages/employees-page'
 import { OnboardingPage as HrOnboardingPage } from '@/features/hr/pages/onboarding-page'
 import { LeavePage } from '@/features/hr/pages/leave-page'
@@ -74,6 +73,7 @@ import { FundRequestPage } from '@/features/funds/pages/fund-request-page'
 import { FundRequestFormPage } from '@/features/funds/pages/fund-request-form-page'
 import { HrFinanceSettingsPage } from '@/features/hr/pages/hr-finance-settings-page'
 import { TeamStructurePage } from '@/features/hr/pages/team-structure-page'
+import { HrHome } from '@/features/hr/components/hr-workspace-entry'
 import { InventoryPage } from '@/features/inventory/pages/inventory-page'
 import { InventoryItemPage } from '@/features/inventory/pages/inventory-item-page'
 import { InventoryItemFormPage } from '@/features/inventory/pages/inventory-item-form-page'
@@ -300,7 +300,7 @@ export const router = createBrowserRouter([
                     path: 'hr',
                     element: withPlanFeature(<HrLayout />, 'hr_module'),
                     children: [
-                      { index: true, element: withPermission(<HrOverviewPage />, 'hr.view_reports') },
+                      { index: true, element: <HrHome /> },
                       { path: 'employees', element: withPermission(<EmployeesPage />, 'staff.manage') },
                       { path: 'team-structure', element: withPermission(<TeamStructurePage />, ['staff.manage', 'departments.manage'], 'any') },
                       { path: 'onboarding', element: withPermission(<HrOnboardingPage />, 'onboarding.view_own') },

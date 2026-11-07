@@ -13,11 +13,13 @@ import {
   Bell,
   MessageSquare,
   Settings,
+  Users2,
   type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey } from '@/shared/lib/permissions'
 import type { PlanFeatureKey } from '@/features/administration/lib/plan-features'
 import { MessagesNavBadge } from '@/features/messaging/components/messages-nav-badge'
+import { HrWorkspaceNavBadge } from '@/features/hr/components/hr-workspace-entry'
 
 export interface NavItem {
   label: string
@@ -39,7 +41,7 @@ export interface NavSection {
 
 /** Primary navigation for the firm's practice workspace. HR lives in its
  * own separate shell (see src/features/hr/navigation.ts + HrLayout),
- * reached via "HR Workspace" in the profile menu — not listed here. */
+ * reached from "HR & Finance" just above Settings (and the profile menu). */
 export const NAVIGATION: NavSection[] = [
   {
     items: [{ label: 'Dashboard', to: '/', icon: LayoutDashboard, permission: 'dashboard.view', end: true }],
@@ -64,6 +66,12 @@ export const NAVIGATION: NavSection[] = [
       { label: 'Reports', to: '/reports', icon: BarChart3, permission: 'reports.view' },
       { label: 'Notifications', to: '/notifications', icon: Bell, permission: 'notifications.view' },
       { label: 'Messages', to: '/messages', icon: MessageSquare, permission: 'messaging.view', planFeature: 'messaging', badge: MessagesNavBadge },
+    ],
+  },
+  {
+    heading: 'Workspace',
+    items: [
+      { label: 'HR & Finance', to: '/hr', icon: Users2, planFeature: 'hr_module', badge: HrWorkspaceNavBadge },
     ],
   },
   {

@@ -1,11 +1,11 @@
 import * as React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { format } from 'date-fns'
-import { ArrowLeft, Bell, Download, Lock, Search } from 'lucide-react'
+import { ArrowLeft, Bell, Download, Lock, Search, UserPlus } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useBranches } from '@/features/branches/hooks/use-branches'
 import {
-  STAGES, ratingLabel, stageIndex, useAppraisalCycle, useCloseCycle, useCycleProgress, useRemindAppraisals, type AppraisalStatus,
+  STAGES, ratingLabel, stageIndex, useAddToCycle, useAppraisalCycle, useCloseCycle, useCycleMissing, useCycleProgress, useRemindAppraisals, type AppraisalStatus,
 } from '@/features/appraisals/hooks/use-appraisals'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
@@ -16,6 +16,43 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
 import { cn } from '@/shared/lib/utils'
+
+/** Staff in the cycle's audience who aren't in it yet — joined, or got a
+ * login, after it was launched. Tick and add. */
+function MissingPeople({ cycleId }: { cycleId: string }) {
+  const { data: missing = [] } = useCycleMissing(cycleId, true)
+  const add = useAddToCycle()
+  const [picked, setPicked] = React.useState<Set<string>>(new Set())
+  if (missing.length === 0) return null
+  const addable = missing.filter((m) => m.can_add)
+  const toggle = (id: string) => setPicked((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
+  return (
+    <Card className="mb-5 space-y-3 border-warning/40 bg-warning/5 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold">{missing.length} staff member{missing.length === 1 ? ' is' : 's are'} not in this cycle</p>
+        {addable.length > 0 && (
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setPicked(new Set(addable.map((m) => m.employee_id)))}>Select all</Button>
+            <Button size="sm" disabled={picked.size === 0} loading={add.isPending} onClick={() => add.mutate({ cycle: cycleId, employees: [...picked] }, {
+              onSuccess: (n) => { toast.success(`${n} added — they’ve been asked to complete their self-appraisal`); setPicked(new Set()) },
+              onError: (e) => toast.error('Could not add', { description: errorMessage(e) }),
+            })}><UserPlus className="h-4 w-4" /> Add {picked.size || ''} to cycle</Button>
+          </div>
+        )}
+      </div>
+      <ul className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
+        {missing.map((m) => (
+          <li key={m.employee_id}>
+            <label className={cn('flex items-start gap-2 rounded px-2 py-1.5 text-sm', m.can_add ? 'cursor-pointer hover:bg-muted/50' : 'opacity-60')}>
+              <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary" disabled={!m.can_add} checked={picked.has(m.employee_id)} onChange={() => toggle(m.employee_id)} />
+              <span>{m.full_name}{m.reason && <span className="block text-xs text-muted-foreground">{m.reason}</span>}</span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
 
 /** HR's view of one cycle: where every appraisal is, who's holding it up, final ratings. */
 export function AppraisalCyclePage() {
@@ -73,6 +110,8 @@ export function AppraisalCyclePage() {
           </div>
         }
       />
+
+      {cycle.status === 'open' && <MissingPeople cycleId={cycle.id} />}
 
       <div className="mb-5 grid gap-4 lg:grid-cols-[1fr_300px]">
         <Card className="p-4">

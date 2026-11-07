@@ -4,10 +4,14 @@ import { format } from 'date-fns'
 import { ArrowLeft, Check, Plus, Printer, Trash2, Undo2, PenLine, Lock } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import {
-  RATING_SCALE, RECOMMENDATIONS, STAGES, ratingLabel, stageIndex, useAcknowledge, useAddInput, useAppraisal, useSaveManager, useSaveSelf, useSignOff,
+  RATING_SCALE, RECOMMENDATIONS, STAGES, ratingLabel, stageIndex, useAcknowledge, useAddInput, useAppraisal, useMarkFiled, useReassignReviewer, useSaveManager, useSaveSelf, useSignOff,
   type AppraisalDetail, type GoalInput, type ScoreInput,
 } from '@/features/appraisals/hooks/use-appraisals'
-import { printAppraisal } from '@/features/appraisals/lib/print-appraisal'
+import { appraisalPdf, printAppraisal } from '@/features/appraisals/lib/print-appraisal'
+import { useEmployeeRegister } from '@/features/hr/hooks/use-employees'
+import { usePermissions } from '@/features/auth/hooks/use-permissions'
+import { hrService } from '@/features/hr/services/hr.service'
+import { FileCheck2, UserCog } from 'lucide-react'
 import { getSignatures, openBlankPrintWindow } from '@/shared/lib/signatures'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
@@ -392,11 +396,77 @@ function AcknowledgePanel({ d }: { d: AppraisalDetail }) {
   )
 }
 
+/** HR: change who reviews this appraisal (line manager changed, or away). */
+function ReviewerControl({ d }: { d: AppraisalDetail }) {
+  const { activeOrgId } = useAuth()
+  const { data: register = [] } = useEmployeeRegister(activeOrgId)
+  const reassign = useReassignReviewer()
+  const [editing, setEditing] = React.useState(false)
+  const people = register.filter((e) => e.user_id && e.user_id !== d.appraisal.user_id && !['resigned', 'terminated', 'former_employee'].includes(e.employment_status))
+  return (
+    <Card className="mb-4 flex flex-wrap items-center gap-3 p-3 text-sm">
+      <UserCog className="h-4 w-4 text-muted-foreground" />
+      <span>Reviewer: <strong>{d.appraisal.manager_name ?? 'nobody — HR reviews'}</strong></span>
+      {editing ? (
+        <Select onValueChange={(v) => reassign.mutate({ id: d.appraisal.id, reviewer: v }, {
+          onSuccess: () => { toast.success('Reviewer changed'); setEditing(false) },
+          onError: (e) => toast.error('Could not change', { description: errorMessage(e) }),
+        })}>
+          <SelectTrigger className="h-8 w-64"><SelectValue placeholder="Choose the new reviewer" /></SelectTrigger>
+          <SelectContent>{people.map((e) => <SelectItem key={e.id} value={e.user_id!}>{e.fullName}</SelectItem>)}</SelectContent>
+        </Select>
+      ) : (
+        <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Change reviewer</Button>
+      )}
+    </Card>
+  )
+}
+
+/** HR: a completed appraisal is saved, as a signed PDF, to the staff
+ * member's HR documents (Performance Review) — automatically the first time
+ * someone who manages HR documents opens it. */
+function FilingControl({ d }: { d: AppraisalDetail }) {
+  const { activeOrgId, activeMembership, userId } = useAuth()
+  const markFiled = useMarkFiled()
+  const [busy, setBusy] = React.useState(false)
+  const tried = React.useRef(false)
+  const filed = Boolean(d.appraisal.filed_document_id)
+
+  const file = React.useCallback(async (auto: boolean) => {
+    if (!activeOrgId || !activeMembership) return
+    setBusy(true)
+    try {
+      const pdf = await appraisalPdf(d, activeMembership.organization, await getSignatures([d.appraisal.user_id, d.appraisal.manager_user_id, d.appraisal.signed_off_by]))
+      await hrService.uploadHrDocument({ organizationId: activeOrgId, userId: d.appraisal.user_id, file: pdf, category: 'performance_review', uploadedBy: userId })
+      const docs = await hrService.listEmployeeHrDocuments(activeOrgId, d.appraisal.user_id)
+      const doc = docs.filter((x) => x.display_name === pdf.name).sort((a, b) => b.created_at.localeCompare(a.created_at))[0]
+      if (doc) await markFiled.mutateAsync({ id: d.appraisal.id, document: doc.id })
+      toast.success(auto ? 'Signed appraisal filed to their HR documents' : 'Filed to HR documents')
+    } catch (err) {
+      if (!auto) toast.error('Could not file it', { description: errorMessage(err) })
+    } finally { setBusy(false) }
+  }, [activeOrgId, activeMembership, d, markFiled, userId])
+
+  React.useEffect(() => {
+    if (!filed && !tried.current) { tried.current = true; void file(true) }
+  }, [filed, file])
+
+  return (
+    <Card className="mb-4 flex flex-wrap items-center gap-3 p-3 text-sm">
+      <FileCheck2 className={filed ? 'h-4 w-4 text-success' : 'h-4 w-4 text-muted-foreground'} />
+      {filed ? <span>Filed to {d.appraisal.employee_name}’s HR documents (Performance Review).</span>
+        : <span>{busy ? 'Filing the signed appraisal to their HR documents…' : 'Not yet filed to their HR documents.'}</span>}
+      {!filed && !busy && <Button size="sm" variant="outline" onClick={() => file(false)}>File to HR records</Button>}
+    </Card>
+  )
+}
+
 /** One appraisal — what you see and can do depends on who you are and the stage. */
 export function AppraisalPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { activeMembership } = useAuth()
+  const { has } = usePermissions()
   const { data: d, isLoading } = useAppraisal(id)
 
   if (isLoading) return <Skeleton className="h-96 w-full" />
@@ -433,6 +503,8 @@ export function AppraisalPage() {
       <Stepper status={a.status} />
       {!open && a.status !== 'completed' && <Card className="mb-4 p-3 text-sm text-muted-foreground">This appraisal cycle is closed.</Card>}
       {waitingNote && <Card className="mb-4 bg-muted/30 p-4 text-sm">{waitingNote}</Card>}
+      {role === 'hr' && open && (a.status === 'self_review' || a.status === 'manager_review') && <ReviewerControl d={d} />}
+      {role === 'hr' && a.status === 'completed' && has('hr_documents.manage') && <FilingControl d={d} />}
 
       <div className="space-y-5">
         {acknowledging && <AcknowledgePanel d={d} />}

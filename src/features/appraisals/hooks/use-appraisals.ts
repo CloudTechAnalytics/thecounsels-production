@@ -55,6 +55,7 @@ export interface AppraisalDetail {
     final_rating: number | null; recommendation: string | null; sign_off_comment: string | null
     signed_off_by: string | null; signed_off_by_name: string | null; signed_off_at: string | null
     employee_agrees: boolean | null; employee_comment: string | null; employee_signed: boolean; acknowledged_at: string | null
+    filed_document_id?: string | null
   }
   cycle: { id: string; name: string; period_start: string; period_end: string; self_due: string | null; manager_due: string | null; status: string; competencies: Competency[] }
   scores: { competency: number; self_rating: number | null; self_comment: string | null; manager_rating: number | null; manager_comment: string | null }[]
@@ -98,7 +99,7 @@ export function useAppraisals(organizationId: string | null) {
     enabled: Boolean(organizationId),
     queryFn: async () => {
       const { data, error } = await supabase.from('appraisals')
-        .select('id, organization_id, cycle_id, employee_id, user_id, branch_id, manager_user_id, status, self_submitted_at, manager_submitted_at, signed_off_at, acknowledged_at, created_at, updated_at')
+        .select('id, organization_id, cycle_id, employee_id, user_id, branch_id, manager_user_id, status, filed_document_id, self_submitted_at, manager_submitted_at, signed_off_at, acknowledged_at, created_at, updated_at')
         .eq('organization_id', organizationId!).order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as AppraisalRow[]
@@ -193,3 +194,21 @@ export const useSignOff = () => useRpc<{ id: string; final: number | null; recom
 
 export const useAcknowledge = () => useRpc<{ id: string; agrees: boolean; comment: string; withSignature: boolean }>((v) =>
   supabase.rpc('acknowledge_appraisal', { p_id: v.id, p_agrees: v.agrees, p_comment: v.comment || null, p_with_signature: v.withSignature }))
+
+export function useCycleMissing(cycleId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['appraisals', 'missing', cycleId],
+    enabled: Boolean(cycleId) && enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('appraisal_cycle_missing', { p_cycle: cycleId! })
+      if (error) throw error
+      return data ?? []
+    },
+  })
+}
+export const useAddToCycle = () => useRpc<{ cycle: string; employees: string[] }, number>((v) =>
+  supabase.rpc('add_to_appraisal_cycle', { p_cycle: v.cycle, p_employee_ids: v.employees }))
+export const useReassignReviewer = () => useRpc<{ id: string; reviewer: string }>((v) =>
+  supabase.rpc('reassign_appraisal_reviewer', { p_id: v.id, p_reviewer: v.reviewer }))
+export const useMarkFiled = () => useRpc<{ id: string; document: string }>((v) =>
+  supabase.rpc('mark_appraisal_filed', { p_id: v.id, p_document: v.document }))

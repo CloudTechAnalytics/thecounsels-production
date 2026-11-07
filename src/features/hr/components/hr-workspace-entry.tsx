@@ -6,6 +6,7 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { usePlanFeature } from '@/features/administration/hooks/use-administration'
 import { usePendingLeaveCount, useUnreadAnnouncementCount } from '@/features/hr/hooks/use-hr'
 import { useSurveys } from '@/features/surveys/hooks/use-surveys'
+import { useAppraisalsWaiting } from '@/features/dashboard/components/appraisals-notice'
 import { HR_NAVIGATION } from '@/features/hr/navigation'
 import { HrOverviewPage } from '@/features/hr/pages/hr-overview-page'
 
@@ -21,11 +22,12 @@ export function HrWorkspaceNavBadge() {
   const { data: surveys = [] } = useSurveys(hasFeature('surveys') ? activeOrgId : null, userId)
   const today = format(new Date(), 'yyyy-MM-dd')
   const waitingSurveys = surveys.filter((s) => s.status === 'open' && s.i_am_recipient && !s.my_responded_at && (!s.closes_on || s.closes_on >= today)).length
-  const count = (leave ?? 0) + (circulars ?? 0) + waitingSurveys
+  const appraisals = useAppraisalsWaiting().length
+  const count = (leave ?? 0) + (circulars ?? 0) + waitingSurveys + (hasFeature('appraisals') ? appraisals : 0)
   if (!count) return <ArrowUpRight className="ml-auto h-3.5 w-3.5 shrink-0 opacity-60" aria-label="Opens the HR & Finance workspace" />
   return (
     <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground"
-      title={[leave && `${leave} leave to review`, circulars && `${circulars} unread circular${circulars === 1 ? '' : 's'}`, waitingSurveys && `${waitingSurveys} survey${waitingSurveys === 1 ? '' : 's'} to answer`].filter(Boolean).join(' · ')}>
+      title={[leave && `${leave} leave to review`, circulars && `${circulars} unread circular${circulars === 1 ? '' : 's'}`, waitingSurveys && `${waitingSurveys} survey${waitingSurveys === 1 ? '' : 's'} to answer`, hasFeature('appraisals') && appraisals && `${appraisals} appraisal${appraisals === 1 ? '' : 's'} to act on`].filter(Boolean).join(' · ')}>
       {count > 99 ? '99+' : count}
     </span>
   )

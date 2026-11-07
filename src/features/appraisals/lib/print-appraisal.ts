@@ -1,4 +1,5 @@
-import { esc, facts, letterhead, openPrintDocument, printDate, signatureBlock, type PrintFirm } from '@/shared/lib/print-document'
+import { esc, facts, letterhead, openPrintDocument, printDate, signatureBlock, type PrintDocumentOptions, type PrintFirm } from '@/shared/lib/print-document'
+import { printDocumentToPdf } from '@/shared/lib/html-to-pdf'
 import { ratingLabel, type AppraisalDetail } from '@/features/appraisals/hooks/use-appraisals'
 
 const dots = (n: number | null | undefined) =>
@@ -23,8 +24,8 @@ const CSS = `
   h2.sec{margin-top:7mm}
 `
 
-/** Print-ready appraisal form with the firm's letterhead and e-signatures. */
-export function printAppraisal(d: AppraisalDetail, firm: PrintFirm, sigs: Record<string, string>, win?: Window | null) {
+/** The appraisal form — firm letterhead, ratings, comments, e-signatures. */
+export function appraisalDocument(d: AppraisalDetail, firm: PrintFirm, sigs: Record<string, string>): PrintDocumentOptions {
   const a = d.appraisal
   const c = d.cycle
   const score = (i: number) => d.scores.find((s) => s.competency === i)
@@ -90,13 +91,25 @@ export function printAppraisal(d: AppraisalDetail, firm: PrintFirm, sigs: Record
       ${signatureBlock('Approved by', a.signed_off_by_name, a.signed_off_at ? `Signed off ${printDate(a.signed_off_at, 'd MMM yyyy')}` : null, a.signed_off_by ? sigs[a.signed_off_by] : null)}
     </div>
   `
-  openPrintDocument({
+  return {
     title: `Appraisal — ${a.employee_name} — ${c.name}`,
     firm,
     head: letterhead(firm, { title: 'Performance Appraisal', number: c.name, badge: done ? { label: 'Completed', tone: 'green' } : { label: 'In progress', tone: 'gold' } }),
     body,
     css: CSS,
     footNote: 'Confidential — staff appraisal',
-    win,
-  })
+  }
 }
+
+/** Print-ready appraisal (Save as PDF from the print dialog). */
+export function printAppraisal(d: AppraisalDetail, firm: PrintFirm, sigs: Record<string, string>, win?: Window | null) {
+  openPrintDocument({ ...appraisalDocument(d, firm, sigs), win })
+}
+
+/** The same form as a PDF file — for filing in the staff member's HR documents. */
+export async function appraisalPdf(d: AppraisalDetail, firm: PrintFirm, sigs: Record<string, string>): Promise<File> {
+  const blob = await printDocumentToPdf(appraisalDocument(d, firm, sigs))
+  const safe = `${d.cycle.name} appraisal - ${d.appraisal.employee_name}`.replace(/[^\w.\- ]+/g, '').trim()
+  return new File([blob], `${safe}.pdf`, { type: 'application/pdf' })
+}
+

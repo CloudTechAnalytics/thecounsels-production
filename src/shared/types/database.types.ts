@@ -1412,6 +1412,7 @@ export interface Database {
           branch_id: string | null
           manager_user_id: string | null
           status: 'self_review' | 'manager_review' | 'sign_off' | 'acknowledge' | 'completed'
+          filed_document_id: string | null
           self_submitted_at: string | null
           manager_submitted_at: string | null
           signed_off_at: string | null
@@ -3458,6 +3459,10 @@ export interface Database {
       }
       set_org_feature: { Args: { p_org: string; p_feature: string; p_enabled: boolean | null; p_note?: string | null }; Returns: undefined }
       launch_appraisal_cycle: { Args: { p_cycle: string }; Returns: number }
+      appraisal_cycle_missing: { Args: { p_cycle: string }; Returns: { employee_id: string; full_name: string; can_add: boolean; reason: string | null }[] }
+      add_to_appraisal_cycle: { Args: { p_cycle: string; p_employee_ids: string[] }; Returns: number }
+      reassign_appraisal_reviewer: { Args: { p_id: string; p_reviewer: string }; Returns: Database['public']['Tables']['appraisals']['Row'] }
+      mark_appraisal_filed: { Args: { p_id: string; p_document: string }; Returns: undefined }
       close_appraisal_cycle: { Args: { p_cycle: string }; Returns: undefined }
       remind_appraisals: { Args: { p_cycle: string }; Returns: number }
       get_appraisal: { Args: { p_id: string }; Returns: Json }

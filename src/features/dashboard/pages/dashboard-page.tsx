@@ -36,6 +36,7 @@ import { SpendingCard } from '@/features/dashboard/components/spending-card'
 import { PendingActionsCard } from '@/features/dashboard/components/pending-actions-card'
 import { CircularsNotice } from '@/features/dashboard/components/circulars-notice'
 import { SurveysNotice } from '@/features/dashboard/components/surveys-notice'
+import { AppraisalsNotice } from '@/features/dashboard/components/appraisals-notice'
 import { UpcomingHearingsCard } from '@/features/dashboard/components/upcoming-hearings-card'
 import { BillableHoursCard } from '@/features/dashboard/components/billable-hours-card'
 import { RecentActivityFeed } from '@/features/dashboard/components/recent-activity-feed'
@@ -224,6 +225,7 @@ export function DashboardPage() {
 
       {hasFeature('hr_module') && hasFeature('circulars') && <CircularsNotice />}
       {hasFeature('hr_module') && hasFeature('surveys') && <SurveysNotice />}
+      {hasFeature('hr_module') && hasFeature('appraisals') && <AppraisalsNotice />}
 
       {/* What needs doing, what's coming, what the data says */}
       <div className="mt-6 grid gap-6 lg:grid-cols-3">

@@ -62,7 +62,7 @@ function ActionPanel({ item, action, onDone }: { item: InventoryItem; action: Ac
   const [emp, setEmp] = React.useState(NONE)
   const [note, setNote] = React.useState('')
   const [cost, setCost] = React.useState('')
-  const [condition, setCondition] = React.useState('Good')
+  const [condition, setCondition] = React.useState('good')
   const copy = ACTION_COPY[action]
   const needsQty = item.kind === 'supply'
   const needsEmp = action === 'assigned'
@@ -116,7 +116,7 @@ function ActionPanel({ item, action, onDone }: { item: InventoryItem; action: Ac
             <Label>Condition on return</Label>
             <Select value={condition} onValueChange={setCondition}>
               <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{['New', 'Good', 'Fair', 'Poor', 'Damaged'].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              <SelectContent>{['new', 'good', 'fair', 'poor', 'damaged'].map((c) => <SelectItem key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         )}
@@ -208,7 +208,7 @@ export function InventoryItemPage() {
               {isAsset ? (
                 <>
                   <Fact label="Serial number" value={item.serial_no} />
-                  <Fact label="Condition" value={item.condition} />
+                  <Fact label="Condition" value={item.condition && item.condition.charAt(0).toUpperCase() + item.condition.slice(1)} />
                   <Fact label="Purchased" value={item.purchase_date && format(new Date(item.purchase_date), 'd MMM yyyy')} />
                   <Fact label="Cost" value={item.purchase_cost != null && formatMoney(Number(item.purchase_cost))} />
                   <Fact label="Supplier" value={item.supplier} />

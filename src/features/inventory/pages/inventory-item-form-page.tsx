@@ -18,7 +18,9 @@ import { toast } from '@/shared/components/ui/sonner'
 import { errorMessage } from '@/shared/lib/errors'
 
 const NONE = '__none__'
-const CONDITIONS = ['New', 'Good', 'Fair', 'Poor']
+// Stored lowercase (the database only accepts these values); shown capitalised.
+const CONDITIONS = ['new', 'good', 'fair', 'poor']
+const cap = (c: string) => c.charAt(0).toUpperCase() + c.slice(1)
 
 function Field({ label, hint, children, className }: { label: string; hint?: string; children: React.ReactNode; className?: string }) {
   return (
@@ -48,7 +50,7 @@ export function InventoryItemFormPage() {
 
   const [f, setF] = React.useState({
     name: '', category: NONE, branch: NONE, serial: '', description: '', unit: '', reorder: '', unitCost: '', opening: '',
-    purchaseDate: '', purchaseCost: '', supplier: '', warranty: '', condition: 'Good', location: '', notes: '',
+    purchaseDate: '', purchaseCost: '', supplier: '', warranty: '', condition: 'good', location: '', notes: '',
   })
   const set = (k: keyof typeof f) => (v: string) => setF((s) => ({ ...s, [k]: v }))
   React.useEffect(() => {
@@ -58,7 +60,7 @@ export function InventoryItemFormPage() {
       description: existing.description ?? '', unit: existing.unit ?? '', reorder: existing.reorder_level?.toString() ?? '',
       unitCost: existing.unit_cost?.toString() ?? '', opening: '', purchaseDate: existing.purchase_date ?? '',
       purchaseCost: existing.purchase_cost?.toString() ?? '', supplier: existing.supplier ?? '', warranty: existing.warranty_until ?? '',
-      condition: existing.condition ?? 'Good', location: existing.location ?? '', notes: existing.notes ?? '',
+      condition: (existing.condition ?? 'good').toLowerCase(), location: existing.location ?? '', notes: existing.notes ?? '',
     })
   }, [existing])
 
@@ -127,7 +129,7 @@ export function InventoryItemFormPage() {
               <Field label="Condition">
                 <Select value={f.condition} onValueChange={set('condition')}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{CONDITIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  <SelectContent>{CONDITIONS.map((c) => <SelectItem key={c} value={c}>{cap(c)}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
               <Field label="Purchase date"><Input type="date" value={f.purchaseDate} onChange={(e) => set('purchaseDate')(e.target.value)} /></Field>

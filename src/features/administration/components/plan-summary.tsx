@@ -152,7 +152,7 @@ export function PlanSummary() {
         </div>
         {!canManage && (
           <p className="border-t border-border pt-3 text-xs text-muted-foreground">
-            Only your Managing Partner can change plans or manage billing.
+            Only your Managing Partner or Firm Administrator can change plans or manage billing.
           </p>
         )}
       </Card>

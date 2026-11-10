@@ -131,7 +131,7 @@ export function ApprovalRulesCard() {
   const { data: candidates = [] } = useApprovalCandidates(activeOrgId)
   const { data: branches = [] } = useBranches(activeOrgId)
   const [editing, setEditing] = React.useState<ApprovalArea | null>(null)
-  const canEdit = activeMembership?.role.key === 'managing_partner' && (activeMembership?.access_scope ?? 'organization') === 'organization'
+  const canEdit = (activeMembership?.role.key === 'managing_partner' || activeMembership?.role.key === 'firm_administrator') && (activeMembership?.access_scope ?? 'organization') === 'organization'
   const branchName = (id: string | null) => branches.find((b) => b.id === id)?.name ?? 'Branch'
 
   return (
@@ -143,7 +143,7 @@ export function ApprovalRulesCard() {
           <p className="text-xs text-muted-foreground">
             {canEdit
               ? 'Choose who approves each kind of request. Leave an area on “Default” and anyone whose role has access can approve.'
-              : 'Set by the Managing Partner. This is who approves each kind of request in your firm.'}
+              : 'Set by the Managing Partner or Firm Administrator. This is who approves each kind of request in your firm.'}
           </p>
         </div>
       </div>

@@ -100,6 +100,7 @@ export const ROLE_META: Record<RoleKey, { label: string; rank: number; group: st
   platform_owner: { label: 'Platform Owner', rank: 0, group: 'Platform' },
   platform_admin: { label: 'Platform Administrator', rank: 5, group: 'Platform' },
   managing_partner: { label: 'Managing Partner', rank: 10, group: 'Leadership' },
+  firm_administrator: { label: 'Firm Administrator', rank: 12, group: 'Leadership' },
   partner: { label: 'Partner', rank: 20, group: 'Leadership' },
   senior_associate: { label: 'Senior Associate', rank: 30, group: 'Fee Earners' },
   associate: { label: 'Associate', rank: 40, group: 'Fee Earners' },

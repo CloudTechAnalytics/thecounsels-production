@@ -6,7 +6,7 @@
  * is never touched, so nothing confidential is stored on the device and every
  * screen still reads live data. Bump VERSION to force-drop old caches.
  */
-const VERSION = 'counsel-shell-v2'
+const VERSION = 'counsel-shell-v3'
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/brand/counsel-symbol-gold.svg']
 
 self.addEventListener('install', (event) => {
@@ -46,11 +46,20 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Vite's hashed bundles never change under the same name: cache-first.
+  // Only a REAL script/stylesheet/font/image is ever stored: during a deploy a
+  // missing bundle used to come back as the HTML page (200), get cached under
+  // the .css name forever and leave the site unstyled. An HTML answer for an
+  // asset is never cached, and one already cached is thrown away.
   if (url.pathname.startsWith('/assets/')) {
+    const isHtml = (res) => (res.headers.get('content-type') || '').includes('text/html')
     event.respondWith(
-      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-        if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)) }
-        return res
+      caches.open(VERSION).then((cache) => cache.match(req).then((hit) => {
+        if (hit && !isHtml(hit)) return hit
+        if (hit) cache.delete(req)
+        return fetch(req).then((res) => {
+          if (res.ok && !isHtml(res)) cache.put(req, res.clone())
+          return res
+        })
       })),
     )
     return

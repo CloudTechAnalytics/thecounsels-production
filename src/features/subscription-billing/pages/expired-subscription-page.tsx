@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, LockKeyhole, LogOut } from 'lucide-react'
+import { CheckCircle2, LockKeyhole, LogOut, MessageSquare } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePermissions } from '@/features/auth/hooks/use-permissions'
 import { useSubscription } from '@/features/administration/hooks/use-administration'
@@ -92,9 +92,15 @@ export function ExpiredSubscriptionPage() {
     navigate('/auth/login', { replace: true })
   }
   const signOutButton = (
-    <Button variant="ghost" size="sm" onClick={leave} className="gap-1.5 text-muted-foreground">
-      <LogOut className="h-4 w-4" /> Sign out
-    </Button>
+    <div className="flex items-center gap-1">
+      {/* Still reachable while the workspace is locked (0210). */}
+      <Button variant="ghost" size="sm" onClick={() => navigate('/support')} className="gap-1.5 text-muted-foreground">
+        <MessageSquare className="h-4 w-4" /> Messages
+      </Button>
+      <Button variant="ghost" size="sm" onClick={leave} className="gap-1.5 text-muted-foreground">
+        <LogOut className="h-4 w-4" /> Sign out
+      </Button>
+    </div>
   )
 
   const subscribe = async (planId: string) => {

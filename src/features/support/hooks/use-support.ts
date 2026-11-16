@@ -45,6 +45,34 @@ export function useAddTicketMessage() {
   })
 }
 
+export function useFirmRecipients(organizationId: string | undefined) {
+  return useQuery({
+    queryKey: ['support', 'recipients', organizationId],
+    enabled: Boolean(organizationId),
+    queryFn: () => supportService.listFirmRecipients(organizationId!),
+  })
+}
+
+export function useMessageFirm() {
+  const invalidate = useInvalidate()
+  return useMutation({ mutationFn: supportService.messageFirm, onSuccess: invalidate })
+}
+
+/** Keeps an open conversation current while either side is typing back. */
+export function useLiveTicket(id: string | null) {
+  const qc = useQueryClient()
+  React.useEffect(() => {
+    if (!id) return
+    const channel = supabase
+      .channel(`ticket:${id}:${Date.now()}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_ticket_messages', filter: `ticket_id=eq.${id}` },
+        () => qc.invalidateQueries({ queryKey: ['support'] }))
+      .subscribe()
+    const poll = window.setInterval(() => qc.invalidateQueries({ queryKey: ['support', 'ticket', id] }), 20000)
+    return () => { supabase.removeChannel(channel); window.clearInterval(poll) }
+  }, [id, qc])
+}
+
 export function useDeleteTicket() {
   const invalidate = useInvalidate()
   return useMutation({

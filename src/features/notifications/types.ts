@@ -36,6 +36,7 @@ export function resolveNotificationHref(n: Pick<NotificationRow, 'entity_type' |
   // Direct-message notifications (notify_dm_message, migration 0061) — deep
   // link straight into that conversation.
   if (n.entity_type === 'conversation' && n.entity_id) return `/messages?dm=${n.entity_id}`
+  if (n.entity_type === 'support_ticket' && n.entity_id) return `/support/${n.entity_id}`
   // HR module (0075+) — each event type routes to where you'd actually act on it.
   if (n.entity_type === 'leave_request') return '/hr/leave'
   if (n.entity_type === 'hr_request') return '/hr/requests'

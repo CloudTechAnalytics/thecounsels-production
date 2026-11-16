@@ -113,6 +113,9 @@ import { ErrorLogsPage } from '@/features/platform/pages/error-logs-page'
 import { PlatformUsersPage } from '@/features/platform/pages/platform-users-page'
 import { PlatformSettingsPage } from '@/features/platform/pages/platform-settings-page'
 import { SupportTicketsPage } from '@/features/platform/pages/support-tickets-page'
+import { MessageFirmPage } from '@/features/platform/pages/message-firm-page'
+import { PlatformConversationPage } from '@/features/platform/pages/conversation-page'
+import { SupportInboxPage } from '@/features/support/pages/support-inbox-page'
 import { SystemHealthPage } from '@/features/platform/pages/system-health-page'
 
 const withPermission = (
@@ -210,6 +213,14 @@ export const router = createBrowserRouter([
             children: [{ index: true, element: <SettingsPage /> }],
           },
 
+          // Messages from The Counsel (0210) — outside the subscription gate on
+          // purpose, so a firm whose trial has ended can still read and reply.
+          {
+            path: '/support',
+            element: <SettingsLayout />,
+            children: [{ index: true, element: <SupportInboxPage /> }, { path: ':id', element: <SupportInboxPage /> }],
+          },
+
           // Self-service onboarding wizard — reachable only by an
           // authenticated user with no firm yet (see RequireNoOrganization).
           {
@@ -236,6 +247,8 @@ export const router = createBrowserRouter([
                   { path: 'organizations', element: <OrganizationsPage /> },
                   { path: 'organizations/:id', element: <OrganizationDetailPage /> },
                   { path: 'organizations/:id/features', element: <OrganizationDetailPage /> },
+                  { path: 'organizations/:id/message', element: <MessageFirmPage /> },
+                  { path: 'conversations/:id', element: <PlatformConversationPage /> },
                   { path: 'organization-users', element: <OrganizationUsersPage /> },
                   { path: 'subscriptions', element: <SubscriptionsPage /> },
                   { path: 'billing', element: <PlatformBillingPage /> },

@@ -39,6 +39,10 @@ export interface TicketRow {
   resolved_at: string | null
   created_at: string
   updated_at: string
+  /** 'platform_message' = a conversation The Counsel started with the firm (0210). */
+  kind: 'support' | 'platform_message'
+  recipient_user_ids: string[]
+  extra_emails: string[]
   organization: { id: string; name: string; slug: string; logo_url: string | null } | null
   creator: TicketPerson | null
   assignee: TicketPerson | null
@@ -51,6 +55,7 @@ export interface TicketMessage {
   from_platform: boolean
   body: string
   created_at: string
+  emailed_at: string | null
   author: TicketPerson | null
 }
 

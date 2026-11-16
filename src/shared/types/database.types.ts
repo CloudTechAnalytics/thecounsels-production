@@ -968,6 +968,9 @@ export interface Database {
           resolved_at: string | null
           created_at: string
           updated_at: string
+          kind: 'support' | 'platform_message'
+          recipient_user_ids: string[]
+          extra_emails: string[]
         }
         Insert: {
           id?: string
@@ -982,6 +985,9 @@ export interface Database {
           resolved_at?: string | null
           created_at?: string
           updated_at?: string
+          kind?: 'support' | 'platform_message'
+          recipient_user_ids?: string[]
+          extra_emails?: string[]
         }
         Update: Partial<Database['public']['Tables']['support_tickets']['Insert']>
         Relationships: [
@@ -1023,6 +1029,7 @@ export interface Database {
           from_platform: boolean
           body: string
           created_at: string
+          emailed_at: string | null
         }
         Insert: {
           id?: string
@@ -3355,6 +3362,10 @@ export interface Database {
         Returns: Database['public']['Tables']['support_sessions']['Row']
       }
       deny_support_session: { Args: { p_id: string }; Returns: undefined }
+      platform_message_firm: {
+        Args: { p_org: string; p_subject: string; p_body: string; p_recipients: string[]; p_extra_emails?: string[] }
+        Returns: string
+      }
       end_support_session: { Args: { p_id: string }; Returns: undefined }
       list_visible_membership_ids: { Args: { p_org: string }; Returns: string[] }
       set_platform_access: { Args: { p_user: string; p_role: string; p_is_admin: boolean }; Returns: undefined }

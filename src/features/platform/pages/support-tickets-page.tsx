@@ -1,9 +1,9 @@
 import * as React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
-import { LifeBuoy, Inbox, Timer, CheckCircle2, AlertTriangle, Plus, Search, Trash2 } from 'lucide-react'
+import { LifeBuoy, Inbox, Timer, CheckCircle2, AlertTriangle, Plus, Search, Trash2, Megaphone } from 'lucide-react'
 import { useDeleteTicket, useTickets } from '@/features/support/hooks/use-support'
-import { usePlatformOrganizations, usePlatformUsers } from '@/features/platform/hooks/use-platform'
-import { TicketThreadDialog } from '@/features/support/components/ticket-thread-dialog'
+import { usePlatformOrganizations } from '@/features/platform/hooks/use-platform'
 import { NewTicketDialog } from '@/features/support/components/new-ticket-dialog'
 import { OPEN_TICKET_STATUSES, TICKET_PRIORITY_META, TICKET_STATUS_META, TICKET_STATUSES, type TicketRow } from '@/features/support/types'
 import type { TicketStatus } from '@/shared/types/database.types'
@@ -25,8 +25,7 @@ export function SupportTicketsPage() {
   const [status, setStatus] = React.useState<TicketStatus | 'all'>('all')
   const { data: tickets, isLoading } = useTickets({ search, status })
   const { data: orgs } = usePlatformOrganizations()
-  const { data: platformUsers } = usePlatformUsers()
-  const [openTicketId, setOpenTicketId] = React.useState<string | null>(null)
+  const navigate = useNavigate()
   const [createOpen, setCreateOpen] = React.useState(false)
   const [toDelete, setToDelete] = React.useState<TicketRow | null>(null)
   const del = useDeleteTicket()
@@ -42,8 +41,8 @@ export function SupportTicketsPage() {
   return (
     <div>
       <PageHeader
-        title="Support Tickets"
-        description="Issues raised by law firms — triage, assign and resolve."
+        title="Support & Messages"
+        description="Tickets raised by law firms, and conversations you started with a firm — replies land here."
         actions={<Button onClick={() => setCreateOpen(true)}><Plus /> New ticket</Button>}
       />
 
@@ -91,10 +90,10 @@ export function SupportTicketsPage() {
             </TableRow></TableHeader>
             <TableBody>
               {all.map((t) => (
-                <TableRow key={t.id} className="cursor-pointer" onClick={() => setOpenTicketId(t.id)}>
+                <TableRow key={t.id} className="cursor-pointer" onClick={() => navigate(`/platform/conversations/${t.id}`)}>
                   <TableCell>
-                    <p className="text-sm font-medium">{t.subject}</p>
-                    <p className="font-mono text-xs text-muted-foreground">{t.ticket_number}</p>
+                    <p className="flex items-center gap-1.5 text-sm font-medium">{t.kind === 'platform_message' && <Megaphone className="h-3.5 w-3.5 text-primary" aria-label="Sent by us" />}{t.subject}</p>
+                    <p className="font-mono text-xs text-muted-foreground">{t.kind === 'platform_message' ? (t.status === 'open' ? 'Firm replied' : 'Message to the firm') : t.ticket_number}</p>
                   </TableCell>
                   <TableCell className="text-sm">{t.organization?.name ?? '—'}</TableCell>
                   <TableCell><Badge variant={TICKET_PRIORITY_META[t.priority].variant}>{TICKET_PRIORITY_META[t.priority].label}</Badge></TableCell>
@@ -127,12 +126,6 @@ export function SupportTicketsPage() {
         )}
       </Card>
 
-      <TicketThreadDialog
-        ticketId={openTicketId}
-        onOpenChange={(o) => !o && setOpenTicketId(null)}
-        platformView
-        assignees={platformUsers ?? []}
-      />
       <NewTicketDialog
         open={createOpen}
         onOpenChange={setCreateOpen}

@@ -1,8 +1,9 @@
 import * as React from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { format } from 'date-fns'
-import { ArrowLeft, Check, Minus, SlidersHorizontal, Pencil, Users, CreditCard, ScrollText } from 'lucide-react'
+import { format, formatDistanceToNow } from 'date-fns'
+import { ArrowLeft, Check, Minus, SlidersHorizontal, Pencil, Users, CreditCard, ScrollText, Send, Megaphone, LifeBuoy } from 'lucide-react'
+import { useTickets } from '@/features/support/hooks/use-support'
 import { useUpdateOrganization } from '@/features/platform/hooks/use-platform'
 import { Label } from '@/shared/components/ui/label'
 import type { OrgRow } from '@/features/platform/types'
@@ -132,6 +133,7 @@ export function OrganizationDetailPage() {
   const navigate = useNavigate()
   const { data: orgs = [], isLoading } = usePlatformOrganizations()
   const { data: overrides = [] } = useAllFeatureOverrides()
+  const { data: conversations = [] } = useTickets({ organizationId: id })
   const setFeature = useSetFeature()
   const [note, setNote] = React.useState('')
   const [busyKey, setBusyKey] = React.useState<string | null>(null)
@@ -184,6 +186,7 @@ export function OrganizationDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button onClick={() => navigate(`/platform/organizations/${org.id}/message`)}><Send className="h-4 w-4" /> Message this firm</Button>
           <Button variant={editing ? 'default' : 'outline'} onClick={() => setEditing(!editing)}><Pencil className="h-4 w-4" /> {editing ? 'Editing…' : 'Edit'}</Button>
           <Button variant="outline" onClick={() => navigate('/platform/organization-users')}><Users className="h-4 w-4" /> Users</Button>
           <Button variant="outline" onClick={() => navigate('/platform/subscriptions')}><CreditCard className="h-4 w-4" /> Subscription</Button>
@@ -228,6 +231,31 @@ export function OrganizationDetailPage() {
           <Row label="Last login" value={org.last_login_at ? format(new Date(org.last_login_at), 'd MMM yyyy, HH:mm') : 'Never'} />
         </Card>
       </div>
+
+      <Card className="mb-8 overflow-hidden">
+        <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-2.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conversations</p>
+          <Button size="sm" variant="ghost" onClick={() => navigate(`/platform/organizations/${org.id}/message`)}><Send className="h-3.5 w-3.5" /> New message</Button>
+        </div>
+        {conversations.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-muted-foreground">No messages or tickets with {org.name} yet.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {conversations.slice(0, 8).map((t) => (
+              <li key={t.id}>
+                <button type="button" onClick={() => navigate(`/platform/conversations/${t.id}`)} className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-muted/50">
+                  {t.kind === 'platform_message' ? <Megaphone className="h-4 w-4 shrink-0 text-primary" /> : <LifeBuoy className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{t.subject}</span>
+                  {t.kind === 'platform_message' && t.status === 'open' && <Badge>Firm replied</Badge>}
+                  {t.kind === 'platform_message' && t.status === 'waiting' && <Badge variant="muted">Waiting for them</Badge>}
+                  {t.kind === 'support' && <Badge variant="outline">Ticket</Badge>}
+                  <span className="hidden text-xs text-muted-foreground sm:inline">{formatDistanceToNow(new Date(t.updated_at), { addSuffix: true })}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       <div id="features" className="mb-3 scroll-mt-20">
         <h2 className="font-display text-xl font-semibold">Features</h2>

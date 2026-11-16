@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { UserPlus, MoreHorizontal, ShieldOff, KeyRound, Loader2 } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { usePlatformUsers, useCreatePlatformUser, useSetPlatformAccess } from '@/features/platform/hooks/use-platform'
@@ -202,7 +202,7 @@ export function PlatformUsersPage() {
                     </div>
                   </TableCell>
                   <TableCell><Badge variant="secondary">{platformRoleLabel(u.platform_role)}</Badge></TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{u.last_seen_at ? format(new Date(u.last_seen_at), 'MMM d, yyyy') : 'Never'}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{u.last_seen_at ? <span title={formatDistanceToNow(new Date(u.last_seen_at), { addSuffix: true })}>{format(new Date(u.last_seen_at), 'MMM d, yyyy')}<span className="block text-xs">{format(new Date(u.last_seen_at), 'h:mm a')}</span></span> : 'Never'}</TableCell>
                   <TableCell className="text-right"><RowActions user={u} /></TableCell>
                 </TableRow>
               ))}

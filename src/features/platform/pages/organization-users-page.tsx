@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { Info, MoreHorizontal, Ban, RotateCcw, Trash2 } from 'lucide-react'
 import { useAllMembers, usePlatformSetMembershipStatus, usePlatformRemoveMember } from '@/features/platform/hooks/use-platform'
 import type { MemberDirectoryRow } from '@/features/platform/types'
@@ -227,7 +227,7 @@ export function OrganizationUsersPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {m.user?.last_seen_at ? format(new Date(m.user.last_seen_at), 'MMM d, yyyy') : 'Never'}
+                    {m.user?.last_seen_at ? <span title={formatDistanceToNow(new Date(m.user.last_seen_at), { addSuffix: true })}>{format(new Date(m.user.last_seen_at), 'MMM d, yyyy')}<span className="block text-xs">{format(new Date(m.user.last_seen_at), 'h:mm a')}</span></span> : 'Never'}
                   </TableCell>
                   <TableCell className="text-right">
                     <MemberActionsMenu member={m} />

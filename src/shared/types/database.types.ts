@@ -3362,6 +3362,8 @@ export interface Database {
         Returns: Database['public']['Tables']['support_sessions']['Row']
       }
       deny_support_session: { Args: { p_id: string }; Returns: undefined }
+      mark_support_ticket_read: { Args: { p_ticket: string }; Returns: undefined }
+      my_unread_counsel_messages: { Args: { p_org: string }; Returns: { ticket_id: string; unread: number }[] }
       platform_message_firm: {
         Args: { p_org: string; p_subject: string; p_body: string; p_recipients: string[]; p_extra_emails?: string[] }
         Returns: string

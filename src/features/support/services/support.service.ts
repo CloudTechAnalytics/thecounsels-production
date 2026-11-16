@@ -112,6 +112,25 @@ export const supportService = {
     return supportService.emailMessage(data.id).catch(() => null)
   },
 
+  /** Unread messages from The Counsel, per conversation, for the signed-in person (0211). */
+  async unreadCounselMessages(organizationId: string): Promise<Record<string, number>> {
+    const { data, error } = await supabase.rpc('my_unread_counsel_messages', { p_org: organizationId })
+    if (error) throw error
+    return Object.fromEntries(((data ?? []) as { ticket_id: string; unread: number }[]).map((r) => [r.ticket_id, r.unread]))
+  },
+
+  async markRead(ticketId: string): Promise<void> {
+    const { error } = await supabase.rpc('mark_support_ticket_read', { p_ticket: ticketId })
+    if (error) throw error
+  },
+
+  /** Platform: conversations a firm has answered (or new tickets) — waiting on us. */
+  async countNeedingReply(): Promise<number> {
+    const { count, error } = await supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open')
+    if (error) throw error
+    return count ?? 0
+  },
+
   async emailMessage(messageId: string): Promise<EmailResult> {
     return invokeEdgeFunction<EmailResult>('send-ticket-email', { messageId })
   },

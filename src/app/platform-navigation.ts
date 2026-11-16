@@ -15,12 +15,16 @@ import {
   Settings2,
   type LucideIcon,
 } from 'lucide-react'
+import type { ComponentType } from 'react'
+import { SupportNeedsReplyNavBadge } from '@/features/support/components/counsel-nav-badges'
 
 export interface PlatformNavItem {
   label: string
   to: string
   icon: LucideIcon
   end?: boolean
+  /** Rendered after the label, e.g. a "needs a reply" count. */
+  badge?: ComponentType
 }
 
 export interface PlatformNavSection {
@@ -52,7 +56,7 @@ export const PLATFORM_NAVIGATION: PlatformNavSection[] = [
   {
     heading: 'Operations',
     items: [
-      { label: 'Support Tickets', to: '/platform/tickets', icon: LifeBuoy },
+      { label: 'Support & Messages', to: '/platform/tickets', icon: LifeBuoy, badge: SupportNeedsReplyNavBadge },
       { label: 'Audit Logs', to: '/platform/audit', icon: ScrollText },
       { label: 'Error Logs', to: '/platform/errors', icon: Bug },
       { label: 'System Health', to: '/platform/health', icon: Activity },

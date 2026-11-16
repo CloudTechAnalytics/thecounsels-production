@@ -52,7 +52,8 @@ export function PlatformSidebar({ onNavigate, collapsed = false }: { onNavigate?
                             isActive ? 'text-sidebar-accent' : 'text-sidebar-muted group-hover:text-sidebar-foreground',
                           )}
                         />
-                        {!collapsed && item.label}
+                        {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
+                        {!collapsed && item.badge && <item.badge />}
                       </>
                     )}
                   </NavLink>

@@ -73,6 +73,29 @@ export function useLiveTicket(id: string | null) {
   }, [id, qc])
 }
 
+/** Unread messages from The Counsel for me in this firm: { ticketId: count }. */
+export function useCounselUnread(organizationId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['support', 'unread', organizationId],
+    enabled: Boolean(organizationId),
+    queryFn: () => supportService.unreadCounselMessages(organizationId!),
+    refetchInterval: 60000,
+  })
+}
+
+/** Marks a conversation read once it is open (and again when new messages arrive). */
+export function useMarkTicketRead(ticketId: string | null, enabled: boolean, messageCount: number) {
+  const qc = useQueryClient()
+  React.useEffect(() => {
+    if (!ticketId || !enabled) return
+    supportService.markRead(ticketId).then(() => qc.invalidateQueries({ queryKey: ['support', 'unread'] })).catch(() => {})
+  }, [ticketId, enabled, messageCount, qc])
+}
+
+export function usePlatformNeedsReplyCount() {
+  return useQuery({ queryKey: ['support', 'needs-reply'], queryFn: supportService.countNeedingReply, refetchInterval: 60000 })
+}
+
 export function useDeleteTicket() {
   const invalidate = useInvalidate()
   return useMutation({

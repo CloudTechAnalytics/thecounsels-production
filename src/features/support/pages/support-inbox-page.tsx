@@ -2,7 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { ArrowLeft, LifeBuoy, Megaphone } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
-import { useTickets } from '@/features/support/hooks/use-support'
+import { useCounselUnread, useTickets } from '@/features/support/hooks/use-support'
 import { TicketThread } from '@/features/support/components/ticket-thread'
 import { PageHeader } from '@/shared/components/page-header'
 import { Card } from '@/shared/components/ui/card'
@@ -19,6 +19,7 @@ export function SupportInboxPage() {
   const navigate = useNavigate()
   const { activeOrgId } = useAuth()
   const { data: tickets = [], isLoading } = useTickets({ organizationId: activeOrgId ?? undefined })
+  const { data: unread = {} } = useCounselUnread(activeOrgId)
 
   if (id) {
     return (
@@ -44,7 +45,8 @@ export function SupportInboxPage() {
           <ul className="divide-y divide-border">
             {tickets.map((t) => {
               const ours = t.kind === 'platform_message'
-              const needsYou = ours && t.status === 'waiting'
+              const newCount = unread[t.id] ?? 0
+              const needsYou = newCount > 0
               return (
                 <li key={t.id}>
                   <button type="button" onClick={() => navigate(`/support/${t.id}`)} className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/50">
@@ -57,7 +59,7 @@ export function SupportInboxPage() {
                         {ours ? 'From The Counsel' : `Support ticket ${t.ticket_number ?? ''}`} · {formatDistanceToNow(new Date(t.updated_at), { addSuffix: true })}
                       </span>
                     </span>
-                    {needsYou && <Badge>New</Badge>}
+                    {needsYou && <Badge>{newCount === 1 ? 'New' : `${newCount} new`}</Badge>}
                   </button>
                 </li>
               )

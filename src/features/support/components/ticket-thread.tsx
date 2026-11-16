@@ -2,7 +2,7 @@ import * as React from 'react'
 import { format } from 'date-fns'
 import { Send, Loader2, MailCheck, Megaphone } from 'lucide-react'
 import { useAuth } from '@/features/auth/context/auth-provider'
-import { useAddTicketMessage, useFirmRecipients, useLiveTicket, useTicket, useUpdateTicket } from '@/features/support/hooks/use-support'
+import { useAddTicketMessage, useFirmRecipients, useLiveTicket, useMarkTicketRead, useTicket, useUpdateTicket } from '@/features/support/hooks/use-support'
 import { TICKET_PRIORITIES, TICKET_PRIORITY_META, TICKET_STATUSES, TICKET_STATUS_META, type TicketPerson } from '@/features/support/types'
 import type { TicketPriority, TicketStatus } from '@/shared/types/database.types'
 import { Badge } from '@/shared/components/ui/badge'
@@ -42,6 +42,8 @@ export function TicketThread({
   const isPlatformMsg = ticket?.kind === 'platform_message'
   const { data: people = [] } = useFirmRecipients(platformView && isPlatformMsg ? ticket?.organization_id : undefined)
   const endRef = React.useRef<HTMLDivElement>(null)
+  // Firm side: opening a conversation (or a new message arriving in it) clears its unread count.
+  useMarkTicketRead(ticketId, !platformView && Boolean(ticket), ticket?.messages.length ?? 0)
 
   React.useEffect(() => { setReply('') }, [ticketId])
   React.useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }) }, [ticket?.messages.length])

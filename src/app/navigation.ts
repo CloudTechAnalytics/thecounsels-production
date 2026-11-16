@@ -14,8 +14,10 @@ import {
   MessageSquare,
   Settings,
   Users2,
+  Megaphone,
   type LucideIcon,
 } from 'lucide-react'
+import { CounselMessagesNavBadge } from '@/features/support/components/counsel-nav-badges'
 import type { PermissionKey } from '@/shared/lib/permissions'
 import type { PlanFeatureKey } from '@/features/administration/lib/plan-features'
 import { MessagesNavBadge } from '@/features/messaging/components/messages-nav-badge'
@@ -72,6 +74,8 @@ export const NAVIGATION: NavSection[] = [
     heading: 'Workspace',
     items: [
       { label: 'HR & Finance', to: '/hr', icon: Users2, planFeature: 'hr_module', badge: HrWorkspaceNavBadge },
+      // Messages from The Counsel team (0210/0211) — the number is what this person hasn't opened yet.
+      { label: 'From The Counsel', to: '/support', icon: Megaphone, badge: CounselMessagesNavBadge },
     ],
   },
   {

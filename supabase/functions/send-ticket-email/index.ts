@@ -131,7 +131,7 @@ Deno.serve(async (req: Request) => {
         body: paragraphs(msg.body),
         button: x.member ? { label: 'Reply in The Counsel', href: `${SITE_URL}/support/${t.id}` } : undefined,
         footer: x.member
-          ? `Sent to you by The Counsel about ${esc(org?.name ?? 'your firm')}'s workspace. You can reply in The Counsel, or simply reply to this email.`
+          ? `Sent to you by The Counsel about the ${esc(org?.name ?? 'your firm')} workspace. You can reply in The Counsel, or simply reply to this email.`
           : `Sent to you by The Counsel about ${esc(org?.name ?? 'your firm')}. Simply reply to this email to answer.`,
       })
       const r = await sendEmail({ to: x.to, subject, html, replyTo: author?.email })

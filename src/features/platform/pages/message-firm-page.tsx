@@ -45,6 +45,12 @@ ${SIGN_TEAM}`,
 
 ${SIGN_FOUNDER}`,
   },
+  {
+    // For a firm that signed up, looked around once and went quiet.
+    key: 'follow-up', label: 'Follow-up',
+    subject: (f) => `Can I help ${f} get started with The Counsel?`,
+    body: (f) => `I noticed ${f} signed up for The Counsel but hasn't had a chance to settle in yet, so I wanted to check in personally.\n\nThe Counsel is built for law firms across Africa: your matters and court dates, hearing reminders by email and WhatsApp, documents, time and billing, and now HR and finance (leave, payroll, staff advances and appraisals), all in one place.\n\nThe easiest way to see if it fits is a short walkthrough. In 15 to 20 minutes I can show your team around using your own kind of cases, and help you set up your first few matters. If your trial ran out before you could try it properly, I'm happy to give you more time.\n\nWas anything unclear, or missing for how your firm works? Just reply here and let me know. Even a one-line answer helps.\n\n${SIGN_FOUNDER}`,
+  },
 ]
 
 /** Platform Console → a firm → "Message this firm": choose who gets it, write

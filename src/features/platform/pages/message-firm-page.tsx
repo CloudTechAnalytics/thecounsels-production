@@ -18,22 +18,32 @@ import { cn } from '@/shared/lib/utils'
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
+// Sign-offs: the welcome comes from John personally; trial reminders from the team.
+const SIGN_FOUNDER = 'Best regards,\nJohn Adeleke\nFounder, The Counsel'
+const SIGN_TEAM = 'Best regards,\nThe Counsel Team'
+
 type Template = { key: string; label: string; subject: (firm: string) => string; body: (firm: string, trialEnd: string | null) => string }
 const TEMPLATES: Template[] = [
   {
     key: 'trial-ending', label: 'Trial ending',
     subject: (f) => `Your free trial of The Counsel${f ? ` for ${f}` : ''} is ending`,
-    body: (f, end) => `Thank you for trying The Counsel with ${f}.\n\nYour free trial ${end ? `ends on ${end}` : 'is ending soon'}. To keep your matters, court dates, documents and billing running without a break, you can choose a plan from Firm Settings → Plan & Billing.\n\nIf you'd like more time to try things, or a quick walkthrough for your team, just reply here and I'll sort it out.`,
+    body: (f, end) => `Thank you for trying The Counsel with ${f}.\n\nYour free trial ${end ? `ends on ${end}` : 'is ending soon'}. To keep your matters, court dates, documents and billing running without a break, you can choose a plan from Firm Settings → Plan & Billing.\n\nIf you'd like more time to try things, or a quick walkthrough for your team, just reply here and we'll sort it out.
+
+${SIGN_TEAM}`,
   },
   {
     key: 'trial-ended', label: 'Trial ended',
     subject: () => 'Your trial of The Counsel has ended — your data is safe',
-    body: (f, end) => `Your free trial for ${f}${end ? ` ended on ${end}` : ' has ended'}. Everything your team added is safe and waiting for you.\n\nTo carry on, choose a plan from Firm Settings → Plan & Billing. If something held you back, or you need a few more days, reply here and tell me. I'm happy to help.`,
+    body: (f, end) => `Your free trial for ${f}${end ? ` ended on ${end}` : ' has ended'}. Everything your team added is safe and waiting for you.\n\nTo carry on, choose a plan from Firm Settings → Plan & Billing. If something held you back, or you need a few more days, reply here and tell us. We're happy to help.
+
+${SIGN_TEAM}`,
   },
   {
     key: 'welcome', label: 'Welcome',
     subject: () => 'Welcome to The Counsel',
-    body: (f) => `Welcome to The Counsel, and thank you for setting up ${f}.\n\nA good first step is to add your team, then your active matters and their next court dates, so everyone gets reminders before each hearing.\n\nIf you'd like, I can walk your team through it in 15 minutes. Just reply here with a time that suits you.`,
+    body: (f) => `Welcome to The Counsel, and thank you for setting up ${f}.\n\nA good first step is to add your team, then your active matters and their next court dates, so everyone gets reminders before each hearing.\n\nIf you'd like, I can walk your team through it in 15 minutes. Just reply here with a time that suits you.
+
+${SIGN_FOUNDER}`,
   },
 ]
 
